@@ -152,5 +152,65 @@ namespace TimeTracker.Controllers
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateCompany(int id, [FromBody] UpdateCompanyRequest request)
+        {
+            try
+            {
+                var result = await _companyService.UpdateCompanyAsync(id, request);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error, errors = result.Errors });
+
+                return Ok(result.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating company");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteCompany(int id)
+        {
+            try
+            {
+                var result = await _companyService.DeleteCompanyAsync(id);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error });
+
+                return Ok(new { message = "Company deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting company");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        [HttpPut("{companyId}/users/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateUserInCompany(int companyId, int userId, [FromBody] UpdateUserInCompanyRequest request)
+        {
+            try
+            {
+                var result = await _companyService.UpdateUserInCompanyAsync(companyId, userId, request);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error, errors = result.Errors });
+
+                return Ok(new { message = "User updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user in company");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
     }
 }

@@ -6,13 +6,21 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSelectModule } from '@angular/material/select';
 import { CompanyService } from '../../services/company.service';
-import { Company } from '../../interfaces';
+import { UserRole } from '../../../core/enums';
 import Swal from 'sweetalert2';
 
+export interface EditUserDialogData {
+  companyId: number;
+  userId: number;
+  userName: string;
+  currentRole: UserRole;
+  currentHourlyRate: number | null;
+}
+
 @Component({
-  selector: 'app-company-modal',
+  selector: 'app-edit-user-modal',
   standalone: true,
   imports: [
     CommonModule,
@@ -22,42 +30,33 @@ import Swal from 'sweetalert2';
     MatInputModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    MatCheckboxModule
+    MatSelectModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data ? 'Edit Company' : 'Create Company' }}</h2>
+    <h2 mat-dialog-title>Edit User: {{ data.userName }}</h2>
 
     <mat-dialog-content>
-      <form [formGroup]="companyForm" class="form-content">
+      <form [formGroup]="userForm" class="form-content">
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Company Name</mat-label>
-          <input matInput formControlName="name" placeholder="Enter company name" required>
-          @if (companyForm.get('name')?.hasError('required') && companyForm.get('name')?.touched) {
-            <mat-error>Company name is required</mat-error>
-          }
-          @if (companyForm.get('name')?.hasError('maxlength')) {
-            <mat-error>Company name cannot exceed 200 characters</mat-error>
+          <mat-label>Role</mat-label>
+          <mat-select formControlName="role" required>
+            <mat-option [value]="UserRole.Admin">Admin</mat-option>
+            <mat-option [value]="UserRole.Manager">Manager</mat-option>
+            <mat-option [value]="UserRole.Developer">Developer</mat-option>
+            <mat-option [value]="UserRole.Viewer">Viewer</mat-option>
+          </mat-select>
+          @if (userForm.get('role')?.hasError('required') && userForm.get('role')?.touched) {
+            <mat-error>Role is required</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Company Code</mat-label>
-          <input matInput formControlName="code" placeholder="Enter company code" required>
-          @if (companyForm.get('code')?.hasError('required') && companyForm.get('code')?.touched) {
-            <mat-error>Company code is required</mat-error>
-          }
-          @if (companyForm.get('code')?.hasError('maxlength')) {
-            <mat-error>Company code cannot exceed 50 characters</mat-error>
+          <mat-label>Hourly Rate</mat-label>
+          <input matInput formControlName="hourlyRate" type="number" placeholder="Enter hourly rate" min="0" step="0.01">
+          @if (userForm.get('hourlyRate')?.hasError('min')) {
+            <mat-error>Hourly rate must be greater than or equal to 0</mat-error>
           }
         </mat-form-field>
-
-        @if (data) {
-          <div class="checkbox-field">
-            <mat-checkbox formControlName="isActive">
-              Active
-            </mat-checkbox>
-          </div>
-        }
       </form>
     </mat-dialog-content>
 
@@ -73,8 +72,8 @@ import Swal from 'sweetalert2';
           mat-raised-button
           color="primary"
           (click)="onSave()"
-          [disabled]="!companyForm.valid">
-          {{ data ? 'Update' : 'Create' }}
+          [disabled]="!userForm.valid">
+          Update
         </button>
       }
     </mat-dialog-actions>
@@ -106,10 +105,6 @@ import Swal from 'sweetalert2';
       gap: 8px;
     }
 
-    .checkbox-field {
-      margin: 16px 0;
-    }
-
     @media (max-width: 768px) {
       .form-content {
         min-width: 300px;
@@ -117,62 +112,49 @@ import Swal from 'sweetalert2';
     }
   `]
 })
-export class CompanyModalComponent {
+export class EditUserInCompanyModalComponent {
   private fb = inject(FormBuilder);
   private companyService = inject(CompanyService);
-  private dialogRef = inject(MatDialogRef<CompanyModalComponent>);
-  public data = inject<Company | null>(MAT_DIALOG_DATA);
+  private dialogRef = inject(MatDialogRef<EditUserInCompanyModalComponent>);
+  public data = inject<EditUserDialogData>(MAT_DIALOG_DATA);
 
   public isLoading = signal<boolean>(false);
+  public UserRole = UserRole; // Para usar en el template
 
-  public companyForm: FormGroup = this.fb.group({
-    name: ['', [Validators.required, Validators.maxLength(200)]],
-    code: ['', [Validators.required, Validators.maxLength(50)]],
-    isActive: [true]
+  public userForm: FormGroup = this.fb.group({
+    role: [this.data.currentRole, [Validators.required]],
+    hourlyRate: [this.data.currentHourlyRate, [Validators.min(0)]]
   });
 
-  constructor() {
-    // If editing, populate form with company data
-    if (this.data) {
-      this.companyForm.patchValue({
-        name: this.data.name,
-        code: this.data.code,
-        isActive: this.data.isActive
-      });
-    }
-  }
-
   onSave(): void {
-    if (!this.companyForm.valid) {
+    if (!this.userForm.valid) {
       return;
     }
 
     this.isLoading.set(true);
-    const formData = this.companyForm.value;
 
-    // Determine if it's create or update
-    const request$ = this.data
-      ? this.companyService.updateCompany(this.data.id, formData)
-      : this.companyService.createCompany(formData);
+    const formData = {
+      role: this.userForm.value.role,
+      hourlyRate: this.userForm.value.hourlyRate ? Number(this.userForm.value.hourlyRate) : null
+    };
 
-    request$.subscribe({
-      next: (company) => {
+    this.companyService.updateUserInCompany(this.data.companyId, this.data.userId, formData).subscribe({
+      next: () => {
         this.isLoading.set(false);
-        const action = this.data ? 'updated' : 'created';
         Swal.fire({
           title: 'Success!',
-          text: `Company "${company.name}" ${action} successfully`,
+          text: `User "${this.data.userName}" updated successfully`,
           icon: 'success',
           timer: 2000,
           showConfirmButton: false
         });
-        this.dialogRef.close(company);
+        this.dialogRef.close(true);
       },
       error: (error) => {
-        console.error(`Error ${this.data ? 'updating' : 'creating'} company:`, error);
+        console.error('Error updating user:', error);
         this.isLoading.set(false);
 
-        let errorMessage = `Failed to ${this.data ? 'update' : 'create'} company. Please try again.`;
+        let errorMessage = 'Failed to update user. Please try again.';
         if (error.error?.error) {
           errorMessage = error.error.error;
         } else if (error.error?.errors && Array.isArray(error.error.errors)) {
@@ -192,6 +174,6 @@ export class CompanyModalComponent {
   }
 
   onCancel(): void {
-    this.dialogRef.close(null);
+    this.dialogRef.close(false);
   }
 }

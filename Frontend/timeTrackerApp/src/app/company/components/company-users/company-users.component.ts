@@ -8,11 +8,13 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { CompanyService } from '../../services/company.service';
 import { AuthService } from '../../../auth/services/auth.service';
 import { CompanyUser, Company } from '../../interfaces';
 import { UserRole } from '../../../core/enums';
 import { AddUserModalComponent } from '../add-user-modal/add-user-modal.component';
+import { EditUserInCompanyModalComponent } from '../edit-user-modal/edit-user-modal.component';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -26,7 +28,8 @@ import Swal from 'sweetalert2';
     MatTableModule,
     MatChipsModule,
     MatProgressSpinnerModule,
-    MatDialogModule
+    MatDialogModule,
+    MatMenuModule
   ],
   template: `
     <div class="container">

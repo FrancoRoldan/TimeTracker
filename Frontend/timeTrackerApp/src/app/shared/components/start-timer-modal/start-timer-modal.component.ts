@@ -14,6 +14,7 @@ import { TimeEntryService } from '../../../time-entry/services/time-entry.servic
 import { Project } from '../../../project/interfaces';
 import { Issue } from '../../../issue/interfaces';
 import Swal from 'sweetalert2';
+import { CompanyService } from '../../../company/services/company.service';
 
 @Component({
   selector: 'app-start-timer-modal',
@@ -140,6 +141,7 @@ export class StartTimerModalComponent implements OnInit {
   private projectService = inject(ProjectService);
   private issueService = inject(IssueService);
   private timeEntryService = inject(TimeEntryService);
+  private companyService = inject(CompanyService);
 
   public timerForm!: FormGroup;
   public projects = signal<Project[]>([]);
@@ -147,10 +149,17 @@ export class StartTimerModalComponent implements OnInit {
   public isLoadingProjects = signal<boolean>(false);
   public isLoadingIssues = signal<boolean>(false);
   public isSubmitting = signal<boolean>(false);
+  public selectedCompany = signal<any>(null);
 
   ngOnInit(): void {
     this.initForm();
     this.loadProjects();
+    this.companyService.selectedCompany$.subscribe(company => {
+      this.selectedCompany.set(company);
+      if (company) {
+        this.loadIssues(company.id);
+      }
+    });
   }
 
   private initForm(): void {
@@ -187,13 +196,13 @@ export class StartTimerModalComponent implements OnInit {
     this.issues.set([]);
 
     if (projectId) {
-      this.loadIssues(projectId);
+      this.loadIssues(this.selectedCompany().id);
     }
   }
 
   private loadIssues(projectId: number): void {
     this.isLoadingIssues.set(true);
-    this.issueService.getIssues(projectId).subscribe({
+    this.issueService.getMyIssues(projectId).subscribe({
       next: (issues) => {
         this.issues.set(issues);
         this.isLoadingIssues.set(false);

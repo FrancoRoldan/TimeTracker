@@ -9,6 +9,8 @@ import { Router } from '@angular/router';
 import { CompanyService } from '../../services/company.service';
 import { Company } from '../../interfaces';
 import { CompanyModalComponent } from '../company-modal/company-modal.component';
+import { AuthService } from '../../../auth/services/auth.service';
+import { UserRole } from '../../../core/enums';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -78,6 +80,16 @@ import Swal from 'sweetalert2';
                   <mat-icon>group</mat-icon>
                   Users
                 </button>
+                @if (canManageCompany()) {
+                  <button mat-button (click)="openEditModal(company)">
+                    <mat-icon>edit</mat-icon>
+                    Edit
+                  </button>
+                  <button mat-button color="warn" (click)="deleteCompany(company)">
+                    <mat-icon>delete</mat-icon>
+                    Delete
+                  </button>
+                }
               </mat-card-actions>
             </mat-card>
           }
@@ -191,6 +203,7 @@ import Swal from 'sweetalert2';
 })
 export class CompanyListComponent implements OnInit {
   private companyService = inject(CompanyService);
+  private authService = inject(AuthService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
 
@@ -257,5 +270,68 @@ export class CompanyListComponent implements OnInit {
       month: 'short',
       day: 'numeric'
     });
+  }
+
+  openEditModal(company: Company): void {
+    const dialogRef = this.dialog.open(CompanyModalComponent, {
+      width: '500px',
+      data: company
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadCompanies();
+      }
+    });
+  }
+
+  deleteCompany(company: Company): void {
+    Swal.fire({
+      title: 'Delete Company?',
+      text: `Are you sure you want to delete "${company.name}"? This action cannot be undone.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f44336',
+      cancelButtonColor: '#757575',
+      confirmButtonText: 'Yes, delete it',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.companyService.deleteCompany(company.id).subscribe({
+          next: () => {
+            Swal.fire({
+              title: 'Deleted!',
+              text: `Company "${company.name}" has been deleted.`,
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+            this.loadCompanies();
+          },
+          error: (error) => {
+            console.error('Error deleting company:', error);
+
+            let errorMessage = 'Failed to delete company. Please try again.';
+            if (error.error?.error) {
+              errorMessage = error.error.error;
+            } else if (typeof error.error === 'string') {
+              errorMessage = error.error;
+            }
+
+            Swal.fire({
+              title: 'Error!',
+              text: errorMessage,
+              icon: 'error',
+              confirmButtonText: 'Ok'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  canManageCompany(): boolean {
+    const currentRole = this.authService.getUserRole();
+    return currentRole === UserRole.Admin;
   }
 }

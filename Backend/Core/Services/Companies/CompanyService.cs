@@ -18,6 +18,8 @@ namespace Core.Services.Companies
         private readonly IValidator<CreateCompanyRequest> _createValidator;
         private readonly IValidator<RegisterUserRequest> _registerValidator;
         private readonly IValidator<JoinCompanyRequest> _joinValidator;
+        private readonly IValidator<UpdateCompanyRequest> _updateCompanyValidator;
+        private readonly IValidator<UpdateUserInCompanyRequest> _updateUserInCompanyValidator;
         private readonly ITenantService _tenantService;
         private readonly IPasswordHasher _passwordHasher;
 
@@ -26,6 +28,8 @@ namespace Core.Services.Companies
             IValidator<CreateCompanyRequest> createValidator,
             IValidator<RegisterUserRequest> registerValidator,
             IValidator<JoinCompanyRequest> joinValidator,
+            IValidator<UpdateCompanyRequest> updateCompanyValidator,
+            IValidator<UpdateUserInCompanyRequest> updateUserInCompanyValidator,
             ITenantService tenantService,
             IPasswordHasher passwordHasher)
         {
@@ -33,6 +37,8 @@ namespace Core.Services.Companies
             _createValidator = createValidator;
             _registerValidator = registerValidator;
             _joinValidator = joinValidator;
+            _updateCompanyValidator = updateCompanyValidator;
+            _updateUserInCompanyValidator = updateUserInCompanyValidator;
             _tenantService = tenantService;
             _passwordHasher = passwordHasher;
         }
@@ -206,15 +212,7 @@ namespace Core.Services.Companies
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                // Verify company exists
-                var company = await _unitOfWork.Companies.GetByIdAsync(request.CompanyId);
-                if (company == null)
-                {
-                    await _unitOfWork.RollbackTransactionAsync();
-                    return Result<RegisterUserResponse>.Failure("Company not found");
-                }
-
-                // Check if email already exists
+                // Check if email already exists FIRST (before creating company)
                 var existingUser = await _unitOfWork.Users.FindAsync(u => u.Email == request.Email);
                 if (existingUser != null)
                 {
@@ -222,11 +220,54 @@ namespace Core.Services.Companies
                     return Result<RegisterUserResponse>.Failure("Email already registered");
                 }
 
+                // Detect CompanyId == 0 and create company automatically
+                int companyIdToUse = request.CompanyId;
+                Company? company = null;
+
+                if (request.CompanyId == 0)
+                {
+                    // Generate unique code based on email
+                    string emailPrefix = request.Email.Split('@')[0].ToUpper();
+                    string uniqueCode = $"{emailPrefix}_{DateTime.UtcNow.Ticks.ToString().Substring(10)}";
+
+                    // Create company automatically
+                    company = new Company
+                    {
+                        Name = $"Empresa de {request.Name}",
+                        Code = uniqueCode,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _unitOfWork.Companies.AddAsync(company);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    companyIdToUse = company.Id;
+                }
+                else
+                {
+                    // Verify company exists
+                    company = await _unitOfWork.Companies.GetByIdAsync(request.CompanyId);
+                    if (company == null)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return Result<RegisterUserResponse>.Failure("Company not found");
+                    }
+                }
+
                 // Parse role
                 if (!Enum.TryParse<UserRole>(request.Role, true, out var userRole))
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     return Result<RegisterUserResponse>.Failure("Invalid role");
+                }
+
+                // If CompanyId original was 0, assign Admin role automatically
+                if (request.CompanyId == 0)
+                {
+                    userRole = UserRole.Admin;
                 }
 
                 // Create user
@@ -247,7 +288,7 @@ namespace Core.Services.Companies
                 var userCompany = new UserCompany
                 {
                     UserId = user.Id,
-                    CompanyId = request.CompanyId,
+                    CompanyId = companyIdToUse,
                     Role = userRole,
                     HourlyRate = request.HourlyRate,
                     CreatedAt = DateTime.UtcNow,
@@ -265,7 +306,7 @@ namespace Core.Services.Companies
                     UserId = user.Id,
                     Name = user.Nombre,
                     Email = user.Email,
-                    CompanyId = request.CompanyId,
+                    CompanyId = companyIdToUse,
                     CompanyName = company.Name,
                     Role = userRole.ToString(),
                     HourlyRate = request.HourlyRate
@@ -381,6 +422,212 @@ namespace Core.Services.Companies
             }
         }
 
+        public async Task<Result<CompanyResponse>> UpdateCompanyAsync(int id, UpdateCompanyRequest request)
+        {
+            try
+            {
+                // Validate request
+                var validationResult = await _updateCompanyValidator.ValidateAsync(request);
+                if (!validationResult.IsValid)
+                {
+                    return Result<CompanyResponse>.Failure(
+                        validationResult.Errors.Select(e => e.ErrorMessage).ToList()
+                    );
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Get company
+                var company = await _unitOfWork.Companies.GetByIdAsync(id);
+                if (company == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result<CompanyResponse>.Failure("Company not found");
+                }
+
+                // Verify current user is Admin in this company
+                var currentUserId = _tenantService.GetCurrentUserId();
+                if (currentUserId == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result<CompanyResponse>.Failure("User not authenticated");
+                }
+
+                var userCompany = await _unitOfWork.UserCompanies.FindAsync(
+                    uc => uc.UserId == currentUserId.Value && uc.CompanyId == id
+                );
+
+                if (userCompany == null || userCompany.Role != UserRole.Admin)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result<CompanyResponse>.Failure("Only Admins can update companies");
+                }
+
+                // Check if new code is unique (if changed)
+                if (company.Code != request.Code)
+                {
+                    var existingCompany = await _unitOfWork.Companies.FindAsync(c => c.Code == request.Code);
+                    if (existingCompany != null)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return Result<CompanyResponse>.Failure("Company code already exists");
+                    }
+                }
+
+                // Update company
+                company.Name = request.Name;
+                company.Code = request.Code;
+                company.IsActive = request.IsActive;
+                company.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.Companies.Update(company);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return Result<CompanyResponse>.Success(company.Adapt<CompanyResponse>());
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result<CompanyResponse>.Failure($"Error updating company: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> DeleteCompanyAsync(int id)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Get company
+                var company = await _unitOfWork.Companies.GetByIdAsync(id);
+                if (company == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure("Company not found");
+                }
+
+                // Verify current user is Admin
+                var currentUserId = _tenantService.GetCurrentUserId();
+                if (currentUserId == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure("User not authenticated");
+                }
+
+                var userCompany = await _unitOfWork.UserCompanies.FindAsync(
+                    uc => uc.UserId == currentUserId.Value && uc.CompanyId == id
+                );
+
+                if (userCompany == null || userCompany.Role != UserRole.Admin)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure("Only Admins can delete companies");
+                }
+
+                // Validate no active projects
+                var activeProjects = await _unitOfWork.Projects
+                    .Query()
+                    .Where(p => p.CompanyId == id && !p.IsDeleted)
+                    .ToListAsync();
+
+                if (activeProjects.Any())
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure($"Cannot delete company with {activeProjects.Count} project(s). Please delete or archive projects first.");
+                }
+
+                // Validate no recent time entries (last 30 days)
+                var recentDate = DateTime.UtcNow.AddDays(-30);
+                var recentTimeEntries = await _unitOfWork.TimeEntries
+                    .Query()
+                    .Where(te => te.CompanyId == id && te.CreatedAt >= recentDate && !te.IsDeleted)
+                    .ToListAsync();
+
+                if (recentTimeEntries.Any())
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure($"Cannot delete company with {recentTimeEntries.Count} time entries from the last 30 days");
+                }
+
+                // Soft delete
+                company.IsDeleted = true;
+                company.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.Companies.Update(company);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result.Failure($"Error deleting company: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> UpdateUserInCompanyAsync(int companyId, int userId, UpdateUserInCompanyRequest request)
+        {
+            try
+            {
+                // Validate request
+                var validationResult = await _updateUserInCompanyValidator.ValidateAsync(request);
+                if (!validationResult.IsValid)
+                {
+                    return Result.Failure(
+                        validationResult.Errors.Select(e => e.ErrorMessage).ToList()
+                    );
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Verify current user is Admin
+                var currentUserId = _tenantService.GetCurrentUserId();
+                if (currentUserId == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure("User not authenticated");
+                }
+
+                var currentUserCompany = await _unitOfWork.UserCompanies.FindAsync(
+                    uc => uc.UserId == currentUserId.Value && uc.CompanyId == companyId
+                );
+
+                if (currentUserCompany == null || currentUserCompany.Role != UserRole.Admin)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure("Only Admins can update user roles");
+                }
+
+                // Get target user company relationship
+                var userCompany = await _unitOfWork.UserCompanies.FindAsync(
+                    uc => uc.UserId == userId && uc.CompanyId == companyId
+                );
+
+                if (userCompany == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return Result.Failure("User is not a member of this company");
+                }
+
+                // Update user company
+                userCompany.Role = request.Role;
+                userCompany.HourlyRate = request.HourlyRate;
+                userCompany.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.UserCompanies.Update(userCompany);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result.Failure($"Error updating user in company: {ex.Message}");
+            }
+        }
 
     }
 }

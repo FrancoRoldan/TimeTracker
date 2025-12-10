@@ -17,6 +17,7 @@ import { TimeEntry } from '../../interfaces';
 import { Issue } from '../../../issue/interfaces';
 import { Project } from '../../../project/interfaces';
 import Swal from 'sweetalert2';
+import { CompanyService } from '../../../company/services/company.service';
 
 @Component({
   selector: 'app-time-entry-modal',
@@ -193,9 +194,11 @@ export class TimeEntryModalComponent implements OnInit {
   private timeEntryService = inject(TimeEntryService);
   private issueService = inject(IssueService);
   private projectService = inject(ProjectService);
+  private companyService = inject(CompanyService);
+
   private dialogRef = inject(MatDialogRef<TimeEntryModalComponent>);
   public data = inject<{ entry: TimeEntry | null }>(MAT_DIALOG_DATA);
-
+  public selectedCompany = signal<any>(null);
   public isLoading = signal<boolean>(false);
   public isEditMode: boolean = false;
   public availableIssues = signal<Issue[]>([]);
@@ -227,6 +230,13 @@ export class TimeEntryModalComponent implements OnInit {
       this.loadProjects();
     }
 
+    this.companyService.selectedCompany$.subscribe(company => {
+      this.selectedCompany.set(company);
+      if (company) {
+        this.loadIssuesForProject(company.id);
+      }
+    });
+
     // Watch for changes to calculate hours
     this.entryForm.valueChanges.subscribe(() => {
       this.calculateHours();
@@ -250,14 +260,13 @@ export class TimeEntryModalComponent implements OnInit {
     // Reset issue selection when project changes
     this.entryForm.patchValue({ issueId: null });
     this.availableIssues.set([]);
-
     if (projectId) {
-      this.loadIssuesForProject(projectId);
+      this.loadIssuesForProject(this.selectedCompany().id);
     }
   }
 
   loadIssuesForProject(projectId: number): void {
-    this.issueService.getIssues(projectId).subscribe({
+    this.issueService.getMyIssues(projectId).subscribe({
       next: (issues) => {
         this.availableIssues.set(issues);
       },

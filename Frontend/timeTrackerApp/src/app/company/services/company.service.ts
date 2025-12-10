@@ -5,9 +5,11 @@ import { environment } from '../../../environments/environment';
 import {
   Company,
   CreateCompanyRequest,
+  UpdateCompanyRequest,
   CompanyUser,
   AddUserToCompanyRequest,
-  AddUserToCompanyResponse
+  AddUserToCompanyResponse,
+  UpdateUserInCompanyRequest
 } from '../interfaces';
 import { AuthService } from '../../auth/services/auth.service';
 
@@ -137,5 +139,69 @@ export class CompanyService {
    */
   refreshCompanies(): void {
     this.getCompanies().subscribe();
+  }
+
+  /**
+   * Update a company (Admin only)
+   */
+  updateCompany(id: number, data: UpdateCompanyRequest): Observable<Company> {
+    return this.http.put<Company>(`${this.urlApi}/company/${id}`, data)
+      .pipe(
+        tap(updatedCompany => {
+          // Update in companies list
+          const currentCompanies = this.companiesSubject.value;
+          const index = currentCompanies.findIndex(c => c.id === id);
+          if (index !== -1) {
+            currentCompanies[index] = updatedCompany;
+            this.companiesSubject.next([...currentCompanies]);
+          }
+
+          // Update selected company if it's the one being updated
+          const selectedCompany = this.selectedCompanySubject.value;
+          if (selectedCompany && selectedCompany.id === id) {
+            this.selectedCompanySubject.next(updatedCompany);
+            localStorage.setItem('selectedCompany', JSON.stringify(updatedCompany));
+          }
+        })
+      );
+  }
+
+  /**
+   * Delete a company (Admin only)
+   */
+  deleteCompany(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.urlApi}/company/${id}`)
+      .pipe(
+        tap(() => {
+          // Remove from companies list
+          const currentCompanies = this.companiesSubject.value;
+          this.companiesSubject.next(currentCompanies.filter(c => c.id !== id));
+
+          // Clear selected company if it's the one being deleted
+          const selectedCompany = this.selectedCompanySubject.value;
+          if (selectedCompany && selectedCompany.id === id) {
+            this.clearSelectedCompany();
+          }
+        })
+      );
+  }
+
+  /**
+   * Update a user's role and hourly rate in a company (Admin only)
+   */
+  updateUserInCompany(companyId: number, userId: number, data: UpdateUserInCompanyRequest): Observable<{ message: string }> {
+    return this.http.put<{ message: string }>(
+      `${this.urlApi}/company/${companyId}/users/${userId}`,
+      data
+    );
+  }
+
+  /**
+   * Remove a user from a company (Admin only)
+   */
+  removeUserFromCompany(companyId: number, userId: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(
+      `${this.urlApi}/company/${companyId}/users/${userId}`
+    );
   }
 }

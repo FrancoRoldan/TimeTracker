@@ -97,7 +97,11 @@ export class RegisterComponent {
       if (!this.myForm.valid) { return; }
 
       const { confirmPassword, ...req } = this.myForm.value;
-      req.createdBy = req.Email; // Use email as creator for self-registration
+
+      // Always send CompanyId = 0 for automatic company creation
+      req.CompanyId = 0;
+      req.Role = "Admin";
+      req.HourlyRate = null;
 
       this.isLoading.set(true);
 
@@ -109,7 +113,15 @@ export class RegisterComponent {
           },
           error: (message:HttpErrorResponse) => {
             let mensaje: string = 'Error de comunicación.';
-            if (typeof message.error ===  "string" ) mensaje = message.error;
+
+            // Handle different error formats
+            if (message.error?.error) {
+              mensaje = message.error.error;
+            } else if (message.error?.errors && Array.isArray(message.error.errors)) {
+              mensaje = message.error.errors.join(', ');
+            } else if (typeof message.error === "string") {
+              mensaje = message.error;
+            }
 
             this.isLoading.set(false);
             Swal.fire({

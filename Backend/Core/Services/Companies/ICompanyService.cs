@@ -14,5 +14,8 @@ namespace Core.Services.Companies
         Task<Result> RemoveUserFromCompanyAsync(int companyId, int userId);
         Task<Result<RegisterUserResponse>> RegisterUserAsync(RegisterUserRequest request);
         Task<Result<JoinCompanyResponse>> JoinCompanyAsync(JoinCompanyRequest request);
+        Task<Result<CompanyResponse>> UpdateCompanyAsync(int id, UpdateCompanyRequest request);
+        Task<Result> DeleteCompanyAsync(int id);
+        Task<Result> UpdateUserInCompanyAsync(int companyId, int userId, UpdateUserInCompanyRequest request);
     }
 }

@@ -2,5 +2,7 @@ export interface RegisterRequest {
     Name: string;
     Email: string;
     Password: string;
-    UsuarioCreacion: string;
+    CompanyId: number;
+    Role: string;
+    HourlyRate: number | null;
 }

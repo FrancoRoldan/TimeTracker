@@ -38,7 +38,36 @@ namespace TimeTracker.Controllers
                 if (!result.IsSuccess)
                     return BadRequest(new { error = result.Error, errors = result.Errors });
 
-                return StatusCode(201, result.Value);
+                // After successful registration, authenticate the user to generate token
+                var (user, companies) = await _userService.AuthenticateAsync(result.Value.Email, request.Password);
+
+                if (user == null)
+                    return StatusCode(500, new { error = "Failed to authenticate after registration" });
+
+                var selectedCompany = companies.First();
+                var companyIds = companies.Select(c => c.CompanyId).ToList();
+                var token = _jwtService.GenerateToken(user, companyIds, selectedCompany.CompanyId, selectedCompany.Role);
+
+                var response = new Data.Dtos.Auth.LoginResponse
+                {
+                    Token = token,
+                    User = new Data.Dtos.Auth.UserInfo
+                    {
+                        Id = user.Id,
+                        Name = user.Nombre,
+                        Email = user.Email
+                    },
+                    Companies = companies.Select(c => new Data.Dtos.Auth.UserCompanyInfo
+                    {
+                        CompanyId = c.CompanyId,
+                        CompanyName = c.Company.Name,
+                        CompanyCode = c.Company.Code,
+                        Role = c.Role.ToString()
+                    }).ToList(),
+                    SelectedCompanyId = selectedCompany.CompanyId
+                };
+
+                return StatusCode(201, response);
             }
             catch (Exception ex)
             {
