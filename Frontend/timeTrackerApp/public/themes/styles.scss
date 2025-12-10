@@ -1,0 +1,74 @@
+@use '@angular/material' as mat;
+@use './ocre' as ocre;
+@use './blue.scss' as azul;
+@use './third.scss' as third;
+@use './pink.scss' as rose;
+@use './green.scss' as verde;
+@use './orange.scss' as naranja;
+
+:root {
+  @include mat.toolbar-overrides((
+    container-background-color: --sys-surface,
+    container-text-color: --sys-on-surface,
+  ));
+}
+
+html {
+  color-scheme: light dark;
+  @include mat.theme((
+    color: (
+      primary: azul.$primary-palette,
+      tertiary: azul.$tertiary-palette,
+    ),
+    typography: Roboto,
+    density: 0
+  ));
+}
+
+.ocre {
+  @include mat.theme((
+      color: (primary: ocre.$primary-palette,
+        tertiary: ocre.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0));
+}
+
+.third {
+  @include mat.theme((
+    color: (
+        primary: third.$primary-palette,
+        tertiary: third.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0));
+}
+
+.pink {
+  @include mat.theme((
+    color: (
+        primary: rose.$primary-palette,
+        tertiary: rose.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0));
+}
+.green {
+  @include mat.theme((
+    color: (
+        primary: verde.$primary-palette,
+        tertiary: verde.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0));
+}
+
+.orange {
+  @include mat.theme((
+    color: (
+        primary: naranja.$primary-palette,
+        tertiary: naranja.$tertiary-palette,
+      ),
+      typography: Roboto,
+      density: 0));
+}

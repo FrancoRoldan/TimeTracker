@@ -1,0 +1,13 @@
+.selector-container {
+  padding: 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  margin-bottom: 8px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.selector-container mat-form-field {
+  font-size: 14px;
+}

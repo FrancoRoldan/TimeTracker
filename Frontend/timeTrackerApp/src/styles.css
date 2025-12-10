@@ -1,0 +1,21 @@
+/* You can add global styles to this file, and also import other style files */
+
+body { margin: 0; font-family: Poppins }
+
+body {
+    background: var(--mat-sys-surface);
+    color: var(--mat-sys-on-surface);
+    color-scheme: light;
+}
+
+.spacer {
+    flex: 1 1 auto;
+}
+
+.dark-theme{
+    color-scheme: dark;
+}
+
+.tertiary{
+    background-color: var(--mat-sys-tertiary-container);
+}

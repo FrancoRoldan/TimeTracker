@@ -1,0 +1,54 @@
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+  gap: 5%;
+  padding: 10px 0;
+  margin: 0 auto;
+}
+
+.theme-block {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  align-self: center;
+  justify-self: center;
+}
+
+.theme-block:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Theme colors */
+.ocre {
+  background-color: #84773b;
+  /* palette.primary.main */
+}
+
+.blue {
+  background-color: #365e9d;
+  /* palette.secondary.main */
+}
+
+.violet {
+  background-color: #7748a7;
+  /* palette.error.main */
+}
+
+.pink {
+  background-color: #954780;
+  /* palette.error.main */
+}
+
+.green {
+  background-color: #396F26;
+  /* palette.error.main */
+}
+
+.orange {
+  background-color: #AB4100;
+  /* palette.error.main */
+}
+

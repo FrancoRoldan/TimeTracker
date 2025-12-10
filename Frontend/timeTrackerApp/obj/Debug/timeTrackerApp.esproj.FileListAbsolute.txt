@@ -1,0 +1,1 @@
+C:\Users\usuario\source\repos\TimeTracker\Frontend\timeTrackerApp\obj\Debug\timeTrackerApp.esproj.CoreCompileInputs.cache

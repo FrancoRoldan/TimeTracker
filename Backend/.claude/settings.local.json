@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /B /S)",
+      "Bash(powershell -Command:*)",
+      "Bash(del /F \"Core\\Services\\Tweets\\CachedTweetService.cs\" \"Core\\Services\\Tweets\\ITweetService.cs\" \"Core\\Services\\Tweets\\TweetService.cs\" \"Data\\Dtos\\AddTweetRequest.cs\" \"Data\\Dtos\\GetTweetResponse.cs\" \"Data\\Interfaces\\ITweetRepository.cs\" \"Data\\Models\\Tweet.cs\" \"Data\\Repositorys\\TweetRepository.cs\" \"LoginApi\\Controllers\\tweetController.cs\")",
+      "Bash(del /F \"Core\\Services\\Login\\ILoginAttemptService.cs\" \"Core\\Services\\Login\\LoginAttemptService .cs\" \"Data\\Interfaces\\ILoginAttemptRepository .cs\" \"Data\\Models\\LoginAttempt.cs\" \"Data\\Repositorys\\LoginAttemptRepository .cs\")",
+      "Bash(del /F \"LoginApi\\Controllers\\userController.cs\")",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(git -C \"C:/Users/usuario/source/repos/TimeTracker/Backend\" status \"Core/Security/JwtService.cs\")",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(move /Y:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File update_auth.ps1:*)",
+      "Bash(del update_auth.ps1)",
+      "Bash(dir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
