@@ -1,7 +1,4 @@
 using Core.Helpers;
-using Core.Http.Interfaces;
-using Core.Http.Models;
-using Core.Http.Services;
 using Core.Security;
 using Core.Services;
 using Core.Services.Companies;
@@ -11,7 +8,6 @@ using Core.Services.Reports;
 using Core.Services.Tenant;
 using Core.Services.TimeTracking;
 using Data.Context;
-using Data.Dtos.Company;
 using Data.Interfaces;
 using Data.Repositorys;
 using Data.UnitOfWork;
@@ -43,14 +39,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var cnnString = builder.Configuration.GetConnectionString("DbConnString");
-var redisCnn = builder.Configuration.GetConnectionString("Redis");
 builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseNpgsql(cnnString));
 
-builder.Services.AddStackExchangeRedisCache( opt =>
-{
-    opt.Configuration = redisCnn;
-});
 
 // Add HttpContextAccessor for tenant service
 builder.Services.AddHttpContextAccessor();
@@ -61,7 +52,6 @@ builder.Services.AddValidatorsFromAssemblyContaining<CreateCompanyRequestValidat
 // Core Infrastructure
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
