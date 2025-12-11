@@ -408,6 +408,7 @@ namespace Core.Helpers
                     IssueId = acmeIssues[0].Id,
                     ProjectId = acmeIssues[0].ProjectId, // Ensure ProjectId is set
                     UserId = acmeDev.Id,
+                    CompanyId = acmeCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-20).AddHours(9),
                     EndTime = DateTime.UtcNow.AddDays(-20).AddHours(13),
                     Description = "Initial database design",
@@ -422,6 +423,7 @@ namespace Core.Helpers
                     IssueId = acmeIssues[0].Id,
                     ProjectId = acmeIssues[0].ProjectId, // Ensure ProjectId is set
                     UserId = acmeDev.Id,
+                    CompanyId = acmeCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-19).AddHours(10),
                     EndTime = DateTime.UtcNow.AddDays(-19).AddHours(14),
                     Description = "Implementing migrations",
@@ -437,6 +439,7 @@ namespace Core.Helpers
                     IssueId = acmeIssues[1].Id,
                     ProjectId = acmeIssues[1].ProjectId, // Ensure ProjectId is set
                     UserId = acmeDev.Id,
+                    CompanyId = acmeCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-5).AddHours(9),
                     EndTime = DateTime.UtcNow.AddDays(-5).AddHours(17),
                     Description = "Product listing page implementation",
@@ -451,6 +454,7 @@ namespace Core.Helpers
                     IssueId = acmeIssues[1].Id,
                     ProjectId = acmeIssues[1].ProjectId, // Ensure ProjectId is set
                     UserId = acmeDev.Id,
+                    CompanyId = acmeCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-4).AddHours(10),
                     EndTime = DateTime.UtcNow.AddDays(-4).AddHours(15).AddMinutes(30),
                     Description = "Search functionality",
@@ -466,6 +470,7 @@ namespace Core.Helpers
                     IssueId = acmeIssues[2].Id,
                     ProjectId = acmeIssues[2].ProjectId, // Ensure ProjectId is set
                     UserId = acmeDev.Id,
+                    CompanyId = acmeCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-3).AddHours(14),
                     EndTime = DateTime.UtcNow.AddDays(-3).AddHours(18),
                     Description = "Investigating cart calculation bug",
@@ -486,6 +491,7 @@ namespace Core.Helpers
                     IssueId = techStartIssues[0].Id,
                     ProjectId = techStartIssues[0].ProjectId, // Ensure ProjectId is set
                     UserId = techStartDev.Id,
+                    CompanyId = techStartCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-25).AddHours(9),
                     EndTime = DateTime.UtcNow.AddDays(-25).AddHours(15),
                     Description = "Database schema setup",
@@ -501,6 +507,7 @@ namespace Core.Helpers
                     IssueId = techStartIssues[1].Id,
                     ProjectId = techStartIssues[1].ProjectId, // Ensure ProjectId is set
                     UserId = techStartDev.Id,
+                    CompanyId = techStartCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-6).AddHours(10),
                     EndTime = DateTime.UtcNow.AddDays(-6).AddHours(18),
                     Description = "CRUD operations for contacts",
@@ -515,6 +522,7 @@ namespace Core.Helpers
                     IssueId = techStartIssues[1].Id,
                     ProjectId = techStartIssues[1].ProjectId, // Ensure ProjectId is set
                     UserId = techStartDev.Id,
+                    CompanyId = techStartCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-5).AddHours(9),
                     EndTime = DateTime.UtcNow.AddDays(-5).AddHours(16).AddMinutes(45),
                     Description = "Contact search and filtering",
@@ -530,6 +538,7 @@ namespace Core.Helpers
                     IssueId = techStartIssues[3].Id,
                     ProjectId = techStartIssues[3].ProjectId, // Ensure ProjectId is set
                     UserId = techStartDev.Id,
+                    CompanyId = techStartCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-12).AddHours(10),
                     EndTime = DateTime.UtcNow.AddDays(-12).AddHours(17),
                     Description = "Analytics data model design",
@@ -544,6 +553,7 @@ namespace Core.Helpers
                     IssueId = techStartIssues[4].Id,
                     ProjectId = techStartIssues[4].ProjectId, // Ensure ProjectId is set
                     UserId = techStartDev.Id,
+                    CompanyId = techStartCompany.Id,
                     StartTime = DateTime.UtcNow.AddDays(-2).AddHours(9),
                     EndTime = DateTime.UtcNow.AddDays(-2).AddHours(17).AddMinutes(30),
                     Description = "Dashboard UI implementation",
