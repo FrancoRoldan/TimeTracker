@@ -10,7 +10,9 @@ namespace Core.Services.Companies
         Task<Result<CompanyResponse>> GetCompanyByIdAsync(int id);
         Task<Result<List<CompanyResponse>>> GetAllCompaniesAsync();
         Task<Result<List<CompanyUserResponse>>> GetCompanyUsersAsync(int companyId);
+        Task<Result<List<AvailableUserResponse>>> GetAvailableUsersAsync(int companyId);
         Task<Result> AddUserToCompanyAsync(int companyId, AddUserToCompanyRequest request);
+        Task<Result> CreateAndAddUserToCompanyAsync(int companyId, CreateAndAddUserToCompanyRequest request);
         Task<Result> RemoveUserFromCompanyAsync(int companyId, int userId);
         Task<Result<RegisterUserResponse>> RegisterUserAsync(RegisterUserRequest request);
         Task<Result<JoinCompanyResponse>> JoinCompanyAsync(JoinCompanyRequest request);

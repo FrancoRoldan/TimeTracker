@@ -44,7 +44,9 @@ import { User } from '../../auth/interfaces/user.interface';
 
         <span class="spacer"></span>
 
-        <p class="pt-3"> {{ user()?.nombre }}</p>
+        <p class="profile-avatar m-2 mr-2"> 
+            <strong>{{ user()?.name?.slice(0,2) | titlecase }}</strong>
+        </p>
 
         <button class="ml-2" mat-icon-button (click)="rightnav.toggle()">
             <mat-icon>settings</mat-icon>
@@ -68,7 +70,19 @@ import { User } from '../../auth/interfaces/user.interface';
 
     </mat-sidenav-container>
   `,
-    styles: ``,
+    styles: `
+    profile-avatar {
+        background: linear-gradient(135deg, var(--mat-sys-primary) 0%, var(--mat-sys-tertiary) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        box-shadow: 0 var(--app-hover-shadow-strength) var(--app-hover-shadow-color);
+        color: var(--mat-sys-on-primary);
+    }
+    `,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LayoutComponent {
@@ -84,6 +98,7 @@ export class LayoutComponent {
     constructor() {
         this.screenWidth.set(window.innerWidth);
         this.user.set(this.authService.user);
+        console.log('Current user in layout:', this.user());
         window.onresize = () => {
             this.screenWidth.set(window.innerWidth);
         };

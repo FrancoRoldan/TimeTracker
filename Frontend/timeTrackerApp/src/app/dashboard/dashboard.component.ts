@@ -22,7 +22,7 @@ import { User } from '../auth/interfaces/user.interface';
       <div class="header">
         <h1>Welcome to Time Tracker</h1>
         @if(user()) {
-          <p class="subtitle">Hello, {{ user()?.nombre }}!</p>
+          <p class="subtitle">Hello, {{ user()?.name }}!</p>
         }
       </div>
 

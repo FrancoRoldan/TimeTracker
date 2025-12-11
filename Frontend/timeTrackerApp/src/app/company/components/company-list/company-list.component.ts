@@ -332,6 +332,7 @@ export class CompanyListComponent implements OnInit {
 
   canManageCompany(): boolean {
     const currentRole = this.authService.getUserRole();
-    return currentRole === UserRole.Admin;
+    // Compare both string and enum value for compatibility
+    return currentRole === UserRole.Admin || currentRole === 'Admin' as any;
   }
 }

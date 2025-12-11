@@ -138,6 +138,60 @@ namespace Core.Services.Companies
             return Result<List<CompanyUserResponse>>.Success(companyUsers);
         }
 
+        public async Task<Result<List<AvailableUserResponse>>> GetAvailableUsersAsync(int companyId)
+        {
+            // Verify company exists
+            var company = await _unitOfWork.Companies.GetByIdAsync(companyId);
+            if (company == null)
+                return Result<List<AvailableUserResponse>>.Failure("Company not found");
+
+            // Get current user ID
+            var currentUserId = _tenantService.GetCurrentUserId();
+            if (currentUserId == null)
+                return Result<List<AvailableUserResponse>>.Failure("User not authenticated");
+
+            // Get all companies of the current user
+            var currentUserCompanyIds = await _unitOfWork.UserCompanies
+                .Query()
+                .Where(uc => uc.UserId == currentUserId.Value)
+                .Select(uc => uc.CompanyId)
+                .ToListAsync();
+
+            // Get all user IDs that are already in the target company
+            var existingUserIds = await _unitOfWork.UserCompanies
+                .Query()
+                .Where(uc => uc.CompanyId == companyId)
+                .Select(uc => uc.UserId)
+                .ToListAsync();
+
+            // Get all users that:
+            // 1. Are in at least one of the current user's companies
+            // 2. Are NOT already in the target company
+            // 3. Are NOT the current user themselves
+            var availableUserIds = await _unitOfWork.UserCompanies
+                .Query()
+                .Where(uc => currentUserCompanyIds.Contains(uc.CompanyId))
+                .Where(uc => !existingUserIds.Contains(uc.UserId))
+                .Where(uc => uc.UserId != currentUserId.Value)
+                .Select(uc => uc.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            // Get user details for the available users
+            var availableUsers = await _unitOfWork.Users
+                .Query()
+                .Where(u => availableUserIds.Contains(u.Id))
+                .Select(u => new AvailableUserResponse
+                {
+                    Id = u.Id,
+                    Nombre = u.Nombre,
+                    Email = u.Email
+                })
+                .ToListAsync();
+
+            return Result<List<AvailableUserResponse>>.Success(availableUsers);
+        }
+
         public async Task<Result> AddUserToCompanyAsync(int companyId, AddUserToCompanyRequest request)
         {
             try
@@ -179,6 +233,55 @@ namespace Core.Services.Companies
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 return Result.Failure($"Error adding user to company: {ex.Message}");
+            }
+        }
+
+        public async Task<Result> CreateAndAddUserToCompanyAsync(int companyId, CreateAndAddUserToCompanyRequest request)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                // Verify company exists
+                var company = await _unitOfWork.Companies.GetByIdAsync(companyId);
+                if (company == null)
+                    return Result.Failure("Company not found");
+
+                // Check if email already exists
+                var existingUser = await _unitOfWork.Users.FindAsync(u => u.Email == request.Email);
+                if (existingUser != null)
+                    return Result.Failure("A user with this email already exists");
+
+                // Create new user
+                var newUser = new User
+                {
+                    Nombre = request.Name,
+                    Email = request.Email,
+                    Password = _passwordHasher.HashPassword(request.Password)
+                };
+
+                await _unitOfWork.Users.AddAsync(newUser);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Add user to company
+                var userCompany = new UserCompany
+                {
+                    UserId = newUser.Id,
+                    CompanyId = companyId,
+                    Role = request.Role,
+                    HourlyRate = request.HourlyRate
+                };
+
+                await _unitOfWork.UserCompanies.AddAsync(userCompany);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return Result.Success();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return Result.Failure($"Error creating and adding user to company: {ex.Message}");
             }
         }
 

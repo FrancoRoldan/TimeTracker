@@ -111,6 +111,28 @@ import Swal from 'sweetalert2';
               </td>
             </ng-container>
 
+            <!-- Actions Column -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let user">
+                @if (canManageUsers()) {
+                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Actions">
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #menu="matMenu">
+                    <button mat-menu-item (click)="openEditUserModal(user)">
+                      <mat-icon>edit</mat-icon>
+                      <span>Edit</span>
+                    </button>
+                    <button mat-menu-item (click)="removeUser(user)" style="color: #f44336;">
+                      <mat-icon>delete</mat-icon>
+                      <span>Remove</span>
+                    </button>
+                  </mat-menu>
+                }
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           </table>
@@ -239,7 +261,7 @@ export class CompanyUsersComponent implements OnInit {
   public company = signal<Company | null>(null);
   public isLoading = signal<boolean>(false);
 
-  public displayedColumns: string[] = ['name', 'role', 'hourlyRate', 'joinedAt'];
+  public displayedColumns: string[] = ['name', 'role', 'hourlyRate', 'joinedAt', 'actions'];
 
   private companyId: number = 0;
 
@@ -330,29 +352,95 @@ export class CompanyUsersComponent implements OnInit {
     });
   }
 
+  openEditUserModal(user: CompanyUser): void {
+    const dialogRef = this.dialog.open(EditUserInCompanyModalComponent, {
+      width: '600px',
+      data: {
+        companyId: this.companyId,
+        userId: user.userId,
+        userName: user.userName,
+        currentRole: user.role,
+        currentHourlyRate: user.hourlyRate
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.loadUsers();
+      }
+    });
+  }
+
+  removeUser(user: CompanyUser): void {
+    Swal.fire({
+      title: 'Remove User?',
+      text: `Are you sure you want to remove ${user.userName} from this company?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#f44336',
+      cancelButtonColor: '#757575',
+      confirmButtonText: 'Yes, remove',
+      cancelButtonText: 'Cancel'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.companyService.removeUserFromCompany(this.companyId, user.userId).subscribe({
+          next: () => {
+            Swal.fire({
+              title: 'Removed!',
+              text: 'User has been removed from the company',
+              icon: 'success',
+              confirmButtonText: 'Ok'
+            });
+            this.loadUsers();
+          },
+          error: (error) => {
+            console.error('Error removing user:', error);
+            Swal.fire({
+              title: 'Error!',
+              text: 'Failed to remove user from company',
+              icon: 'error',
+              confirmButtonText: 'Ok'
+            });
+          }
+        });
+      }
+    });
+  }
+
   canAddUsers(): boolean {
     const currentRole = this.authService.getUserRole();
-    return currentRole === UserRole.Admin;
+    // Compare both string and enum value for compatibility
+    return currentRole === UserRole.Admin || currentRole === 'Admin' as any;
+  }
+
+  canManageUsers(): boolean {
+    const currentRole = this.authService.getUserRole();
+    // Compare both string and enum value for compatibility
+    return currentRole === UserRole.Admin || currentRole === 'Admin' as any;
   }
 
   getRoleLabel(role: UserRole): string {
-    const labels: Record<UserRole, string> = {
-      [UserRole.Admin]: 'Admin',
-      [UserRole.Manager]: 'Manager',
-      [UserRole.Developer]: 'Developer',
-      [UserRole.Viewer]: 'Viewer'
+    // Handle both string and enum values
+    const roleStr = typeof role === 'string' ? role : UserRole[role];
+    const labels: Record<string, string> = {
+      'Admin': 'Admin',
+      'Manager': 'Manager',
+      'Developer': 'Developer',
+      'Viewer': 'Viewer'
     };
-    return labels[role] || 'Unknown';
+    return labels[roleStr] || 'Unknown';
   }
 
   getRoleColor(role: UserRole): string {
-    const colors: Record<UserRole, string> = {
-      [UserRole.Admin]: '#f44336',
-      [UserRole.Manager]: '#ff9800',
-      [UserRole.Developer]: '#4caf50',
-      [UserRole.Viewer]: '#757575'
+    // Handle both string and enum values
+    const roleStr = typeof role === 'string' ? role : UserRole[role];
+    const colors: Record<string, string> = {
+      'Admin': '#f44336',
+      'Manager': '#ff9800',
+      'Developer': '#4caf50',
+      'Viewer': '#757575'
     };
-    return colors[role] || '#757575';
+    return colors[roleStr] || '#757575';
   }
 
   formatDate(dateString: string): string {

@@ -96,6 +96,25 @@ namespace TimeTracker.Controllers
             }
         }
 
+        [HttpGet("{id}/users/available")]
+        public async Task<IActionResult> GetAvailableUsers(int id)
+        {
+            try
+            {
+                var result = await _companyService.GetAvailableUsersAsync(id);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error });
+
+                return Ok(result.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available users");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
         [HttpPost("{id}/users")]
         public async Task<IActionResult> AddUserToCompany(int id, [FromBody] AddUserToCompanyRequest request)
         {
@@ -111,6 +130,25 @@ namespace TimeTracker.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error adding user to company");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        [HttpPost("{id}/users/create")]
+        public async Task<IActionResult> CreateAndAddUserToCompany(int id, [FromBody] CreateAndAddUserToCompanyRequest request)
+        {
+            try
+            {
+                var result = await _companyService.CreateAndAddUserToCompanyAsync(id, request);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error });
+
+                return Ok(new { message = "User created and added to company successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating and adding user to company");
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }

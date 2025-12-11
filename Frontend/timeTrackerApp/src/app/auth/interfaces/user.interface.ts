@@ -2,7 +2,7 @@ import { UserRole } from '../../core/enums';
 
 export interface User {
     id: number;
-    nombre: string;
+    name: string;
     email: string;
     createdAt: string;
     updatedAt: string;

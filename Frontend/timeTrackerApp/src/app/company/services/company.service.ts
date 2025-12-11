@@ -75,11 +75,28 @@ export class CompanyService {
   }
 
   /**
+   * Get users that are NOT in a specific company (available to add)
+   */
+  getAvailableUsers(companyId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.urlApi}/company/${companyId}/users/available`);
+  }
+
+  /**
    * Add a user to a company (Admin only)
    */
   addUserToCompany(data: AddUserToCompanyRequest): Observable<AddUserToCompanyResponse> {
     return this.http.post<AddUserToCompanyResponse>(
       `${this.urlApi}/company/${data.companyId}/users`,
+      data
+    );
+  }
+
+  /**
+   * Create a new user and add them to a company (Admin only)
+   */
+  createAndAddUserToCompany(companyId: number, data: { name: string; email: string; password: string; role: number; hourlyRate?: number }): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(
+      `${this.urlApi}/company/${companyId}/users/create`,
       data
     );
   }
