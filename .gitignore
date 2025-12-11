@@ -1,0 +1,9 @@
+﻿################################################################################
+# Este archivo .gitignore ha sido creado automáticamente por Microsoft(R) Visual Studio.
+################################################################################
+
+/Frontend/timeTrackerApp/obj/Debug/package.g.props
+/Frontend/timeTrackerApp/obj/Debug/timeTrackerApp.esproj.FileListAbsolute.txt
+/.vs/TimeTracker/v17/DocumentLayout.backup.json
+/.vs/TimeTracker/v17/DocumentLayout.json
+/.vs/TimeTracker/v17/.wsuo

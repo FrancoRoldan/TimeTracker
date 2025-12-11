@@ -20,6 +20,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPost("start")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> StartTimer([FromBody] StartTimerRequest request)
         {
             try
@@ -39,6 +40,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPost("stop")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> StopTimer()
         {
             try
@@ -79,6 +81,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPost("manual")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> AddManualEntry([FromBody] AddManualEntryRequest request)
         {
             try
@@ -140,6 +143,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPut("entries/{id}")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> UpdateEntry(int id, [FromBody] UpdateTimeEntryRequest request)
         {
             try
@@ -159,6 +163,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpDelete("entries/{id}")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> DeleteEntry(int id)
         {
             try

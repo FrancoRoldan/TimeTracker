@@ -21,6 +21,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> CreateProject([FromBody] CreateProjectRequest request)
         {
             try
@@ -78,6 +79,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> UpdateProject(int id, [FromBody] UpdateProjectRequest request)
         {
             try
@@ -97,6 +99,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> ChangeStatus(int id, [FromBody] ProjectStatus newStatus)
         {
             try
@@ -116,6 +119,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> DeleteProject(int id)
         {
             try

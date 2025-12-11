@@ -21,6 +21,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> CreateIssue([FromBody] CreateIssueRequest request)
         {
             try
@@ -120,6 +121,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> UpdateIssue(int id, [FromBody] UpdateIssueRequest request)
         {
             try
@@ -139,6 +141,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPut("{id}/assign")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> AssignIssue(int id, [FromBody] int userId)
         {
             try
@@ -158,6 +161,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPut("{id}/status")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> ChangeStatus(int id, [FromBody] IssueStatus newStatus)
         {
             try
@@ -177,6 +181,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> DeleteIssue(int id)
         {
             try
