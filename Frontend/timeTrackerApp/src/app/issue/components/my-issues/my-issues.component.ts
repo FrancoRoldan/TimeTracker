@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
@@ -335,9 +335,9 @@ import { ToastService } from '../../../shared/services/toast.service';
 })
 export class MyIssuesComponent implements OnInit {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private issueService = inject(IssueService);
   private dialog = inject(MatDialog);
-  private companyService = inject(CompanyService);
   private toastService = inject(ToastService);
 
   public myIssues = signal<Issue[]>([]);
@@ -346,6 +346,7 @@ export class MyIssuesComponent implements OnInit {
   public selectedStatus = signal<IssueStatus | null>(null);
   public selectedPriority = signal<IssuePriority | null>(null);
   public selectedCompany = signal<any>(null);
+  private projectId: number = 0;
 
   public IssueStatus = IssueStatus;
   public IssuePriority = IssuePriority;
@@ -372,17 +373,13 @@ export class MyIssuesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.companyService.selectedCompany$.subscribe(company => {
-      this.selectedCompany.set(company);
-      if (company) {
-        this.loadMyIssues(company.id);
-      }
-    });
+    this.projectId = Number(this.route.parent?.snapshot.paramMap.get('id'));
+    this.loadMyIssues();
   }
 
-  loadMyIssues(companyId: number): void {
+  loadMyIssues(): void {
     this.isLoading.set(true);
-    this.issueService.getMyIssues(companyId).subscribe({
+    this.issueService.getIssuesByProject(this.projectId).subscribe({
       next: (issues) => {
         this.myIssues.set(issues);
         this.isLoading.set(false);
@@ -401,7 +398,7 @@ export class MyIssuesComponent implements OnInit {
   }
 
   refreshIssues(): void {
-    this.loadMyIssues(this.selectedCompany().id);
+    this.loadMyIssues();
   }
 
   onSearchChange(event: Event): void {
@@ -437,7 +434,7 @@ export class MyIssuesComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.loadMyIssues(this.selectedCompany().id);
+        this.loadMyIssues();
       }
     });
   }
@@ -461,7 +458,7 @@ export class MyIssuesComponent implements OnInit {
     this.issueService.deleteIssue(issueId).subscribe({
       next: () => {
         this.toastService.showSuccess('Issue has been deleted.');
-        this.loadMyIssues(this.selectedCompany().id);
+        this.loadMyIssues();
       },
       error: (error) => {
         console.error('Error deleting issue:', error);

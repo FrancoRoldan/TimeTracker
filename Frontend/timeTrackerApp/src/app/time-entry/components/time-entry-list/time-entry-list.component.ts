@@ -385,7 +385,7 @@ export class TimeEntryListComponent implements OnInit {
   public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'actions'];
 
   public totalHours = computed(() => {
-    return this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0).toFixed(2);
+    return this.timeEntries().reduce((sum, entry) => sum + ((entry.durationMinutes ?? 0) / 60), 0).toFixed(2);
   });
 
   public averageHoursPerDay = computed(() => {
@@ -393,7 +393,7 @@ export class TimeEntryListComponent implements OnInit {
     if (entries.length === 0) return '0.00';
 
     const uniqueDates = new Set(entries.map(e => this.formatDate(e.startTime)));
-    const total = entries.reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
+    const total = entries.reduce((sum, entry) => sum + ((entry.durationMinutes ?? 0)/60), 0);
     return (total / uniqueDates.size).toFixed(2);
   });
 

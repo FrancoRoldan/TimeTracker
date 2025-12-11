@@ -209,7 +209,7 @@ import { ToastService } from '../../../shared/services/toast.service';
                   <ng-container matColumnDef="hours">
                     <th mat-header-cell *matHeaderCellDef>Horas</th>
                     <td mat-cell *matCellDef="let entry">
-                      <span class="hours-badge">{{ (entry.durationMinutes ?? 0).toFixed(2) }}h</span>
+                      <span class="hours-badge">{{ ((entry.durationMinutes ?? 0)/60).toFixed(2) }}h</span>
                     </td>
                   </ng-container>
 
@@ -500,7 +500,7 @@ export class IssueDetailComponent implements OnInit {
   private issueId: number = 0;
 
   public totalHours(): number {
-    return this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
+    return this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0)/60, 0);
   }
 
   ngOnInit(): void {
@@ -639,6 +639,6 @@ export class IssueDetailComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/issues']);
+    this.router.navigate(['/projects']);
   }
 }

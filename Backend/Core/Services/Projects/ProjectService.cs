@@ -26,6 +26,37 @@ namespace Core.Services.Projects
             _createValidator = createValidator;
         }
 
+        /// <summary>
+        /// Validates that the current user has access to the specified project
+        /// </summary>
+        private async Task<Result<int>> ValidateProjectOwnershipAsync(int projectId)
+        {
+            var currentUserId = _tenantService.GetCurrentUserId();
+            if (currentUserId == null)
+                return Result<int>.Failure("User not authenticated");
+
+            // Get companies the user belongs to
+            var userCompanyIds = await _unitOfWork.UserCompanies
+                .Query()
+                .Where(uc => uc.UserId == currentUserId.Value)
+                .Select(uc => uc.CompanyId)
+                .ToListAsync();
+
+            if (!userCompanyIds.Any())
+                return Result<int>.Failure("User is not associated with any company");
+
+            // Verify project belongs to one of user's companies
+            var project = await _unitOfWork.Projects
+                .Query()
+                .Where(p => p.Id == projectId && userCompanyIds.Contains(p.CompanyId))
+                .FirstOrDefaultAsync();
+
+            if (project == null)
+                return Result<int>.Failure("Project not found or you don't have access");
+
+            return Result<int>.Success(project.CompanyId);
+        }
+
         public async Task<Result<ProjectResponse>> CreateProjectAsync(CreateProjectRequest request)
         {
             var validationResult = await _createValidator.ValidateAsync(request);
@@ -61,6 +92,11 @@ namespace Core.Services.Projects
 
         public async Task<Result<ProjectResponse>> GetProjectByIdAsync(int id)
         {
+            // Validate ownership
+            var validationResult = await ValidateProjectOwnershipAsync(id);
+            if (!validationResult.IsSuccess)
+                return Result<ProjectResponse>.Failure(validationResult.Error);
+
             var project = await _unitOfWork.Projects
                 .Query()
                 .Include(p => p.Company)
@@ -101,7 +137,7 @@ namespace Core.Services.Projects
                     return Result<List<ProjectResponse>>.Failure("User not authenticated");
                 }
 
-                // Obtener compañías del usuario
+                // Obtener compaï¿½ï¿½as del usuario
                 var userCompanyIds = await _unitOfWork.UserCompanies
                     .Query()
                     .Where(uc => uc.UserId == currentUserId.Value)
@@ -113,7 +149,7 @@ namespace Core.Services.Projects
                     return Result<List<ProjectResponse>>.Success(new List<ProjectResponse>());
                 }
 
-                // Obtener proyectos de esas compañías
+                // Obtener proyectos de esas compaï¿½ï¿½as
                 projects = await _unitOfWork.Projects
                     .Query()
                     .Where(p => userCompanyIds.Contains(p.CompanyId))
@@ -137,6 +173,11 @@ namespace Core.Services.Projects
 
         public async Task<Result<ProjectResponse>> UpdateProjectAsync(int id, UpdateProjectRequest request)
         {
+            // Validate ownership
+            var validationResult = await ValidateProjectOwnershipAsync(id);
+            if (!validationResult.IsSuccess)
+                return Result<ProjectResponse>.Failure(validationResult.Error);
+
             var project = await _unitOfWork.Projects.GetByIdAsync(id);
             if (project == null)
                 return Result<ProjectResponse>.Failure("Project not found");
@@ -161,6 +202,11 @@ namespace Core.Services.Projects
 
         public async Task<Result> DeleteProjectAsync(int id)
         {
+            // Validate ownership
+            var validationResult = await ValidateProjectOwnershipAsync(id);
+            if (!validationResult.IsSuccess)
+                return Result.Failure(validationResult.Error);
+
             var project = await _unitOfWork.Projects.GetByIdAsync(id);
             if (project == null)
                 return Result.Failure("Project not found");
@@ -173,6 +219,11 @@ namespace Core.Services.Projects
 
         public async Task<Result> ChangeProjectStatusAsync(int id, ProjectStatus newStatus)
         {
+            // Validate ownership
+            var validationResult = await ValidateProjectOwnershipAsync(id);
+            if (!validationResult.IsSuccess)
+                return Result.Failure(validationResult.Error);
+
             var project = await _unitOfWork.Projects.GetByIdAsync(id);
             if (project == null)
                 return Result.Failure("Project not found");

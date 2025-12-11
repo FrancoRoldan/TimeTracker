@@ -97,6 +97,25 @@ namespace Core.Services.Issues
 
         public async Task<Result<List<IssueResponse>>> GetIssuesByProjectAsync(int projectId)
         {
+            // Validate user has access to the project
+            var currentUserId = _tenantService.GetCurrentUserId();
+            if (currentUserId == null)
+                return Result<List<IssueResponse>>.Failure("User not authenticated");
+
+            var userCompanyIds = await _unitOfWork.UserCompanies
+                .Query()
+                .Where(uc => uc.UserId == currentUserId.Value)
+                .Select(uc => uc.CompanyId)
+                .ToListAsync();
+
+            var project = await _unitOfWork.Projects
+                .Query()
+                .Where(p => p.Id == projectId && userCompanyIds.Contains(p.CompanyId))
+                .FirstOrDefaultAsync();
+
+            if (project == null)
+                return Result<List<IssueResponse>>.Failure("Project not found or you don't have access");
+
             var issues = await _unitOfWork.Issues
                 .Query()
                 .Where(i => i.ProjectId == projectId)
@@ -171,7 +190,7 @@ namespace Core.Services.Issues
                 if (userId == null)
                     return Result<List<IssueResponse>>.Failure("User not authenticated");
 
-                // Obtener compañías del usuario
+                // Obtener compaï¿½ï¿½as del usuario
                 var userCompanies = await _unitOfWork.UserCompanies
                     .Query()
                     .Where(uc => uc.UserId == userId)
@@ -184,7 +203,7 @@ namespace Core.Services.Issues
                     .Select(uc => uc.CompanyId)
                     .ToList();
 
-                // Obtener proyectos de esas compañías
+                // Obtener proyectos de esas compaï¿½ï¿½as
                 projectIds = await _unitOfWork.Projects
                     .Query()
                     .Where(p => companyIds.Contains(p.CompanyId))

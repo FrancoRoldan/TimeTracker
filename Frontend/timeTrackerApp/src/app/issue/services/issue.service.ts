@@ -111,6 +111,13 @@ export class IssueService {
     );
   }
 
+  // Get issues by project
+  getIssuesByProject(projectId: number): Observable<Issue[]> {
+    return this.http.get<Issue[]>(`${this.baseUrl}/project/${projectId}`).pipe(
+      tap(issues => this.issuesSubject.next(issues))
+    );
+  }
+
   // Update issue status (for Kanban board)
   updateIssueStatus(id: number, status: number): Observable<Issue> {
     return this.updateIssue(id, { status: status });
