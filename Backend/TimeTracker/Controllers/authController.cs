@@ -149,7 +149,7 @@ namespace TimeTracker.Controllers
         }
 
         [HttpPost("refresh")]
-        public IActionResult RefreshToken()
+        public async Task<IActionResult> RefreshToken()
         {
             try
             {
@@ -159,7 +159,27 @@ namespace TimeTracker.Controllers
                 if (string.IsNullOrEmpty(token))
                     return Unauthorized();
 
-                string newToken = _jwtService.RefreshToken(token);
+                // Get user from token
+                var user = _jwtService.getUserFromToken(token);
+                if (user == null)
+                    return Unauthorized();
+
+                // Get current companies from database (this will include any newly created companies)
+                var companies = await _userService.GetUserCompaniesAsync(user.Id);
+
+                if (companies == null || companies.Count == 0)
+                    return Unauthorized(new { error = "User has no associated companies" });
+
+                // Use the first company as default (or keep the one from the old token if it still exists)
+                var oldPrincipal = _jwtService.ValidateToken(token, validateLifetime: false);
+                var oldCompanyIdStr = oldPrincipal.FindFirst("CompanyId")?.Value;
+                var oldCompanyId = string.IsNullOrEmpty(oldCompanyIdStr) ? 0 : int.Parse(oldCompanyIdStr);
+
+                var selectedCompany = companies.FirstOrDefault(c => c.CompanyId == oldCompanyId) ?? companies.First();
+                var companyIds = companies.Select(c => c.CompanyId).ToList();
+
+                // Generate new token with updated company list
+                string newToken = _jwtService.GenerateToken(user, companyIds, selectedCompany.CompanyId, selectedCompany.Role);
 
                 if (string.IsNullOrEmpty(newToken))
                     return Unauthorized();
@@ -171,7 +191,7 @@ namespace TimeTracker.Controllers
                 _logger.LogError(ex.Message);
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
-            
+
         }
     }
 }

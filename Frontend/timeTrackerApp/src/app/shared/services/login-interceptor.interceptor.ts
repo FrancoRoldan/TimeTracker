@@ -33,7 +33,7 @@ export function LoginInterceptor(req: HttpRequest<unknown>, next: HttpHandlerFn)
   if (companyId !== null) {
     headers = headers.set('X-Company-Id', companyId.toString());
   }
-
+  
   const reqWithHeader = req.clone({ headers });
 
   return next(reqWithHeader).pipe(

@@ -10,6 +10,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CompanyService } from '../../services/company.service';
 import { Company } from '../../interfaces';
 import Swal from 'sweetalert2';
+import { AuthService } from '../../../auth/services/auth.service';
 
 @Component({
   selector: 'app-company-modal',
@@ -121,6 +122,8 @@ export class CompanyModalComponent {
   private fb = inject(FormBuilder);
   private companyService = inject(CompanyService);
   private dialogRef = inject(MatDialogRef<CompanyModalComponent>);
+  private authService = inject(AuthService);
+
   public data = inject<Company | null>(MAT_DIALOG_DATA);
 
   public isLoading = signal<boolean>(false);
@@ -158,6 +161,7 @@ export class CompanyModalComponent {
     request$.subscribe({
       next: (company) => {
         this.isLoading.set(false);
+        this.authService.refreshToken().subscribe(() => {});
         const action = this.data ? 'updated' : 'created';
         Swal.fire({
           title: 'Success!',

@@ -38,6 +38,18 @@ namespace Core.Services
             return (user, companies);
         }
 
+        public async Task<List<UserCompany>> GetUserCompaniesAsync(int userId)
+        {
+            // Get user's companies with company details
+            var companies = await _unitOfWork.UserCompanies
+                .Query()
+                .Include(uc => uc.Company)
+                .Where(uc => uc.UserId == userId)
+                .ToListAsync();
+
+            return companies;
+        }
+
         // RegisterAsync and GetAllAsync removed - users are created via admin/seeder only
     }
 }
