@@ -12,7 +12,10 @@ import { Project } from '../../interfaces';
 import { ProjectStatus } from '../../../core/enums';
 import { ProjectModalComponent } from '../project-modal/project-modal.component';
 import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
-import Swal from 'sweetalert2';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-project-detail',
@@ -302,6 +305,7 @@ export class ProjectDetailComponent implements OnInit {
   private router = inject(Router);
   private projectService = inject(ProjectService);
   private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public project = signal<Project | null>(null);
   public isLoading = signal<boolean>(false);
@@ -342,17 +346,15 @@ export class ProjectDetailComponent implements OnInit {
   }
 
   confirmDelete(): void {
-    Swal.fire({
-      title: 'Delete Project?',
-      text: `Are you sure you want to delete "${this.project()!.name}"? This action cannot be undone.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f44336',
-      cancelButtonColor: '#757575',
-      confirmButtonText: 'Yes, delete it',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Project?',
+        message: `Are you sure you want to delete "${this.project()!.name}"? This action cannot be undone.`
+      } as ConfirmDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
         this.deleteProject();
       }
     });
@@ -361,22 +363,16 @@ export class ProjectDetailComponent implements OnInit {
   deleteProject(): void {
     this.projectService.deleteProject(this.projectId).subscribe({
       next: () => {
-        Swal.fire({
-          title: 'Deleted!',
-          text: 'Project has been deleted.',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess('Project has been deleted.');
         this.router.navigate(['/projects']);
       },
       error: (error) => {
         console.error('Error deleting project:', error);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to delete project. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to delete project. Please try again.')
+          } as ErrorDialogData
         });
       }
     });

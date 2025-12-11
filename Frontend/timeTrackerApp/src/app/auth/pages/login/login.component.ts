@@ -9,7 +9,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { LoginRequest } from '../../interfaces/login-request.interface';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
@@ -60,6 +62,7 @@ export class LoginComponent {
   private router: Router = inject(Router);
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private dialog = inject(MatDialog);
   public isLoading = signal<boolean>(false);
   public hide = signal(true);
 
@@ -89,15 +92,12 @@ export class LoginComponent {
           this.isLoading.set(false);
         },
         error: (message:HttpErrorResponse) => {
-          let mensaje: string = 'Error de comunicación.';
-          if (typeof message.error ===  "string" ) mensaje = message.error;
-
           this.isLoading.set(false);
-          Swal.fire({
-            title: 'Error!',
-            text: mensaje,
-            icon: 'error',
-            confirmButtonText: 'Ok'
+          this.dialog.open(ErrorDialogComponent, {
+            data: {
+              title: 'Error!',
+              message: extractErrorMessage(message, 'Error de comunicación.')
+            } as ErrorDialogData
           });
         }
       }

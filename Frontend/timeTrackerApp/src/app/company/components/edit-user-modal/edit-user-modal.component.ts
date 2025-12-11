@@ -9,7 +9,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { CompanyService } from '../../services/company.service';
 import { UserRole } from '../../../core/enums';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 export interface EditUserDialogData {
   companyId: number;
@@ -117,6 +120,8 @@ export class EditUserInCompanyModalComponent {
   private companyService = inject(CompanyService);
   private dialogRef = inject(MatDialogRef<EditUserInCompanyModalComponent>);
   public data = inject<EditUserDialogData>(MAT_DIALOG_DATA);
+  private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public isLoading = signal<boolean>(false);
   public UserRole = UserRole; // Para usar en el template
@@ -141,33 +146,18 @@ export class EditUserInCompanyModalComponent {
     this.companyService.updateUserInCompany(this.data.companyId, this.data.userId, formData).subscribe({
       next: () => {
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Success!',
-          text: `User "${this.data.userName}" updated successfully`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`User "${this.data.userName}" updated successfully`);
         this.dialogRef.close(true);
       },
       error: (error) => {
         console.error('Error updating user:', error);
         this.isLoading.set(false);
 
-        let errorMessage = 'Failed to update user. Please try again.';
-        if (error.error?.error) {
-          errorMessage = error.error.error;
-        } else if (error.error?.errors && Array.isArray(error.error.errors)) {
-          errorMessage = error.error.errors.join(', ');
-        } else if (typeof error.error === 'string') {
-          errorMessage = error.error;
-        }
-
-        Swal.fire({
-          title: 'Error!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to update user. Please try again.')
+          } as ErrorDialogData
         });
       }
     });

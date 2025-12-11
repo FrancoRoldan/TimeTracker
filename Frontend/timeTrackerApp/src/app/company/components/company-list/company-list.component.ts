@@ -11,7 +11,10 @@ import { Company } from '../../interfaces';
 import { CompanyModalComponent } from '../company-modal/company-modal.component';
 import { AuthService } from '../../../auth/services/auth.service';
 import { UserRole } from '../../../core/enums';
-import Swal from 'sweetalert2';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-company-list',
@@ -206,6 +209,7 @@ export class CompanyListComponent implements OnInit {
   private authService = inject(AuthService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private toastService = inject(ToastService);
 
   public companies = signal<Company[]>([]);
   public isLoading = signal<boolean>(false);
@@ -225,11 +229,11 @@ export class CompanyListComponent implements OnInit {
       error: (error) => {
         console.error('Error loading companies:', error);
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load companies. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load companies. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -250,13 +254,7 @@ export class CompanyListComponent implements OnInit {
 
   selectCompany(company: Company): void {
     this.companyService.selectCompany(company);
-    Swal.fire({
-      title: 'Success!',
-      text: `${company.name} selected as active company`,
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false
-    });
+    this.toastService.showSuccess(`${company.name} selected as active company`);
   }
 
   viewUsers(company: Company): void {
@@ -286,43 +284,28 @@ export class CompanyListComponent implements OnInit {
   }
 
   deleteCompany(company: Company): void {
-    Swal.fire({
-      title: 'Delete Company?',
-      text: `Are you sure you want to delete "${company.name}"? This action cannot be undone.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f44336',
-      cancelButtonColor: '#757575',
-      confirmButtonText: 'Yes, delete it',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Company?',
+        message: `Are you sure you want to delete "${company.name}"? This action cannot be undone.`
+      } as ConfirmDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
         this.companyService.deleteCompany(company.id).subscribe({
           next: () => {
-            Swal.fire({
-              title: 'Deleted!',
-              text: `Company "${company.name}" has been deleted.`,
-              icon: 'success',
-              timer: 2000,
-              showConfirmButton: false
-            });
+            this.toastService.showSuccess(`Company "${company.name}" has been deleted.`);
             this.loadCompanies();
           },
           error: (error) => {
             console.error('Error deleting company:', error);
 
-            let errorMessage = 'Failed to delete company. Please try again.';
-            if (error.error?.error) {
-              errorMessage = error.error.error;
-            } else if (typeof error.error === 'string') {
-              errorMessage = error.error;
-            }
-
-            Swal.fire({
-              title: 'Error!',
-              text: errorMessage,
-              icon: 'error',
-              confirmButtonText: 'Ok'
+            this.dialog.open(ErrorDialogComponent, {
+              data: {
+                title: 'Error!',
+                message: extractErrorMessage(error, 'Failed to delete company. Please try again.')
+              } as ErrorDialogData
             });
           }
         });

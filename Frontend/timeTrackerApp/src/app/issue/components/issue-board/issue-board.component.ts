@@ -13,8 +13,9 @@ import { Issue } from '../../interfaces';
 import { IssueStatus, IssueType, IssuePriority } from '../../../core/enums';
 import { IssueModalComponent } from '../issue-modal/issue-modal.component';
 import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
-import Swal from 'sweetalert2';
 import { CompanyService } from '../../../company/services/company.service';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 
 @Component({
   selector: 'app-issue-board',
@@ -535,11 +536,11 @@ export class IssueBoardComponent implements OnInit {
       error: (error) => {
         console.error('Error loading issues:', error);
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load issues. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load issues. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -571,11 +572,11 @@ export class IssueBoardComponent implements OnInit {
         },
         error: (error) => {
           console.error('Error updating issue status:', error);
-          Swal.fire({
-            title: 'Error!',
-            text: 'Failed to update issue status. Please try again.',
-            icon: 'error',
-            confirmButtonText: 'Ok'
+          this.dialog.open(ErrorDialogComponent, {
+            data: {
+              title: 'Error!',
+              message: extractErrorMessage(error, 'Failed to update issue status. Please try again.')
+            } as ErrorDialogData
           });
         }
       });

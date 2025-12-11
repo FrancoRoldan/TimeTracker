@@ -10,7 +10,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { CompanyService } from '../../services/company.service';
 import { UserRole } from '../../../core/enums';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-add-user-modal',
@@ -229,7 +232,9 @@ export class AddUserModalComponent implements OnInit {
   private fb = inject(FormBuilder);
   private companyService = inject(CompanyService);
   private dialogRef = inject(MatDialogRef<AddUserModalComponent>);
+  private dialog = inject(MatDialog);
   public data = inject<{ companyId: number }>(MAT_DIALOG_DATA);
+  private toastService = inject(ToastService);
 
   public isLoading = signal<boolean>(false);
   public loadingUsers = signal<boolean>(false);
@@ -266,11 +271,11 @@ export class AddUserModalComponent implements OnInit {
       error: (error) => {
         console.error('Error loading available users:', error);
         this.loadingUsers.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load available users',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load available users')
+          } as ErrorDialogData
         });
       }
     });
@@ -311,31 +316,18 @@ export class AddUserModalComponent implements OnInit {
     this.companyService.createAndAddUserToCompany(this.data.companyId, formData).subscribe({
       next: (response) => {
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Success!',
-          text: `User ${formData.name} created and added to company successfully`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`User ${formData.name} created and added to company successfully`);
         this.dialogRef.close(response);
       },
       error: (error) => {
         console.error('Error creating user:', error);
         this.isLoading.set(false);
 
-        let errorMessage = 'Failed to create user. Please try again.';
-        if (error.error && typeof error.error === 'object' && error.error.error) {
-          errorMessage = error.error.error;
-        } else if (error.error && typeof error.error === 'string') {
-          errorMessage = error.error;
-        }
-
-        Swal.fire({
-          title: 'Error!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to create user. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -359,31 +351,18 @@ export class AddUserModalComponent implements OnInit {
       next: (response) => {
         this.isLoading.set(false);
         const userName = this.availableUsers().find(u => u.id === formData.userId)?.nombre || 'User';
-        Swal.fire({
-          title: 'Success!',
-          text: `${userName} added to company successfully`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`${userName} added to company successfully`);
         this.dialogRef.close(response);
       },
       error: (error) => {
         console.error('Error adding user to company:', error);
         this.isLoading.set(false);
 
-        let errorMessage = 'Failed to add user to company. Please try again.';
-        if (error.error && typeof error.error === 'string') {
-          errorMessage = error.error;
-        } else if (error.error?.error) {
-          errorMessage = error.error.error;
-        }
-
-        Swal.fire({
-          title: 'Error!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to add user to company. Please try again.')
+          } as ErrorDialogData
         });
       }
     });

@@ -18,7 +18,9 @@ import { Project } from '../../../project/interfaces/project.interface';
 import { LineChartComponent } from '../../shared/line-chart/line-chart.component';
 import { BarChartComponent } from '../../shared/bar-chart/bar-chart.component';
 import { PieChartComponent } from '../../shared/pie-chart/pie-chart.component';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 
 @Component({
   selector: 'app-project-report',
@@ -464,6 +466,7 @@ export class ProjectReportComponent implements OnInit {
   private reportsService = inject(ReportsService);
   private projectService = inject(ProjectService);
   private companyService = inject(CompanyService);
+  private dialog = inject(MatDialog);
 
   public report = signal<ProjectReport | null>(null);
   public projects = signal<Project[]>([]);
@@ -541,11 +544,11 @@ export class ProjectReportComponent implements OnInit {
           },
           error: (error) => {
             console.error('Error loading projects:', error);
-            Swal.fire({
-              title: 'Error!',
-              text: 'Failed to load projects. Please select a company first.',
-              icon: 'error',
-              confirmButtonText: 'Ok'
+            this.dialog.open(ErrorDialogComponent, {
+              data: {
+                title: 'Error!',
+                message: extractErrorMessage(error, 'Failed to load projects. Please select a company first.')
+              } as ErrorDialogData
             });
           }
         });
@@ -569,11 +572,11 @@ export class ProjectReportComponent implements OnInit {
         console.error('Error loading project report:', error);
         this.isLoading.set(false);
 
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load project report. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load project report. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -689,12 +692,11 @@ export class ProjectReportComponent implements OnInit {
     link.click();
     document.body.removeChild(link);
 
-    Swal.fire({
-      title: 'Success!',
-      text: 'Report exported successfully',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false
+    this.dialog.open(ErrorDialogComponent, {
+      data: {
+        title: 'Success!',
+        message: 'Report exported successfully'
+      } as ErrorDialogData
     });
   }
 

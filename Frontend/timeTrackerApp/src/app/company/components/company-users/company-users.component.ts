@@ -15,7 +15,10 @@ import { CompanyUser, Company } from '../../interfaces';
 import { UserRole } from '../../../core/enums';
 import { AddUserModalComponent } from '../add-user-modal/add-user-modal.component';
 import { EditUserInCompanyModalComponent } from '../edit-user-modal/edit-user-modal.component';
-import Swal from 'sweetalert2';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-company-users',
@@ -256,6 +259,7 @@ export class CompanyUsersComponent implements OnInit {
   private companyService = inject(CompanyService);
   private authService = inject(AuthService);
   private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public users = signal<CompanyUser[]>([]);
   public company = signal<Company | null>(null);
@@ -271,12 +275,13 @@ export class CompanyUsersComponent implements OnInit {
 
     if (!idParam) {
       console.error('No company ID in route parameters');
-      Swal.fire({
-        title: 'Error!',
-        text: 'Invalid company ID',
-        icon: 'error',
-        confirmButtonText: 'Ok'
-      }).then(() => {
+      const dialogRef = this.dialog.open(ErrorDialogComponent, {
+        data: {
+          title: 'Error!',
+          message: 'Invalid company ID'
+        } as ErrorDialogData
+      });
+      dialogRef.afterClosed().subscribe(() => {
         this.router.navigate(['/companies']);
       });
       return;
@@ -287,12 +292,13 @@ export class CompanyUsersComponent implements OnInit {
 
     if (isNaN(this.companyId) || this.companyId <= 0) {
       console.error('Invalid company ID:', this.companyId);
-      Swal.fire({
-        title: 'Error!',
-        text: 'Invalid company ID',
-        icon: 'error',
-        confirmButtonText: 'Ok'
-      }).then(() => {
+      const dialogRef = this.dialog.open(ErrorDialogComponent, {
+        data: {
+          title: 'Error!',
+          message: 'Invalid company ID'
+        } as ErrorDialogData
+      });
+      dialogRef.afterClosed().subscribe(() => {
         this.router.navigate(['/companies']);
       });
       return;
@@ -309,11 +315,11 @@ export class CompanyUsersComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading company:', error);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load company details',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load company details')
+          } as ErrorDialogData
         });
       }
     });
@@ -329,11 +335,11 @@ export class CompanyUsersComponent implements OnInit {
       error: (error) => {
         console.error('Error loading users:', error);
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load company users',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load company users')
+          } as ErrorDialogData
         });
       }
     });
@@ -372,34 +378,27 @@ export class CompanyUsersComponent implements OnInit {
   }
 
   removeUser(user: CompanyUser): void {
-    Swal.fire({
-      title: 'Remove User?',
-      text: `Are you sure you want to remove ${user.userName} from this company?`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f44336',
-      cancelButtonColor: '#757575',
-      confirmButtonText: 'Yes, remove',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Remove User?',
+        message: `Are you sure you want to remove ${user.userName} from this company?`
+      } as ConfirmDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
         this.companyService.removeUserFromCompany(this.companyId, user.userId).subscribe({
           next: () => {
-            Swal.fire({
-              title: 'Removed!',
-              text: 'User has been removed from the company',
-              icon: 'success',
-              confirmButtonText: 'Ok'
-            });
+            this.toastService.showSuccess('User has been removed from the company');
             this.loadUsers();
           },
           error: (error) => {
             console.error('Error removing user:', error);
-            Swal.fire({
-              title: 'Error!',
-              text: 'Failed to remove user from company',
-              icon: 'error',
-              confirmButtonText: 'Ok'
+            this.dialog.open(ErrorDialogComponent, {
+              data: {
+                title: 'Error!',
+                message: extractErrorMessage(error, 'Failed to remove user from company')
+              } as ErrorDialogData
             });
           }
         });

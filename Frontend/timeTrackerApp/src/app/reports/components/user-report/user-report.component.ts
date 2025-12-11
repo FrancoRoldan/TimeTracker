@@ -13,7 +13,9 @@ import { ReportsService } from '../../services/reports.service';
 import { UserReport } from '../../interfaces';
 import { LineChartComponent } from '../../shared/line-chart/line-chart.component';
 import { DoughnutChartComponent } from '../../shared/doughnut-chart/doughnut-chart.component';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 
 @Component({
   selector: 'app-user-report',
@@ -418,6 +420,7 @@ import Swal from 'sweetalert2';
 })
 export class UserReportComponent implements OnInit {
   private reportsService = inject(ReportsService);
+  private dialog = inject(MatDialog);
 
   public report = signal<UserReport | null>(null);
   public isLoading = signal<boolean>(false);
@@ -474,11 +477,11 @@ export class UserReportComponent implements OnInit {
         console.error('Error loading user report:', error);
         this.isLoading.set(false);
 
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load report. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load report. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -572,12 +575,11 @@ export class UserReportComponent implements OnInit {
     link.click();
     document.body.removeChild(link);
 
-    Swal.fire({
-      title: 'Success!',
-      text: 'Report exported successfully',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false
+    this.dialog.open(ErrorDialogComponent, {
+      data: {
+        title: 'Success!',
+        message: 'Report exported successfully'
+      } as ErrorDialogData
     });
   }
 

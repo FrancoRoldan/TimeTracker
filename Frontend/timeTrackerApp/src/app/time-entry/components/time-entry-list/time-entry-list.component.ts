@@ -12,8 +12,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { TimeEntryService } from '../../services/time-entry.service';
 import { TimeEntry } from '../../interfaces';
 import { TimeEntryModalComponent } from '../time-entry-modal/time-entry-modal.component';
-import Swal from 'sweetalert2';
 import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-time-entry-list',
@@ -372,6 +375,7 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
 export class TimeEntryListComponent implements OnInit {
   private timeEntryService = inject(TimeEntryService);
   private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public timeEntries = signal<TimeEntry[]>([]);
   public isLoading = signal<boolean>(false);
@@ -416,11 +420,11 @@ export class TimeEntryListComponent implements OnInit {
       error: (error: any) => {
         console.error('Error loading time entries:', error);
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load time entries. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load time entries. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -469,17 +473,15 @@ export class TimeEntryListComponent implements OnInit {
   }
 
   confirmDelete(entry: TimeEntry): void {
-    Swal.fire({
-      title: 'Delete Time Entry?',
-      text: `Are you sure you want to delete this entry? This action cannot be undone.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f44336',
-      cancelButtonColor: '#757575',
-      confirmButtonText: 'Yes, delete it',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Time Entry?',
+        message: 'Are you sure you want to delete this entry? This action cannot be undone.'
+      } as ConfirmDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
         this.deleteEntry(entry.id);
       }
     });
@@ -488,22 +490,16 @@ export class TimeEntryListComponent implements OnInit {
   deleteEntry(id: number): void {
     this.timeEntryService.deleteTimeEntry(id).subscribe({
       next: () => {
-        Swal.fire({
-          title: 'Deleted!',
-          text: 'Time entry has been deleted.',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess('Time entry has been deleted.');
         this.loadTimeEntries();
       },
       error: (error) => {
         console.error('Error deleting time entry:', error);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to delete time entry. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to delete time entry. Please try again.')
+          } as ErrorDialogData
         });
       }
     });

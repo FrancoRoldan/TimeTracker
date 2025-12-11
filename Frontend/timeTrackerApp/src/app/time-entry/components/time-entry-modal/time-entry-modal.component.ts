@@ -16,8 +16,11 @@ import { ProjectService } from '../../../project/services/project.service';
 import { TimeEntry } from '../../interfaces';
 import { Issue } from '../../../issue/interfaces';
 import { Project } from '../../../project/interfaces';
-import Swal from 'sweetalert2';
 import { CompanyService } from '../../../company/services/company.service';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-time-entry-modal',
@@ -195,10 +198,11 @@ export class TimeEntryModalComponent implements OnInit {
   private issueService = inject(IssueService);
   private projectService = inject(ProjectService);
   private companyService = inject(CompanyService);
-
+  private dialog = inject(MatDialog);
   private dialogRef = inject(MatDialogRef<TimeEntryModalComponent>);
   public data = inject<{ entry: TimeEntry | null }>(MAT_DIALOG_DATA);
   public selectedCompany = signal<any>(null);
+  private toastService = inject(ToastService);
   public isLoading = signal<boolean>(false);
   public isEditMode: boolean = false;
   public availableIssues = signal<Issue[]>([]);
@@ -346,31 +350,18 @@ export class TimeEntryModalComponent implements OnInit {
     request$.subscribe({
       next: (entry) => {
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Success!',
-          text: `Time entry ${this.isEditMode ? 'updated' : 'created'} successfully`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`Time entry ${this.isEditMode ? 'updated' : 'created'} successfully`);
         this.dialogRef.close(entry);
       },
       error: (error) => {
         console.error('Error saving time entry:', error);
         this.isLoading.set(false);
 
-        let errorMessage = `Failed to ${this.isEditMode ? 'update' : 'create'} time entry. Please try again.`;
-        if (error.error && typeof error.error === 'string') {
-          errorMessage = error.error;
-        } else if (error.error?.error) {
-          errorMessage = error.error.error;
-        }
-
-        Swal.fire({
-          title: 'Error!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, `Failed to ${this.isEditMode ? 'update' : 'create'} time entry. Please try again.`)
+          } as ErrorDialogData
         });
       }
     });

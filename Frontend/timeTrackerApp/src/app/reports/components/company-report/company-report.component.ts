@@ -17,7 +17,9 @@ import { Company } from '../../../company/interfaces/company.interface';
 import { LineChartComponent } from '../../shared/line-chart/line-chart.component';
 import { BarChartComponent } from '../../shared/bar-chart/bar-chart.component';
 import { DoughnutChartComponent } from '../../shared/doughnut-chart/doughnut-chart.component';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 
 @Component({
   selector: 'app-company-report',
@@ -508,6 +510,7 @@ import Swal from 'sweetalert2';
 export class CompanyReportComponent implements OnInit {
   private reportsService = inject(ReportsService);
   private companyService = inject(CompanyService);
+  private dialog = inject(MatDialog);
 
   public report = signal<CompanyReport | null>(null);
   public companies = signal<Company[]>([]);
@@ -609,11 +612,11 @@ export class CompanyReportComponent implements OnInit {
         console.error('Error loading company report:', error);
         this.isLoading.set(false);
 
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load company report. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load company report. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -731,12 +734,11 @@ export class CompanyReportComponent implements OnInit {
     link.click();
     document.body.removeChild(link);
 
-    Swal.fire({
-      title: 'Success!',
-      text: 'Report exported successfully',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false
+    this.dialog.open(ErrorDialogComponent, {
+      data: {
+        title: 'Success!',
+        message: 'Report exported successfully'
+      } as ErrorDialogData
     });
   }
 

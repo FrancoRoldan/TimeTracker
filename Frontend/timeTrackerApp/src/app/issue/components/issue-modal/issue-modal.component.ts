@@ -15,7 +15,10 @@ import { CompanyService } from '../../../company/services/company.service';
 import { CompanyUser } from '../../../company/interfaces';
 import { ProjectService } from '../../../project/services/project.service';
 import { Project } from '../../../project/interfaces';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-issue-modal',
@@ -237,6 +240,8 @@ export class IssueModalComponent implements OnInit {
   private projectService = inject(ProjectService);
   private dialogRef = inject(MatDialogRef<IssueModalComponent>);
   public data = inject<{ issue: Issue | null; projectId?: number }>(MAT_DIALOG_DATA);
+  private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public isLoading = signal<boolean>(false);
   public companyUsers = signal<CompanyUser[]>([]);
@@ -319,31 +324,18 @@ export class IssueModalComponent implements OnInit {
     request$.subscribe({
       next: (issue) => {
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Success!',
-          text: `Issue "${issue.title}" ${this.isEditMode ? 'updated' : 'created'} successfully`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`Issue "${issue.title}" ${this.isEditMode ? 'updated' : 'created'} successfully`);
         this.dialogRef.close(issue);
       },
       error: (error) => {
         console.error('Error saving issue:', error);
         this.isLoading.set(false);
 
-        let errorMessage = `Failed to ${this.isEditMode ? 'update' : 'create'} issue. Please try again.`;
-        if (error.error && typeof error.error === 'string') {
-          errorMessage = error.error;
-        } else if (error.error?.error) {
-          errorMessage = error.error.error;
-        }
-
-        Swal.fire({
-          title: 'Error!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, `Failed to ${this.isEditMode ? 'update' : 'create'} issue. Please try again.`)
+          } as ErrorDialogData
         });
       }
     });

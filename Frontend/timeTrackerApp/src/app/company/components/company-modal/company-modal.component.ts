@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,8 +9,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CompanyService } from '../../services/company.service';
 import { Company } from '../../interfaces';
-import Swal from 'sweetalert2';
 import { AuthService } from '../../../auth/services/auth.service';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-company-modal',
@@ -123,6 +125,8 @@ export class CompanyModalComponent {
   private companyService = inject(CompanyService);
   private dialogRef = inject(MatDialogRef<CompanyModalComponent>);
   private authService = inject(AuthService);
+  private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public data = inject<Company | null>(MAT_DIALOG_DATA);
 
@@ -163,33 +167,20 @@ export class CompanyModalComponent {
         this.isLoading.set(false);
         this.authService.refreshToken().subscribe(() => {});
         const action = this.data ? 'updated' : 'created';
-        Swal.fire({
-          title: 'Success!',
-          text: `Company "${company.name}" ${action} successfully`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`Company "${company.name}" ${action} successfully`);
         this.dialogRef.close(company);
       },
       error: (error) => {
         console.error(`Error ${this.data ? 'updating' : 'creating'} company:`, error);
         this.isLoading.set(false);
 
-        let errorMessage = `Failed to ${this.data ? 'update' : 'create'} company. Please try again.`;
-        if (error.error?.error) {
-          errorMessage = error.error.error;
-        } else if (error.error?.errors && Array.isArray(error.error.errors)) {
-          errorMessage = error.error.errors.join(', ');
-        } else if (typeof error.error === 'string') {
-          errorMessage = error.error;
-        }
+        const errorMessage = extractErrorMessage(error, `Failed to ${this.data ? 'update' : 'create'} company. Please try again.`);
 
-        Swal.fire({
-          title: 'Error!',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: errorMessage
+          } as ErrorDialogData
         });
       }
     });

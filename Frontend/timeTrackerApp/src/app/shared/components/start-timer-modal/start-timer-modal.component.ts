@@ -13,8 +13,10 @@ import { IssueService } from '../../../issue/services/issue.service';
 import { TimeEntryService } from '../../../time-entry/services/time-entry.service';
 import { Project } from '../../../project/interfaces';
 import { Issue } from '../../../issue/interfaces';
-import Swal from 'sweetalert2';
 import { CompanyService } from '../../../company/services/company.service';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../utils/error-handler.util';
 
 @Component({
   selector: 'app-start-timer-modal',
@@ -142,6 +144,7 @@ export class StartTimerModalComponent implements OnInit {
   private issueService = inject(IssueService);
   private timeEntryService = inject(TimeEntryService);
   private companyService = inject(CompanyService);
+  private dialog = inject(MatDialog);
 
   public timerForm!: FormGroup;
   public projects = signal<Project[]>([]);
@@ -180,11 +183,11 @@ export class StartTimerModalComponent implements OnInit {
       error: (error) => {
         console.error('Error loading projects:', error);
         this.isLoadingProjects.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load projects',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load projects')
+          } as ErrorDialogData
         });
       }
     });
@@ -210,11 +213,11 @@ export class StartTimerModalComponent implements OnInit {
       error: (error) => {
         console.error('Error loading issues:', error);
         this.isLoadingIssues.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load issues',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load issues')
+          } as ErrorDialogData
         });
       }
     });
@@ -240,23 +243,22 @@ export class StartTimerModalComponent implements OnInit {
     this.timeEntryService.startTimer(request).subscribe({
       next: () => {
         this.isSubmitting.set(false);
-        Swal.fire({
-          title: 'Timer Started!',
-          text: 'Your timer is now running',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Timer Started!',
+            message: 'Your timer is now running'
+          } as ErrorDialogData
         });
         this.dialogRef.close(true);
       },
       error: (error) => {
         console.error('Error starting timer:', error);
         this.isSubmitting.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: error.error?.message || 'Failed to start timer. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to start timer. Please try again.')
+          } as ErrorDialogData
         });
       }
     });

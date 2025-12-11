@@ -19,3 +19,22 @@ body {
 .tertiary{
     background-color: var(--mat-sys-tertiary-container);
 }
+
+/* Snackbar styles */
+.success-snackbar {
+    --mdc-snackbar-container-color: #4caf50 !important;
+    --mat-snack-bar-button-color: #fff !important;
+    --mdc-snackbar-supporting-text-color: #fff !important;
+}
+
+.error-snackbar {
+    --mdc-snackbar-container-color: #f44336 !important;
+    --mat-snack-bar-button-color: #fff !important;
+    --mdc-snackbar-supporting-text-color: #fff !important;
+}
+
+.info-snackbar {
+    --mdc-snackbar-container-color: #2196f3 !important;
+    --mat-snack-bar-button-color: #fff !important;
+    --mdc-snackbar-supporting-text-color: #fff !important;
+}

@@ -15,8 +15,11 @@ import { IssueStatus, IssueType, IssuePriority } from '../../../core/enums';
 import { IssueCardComponent } from '../issue-card/issue-card.component';
 import { IssueModalComponent } from '../issue-modal/issue-modal.component';
 import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
-import Swal from 'sweetalert2';
 import { CompanyService } from '../../../company/services/company.service';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-my-issues',
@@ -335,6 +338,7 @@ export class MyIssuesComponent implements OnInit {
   private issueService = inject(IssueService);
   private dialog = inject(MatDialog);
   private companyService = inject(CompanyService);
+  private toastService = inject(ToastService);
 
   public myIssues = signal<Issue[]>([]);
   public isLoading = signal<boolean>(false);
@@ -386,11 +390,11 @@ export class MyIssuesComponent implements OnInit {
       error: (error) => {
         console.error('Error loading my issues:', error);
         this.isLoading.set(false);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to load your issues. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to load your issues. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -439,17 +443,15 @@ export class MyIssuesComponent implements OnInit {
   }
 
   confirmDelete(issue: Issue): void {
-    Swal.fire({
-      title: 'Delete Issue?',
-      text: `Are you sure you want to delete "${issue.title}"? This action cannot be undone.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#f44336',
-      cancelButtonColor: '#757575',
-      confirmButtonText: 'Yes, delete it',
-      cancelButtonText: 'Cancel'
-    }).then((result) => {
-      if (result.isConfirmed) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Issue?',
+        message: `Are you sure you want to delete "${issue.title}"? This action cannot be undone.`
+      } as ConfirmDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
         this.deleteIssue(issue.id);
       }
     });
@@ -458,22 +460,16 @@ export class MyIssuesComponent implements OnInit {
   deleteIssue(issueId: number): void {
     this.issueService.deleteIssue(issueId).subscribe({
       next: () => {
-        Swal.fire({
-          title: 'Deleted!',
-          text: 'Issue has been deleted.',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess('Issue has been deleted.');
         this.loadMyIssues(this.selectedCompany().id);
       },
       error: (error) => {
         console.error('Error deleting issue:', error);
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to delete issue. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to delete issue. Please try again.')
+          } as ErrorDialogData
         });
       }
     });

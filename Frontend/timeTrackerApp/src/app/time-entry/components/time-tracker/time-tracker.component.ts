@@ -17,7 +17,10 @@ import { AudioService } from '../../../shared/services/audio.service';
 import { KeyboardShortcutService } from '../../../shared/services/keyboard-shortcut.service';
 import { TimeEntry, StartTimerRequest } from '../../interfaces';
 import { Issue } from '../../../issue/interfaces';
-import Swal from 'sweetalert2';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
+import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-time-tracker',
@@ -597,6 +600,8 @@ export class TimeTrackerComponent implements OnInit, OnDestroy {
   private issueService = inject(IssueService);
   private audioService = inject(AudioService);
   private keyboardService = inject(KeyboardShortcutService);
+  private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
   public isLoading = signal<boolean>(false);
   public isStarting = signal<boolean>(false);
@@ -748,23 +753,17 @@ export class TimeTrackerComponent implements OnInit, OnDestroy {
         // Play start sound
         this.audioService.playStartSound();
 
-        Swal.fire({
-          title: 'Timer Started!',
-          text: 'Your work time is now being tracked',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess('Your work time is now being tracked');
       },
       error: (error) => {
         console.error('Error starting timer:', error);
         this.isStarting.set(false);
 
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to start timer. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to start timer. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
@@ -794,23 +793,17 @@ export class TimeTrackerComponent implements OnInit, OnDestroy {
           }
         });
 
-        Swal.fire({
-          title: 'Timer Stopped!',
-          text: `Total time: ${(stoppedEntry.durationMinutes ?? 0).toFixed(2)} hours`,
-          icon: 'success',
-          timer: 3000,
-          showConfirmButton: false
-        });
+        this.toastService.showSuccess(`Total time: ${(stoppedEntry.durationMinutes ?? 0).toFixed(2)} hours`);
       },
       error: (error: any) => {
         console.error('Error stopping timer:', error);
         this.isStopping.set(false);
 
-        Swal.fire({
-          title: 'Error!',
-          text: 'Failed to stop timer. Please try again.',
-          icon: 'error',
-          confirmButtonText: 'Ok'
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'Failed to stop timer. Please try again.')
+          } as ErrorDialogData
         });
       }
     });
