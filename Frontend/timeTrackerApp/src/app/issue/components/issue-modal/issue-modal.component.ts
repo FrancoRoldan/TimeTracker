@@ -317,6 +317,9 @@ export class IssueModalComponent implements OnInit {
       delete formData.estimatedHours;
     }
 
+    if (formData.assignedUserId === null)
+      formData.assignedUserId = -1;
+
     const request$ = this.isEditMode
       ? this.issueService.updateIssue(this.data.issue!.id, formData)
       : this.issueService.createIssue(formData);

@@ -10,5 +10,6 @@ namespace Data.Dtos.Issue
         public IssueType Type { get; init; }
         public IssuePriority Priority { get; init; }
         public decimal? EstimatedHours { get; init; }
+        public int? AssignedUserId { get; set; }
     }
 }

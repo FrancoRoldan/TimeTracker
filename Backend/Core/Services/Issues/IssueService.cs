@@ -47,6 +47,23 @@ namespace Core.Services.Issues
             if (project.CompanyId != companyId)
                 return Result<IssueResponse>.Failure("You don't have access to this project");
 
+            if (request.AssignedUserId.HasValue)
+            {
+                if (request.AssignedUserId.Value == -1)
+                {
+                    request.AssignedUserId = null;
+                }
+                else
+                {
+                    var userCompany = await _unitOfWork.UserCompanies.FindAsync(
+                        uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId
+                    );
+
+                    if (userCompany == null)
+                        return Result<IssueResponse>.Failure("User does not belong to this company");
+                }
+            }
+
             var issue = request.Adapt<Issue>();
             issue.Status = IssueStatus.ToDo;
             issue.CompanyId = companyId;
