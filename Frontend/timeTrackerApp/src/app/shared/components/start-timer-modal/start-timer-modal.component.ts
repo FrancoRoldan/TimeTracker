@@ -143,7 +143,6 @@ export class StartTimerModalComponent implements OnInit {
   private projectService = inject(ProjectService);
   private issueService = inject(IssueService);
   private timeEntryService = inject(TimeEntryService);
-  private companyService = inject(CompanyService);
   private dialog = inject(MatDialog);
 
   public timerForm!: FormGroup;
@@ -157,12 +156,6 @@ export class StartTimerModalComponent implements OnInit {
   ngOnInit(): void {
     this.initForm();
     this.loadProjects();
-    this.companyService.selectedCompany$.subscribe(company => {
-      this.selectedCompany.set(company);
-      if (company) {
-        this.loadIssues(company.id);
-      }
-    });
   }
 
   private initForm(): void {
@@ -199,13 +192,15 @@ export class StartTimerModalComponent implements OnInit {
     this.issues.set([]);
 
     if (projectId) {
-      this.loadIssues(this.selectedCompany().id);
+      
+      this.loadIssues(projectId);
     }
   }
 
   private loadIssues(projectId: number): void {
+    debugger;
     this.isLoadingIssues.set(true);
-    this.issueService.getMyIssues(projectId).subscribe({
+    this.issueService.getIssuesByProject(projectId).subscribe({
       next: (issues) => {
         this.issues.set(issues);
         this.isLoadingIssues.set(false);

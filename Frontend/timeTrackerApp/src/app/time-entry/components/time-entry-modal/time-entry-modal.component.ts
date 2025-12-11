@@ -197,7 +197,6 @@ export class TimeEntryModalComponent implements OnInit {
   private timeEntryService = inject(TimeEntryService);
   private issueService = inject(IssueService);
   private projectService = inject(ProjectService);
-  private companyService = inject(CompanyService);
   private dialog = inject(MatDialog);
   private dialogRef = inject(MatDialogRef<TimeEntryModalComponent>);
   public data = inject<{ entry: TimeEntry | null }>(MAT_DIALOG_DATA);
@@ -234,13 +233,6 @@ export class TimeEntryModalComponent implements OnInit {
       this.loadProjects();
     }
 
-    this.companyService.selectedCompany$.subscribe(company => {
-      this.selectedCompany.set(company);
-      if (company) {
-        this.loadIssuesForProject(company.id);
-      }
-    });
-
     // Watch for changes to calculate hours
     this.entryForm.valueChanges.subscribe(() => {
       this.calculateHours();
@@ -265,12 +257,12 @@ export class TimeEntryModalComponent implements OnInit {
     this.entryForm.patchValue({ issueId: null });
     this.availableIssues.set([]);
     if (projectId) {
-      this.loadIssuesForProject(this.selectedCompany().id);
+      this.loadIssuesForProject(projectId);
     }
   }
 
   loadIssuesForProject(projectId: number): void {
-    this.issueService.getMyIssues(projectId).subscribe({
+    this.issueService.getIssuesByProject(projectId).subscribe({
       next: (issues) => {
         this.availableIssues.set(issues);
       },
