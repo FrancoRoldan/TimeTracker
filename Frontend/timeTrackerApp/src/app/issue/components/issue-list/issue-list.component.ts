@@ -37,8 +37,8 @@ import { Company } from '../../../company/interfaces/company.interface';
     <div class="container">
       <div class="header">
         <div class="header-left">
-          <h1>Issues</h1>
-          <p class="subtitle">Manage project tasks, bugs, and user stories</p>
+          <h1>Incidencias</h1>
+          <p class="subtitle">Gestiona tareas, bugs e historias de usuario del proyecto</p>
         </div>
         <button
           mat-raised-button
@@ -46,25 +46,25 @@ import { Company } from '../../../company/interfaces/company.interface';
           (click)="openCreateModal()"
           >
           <mat-icon>add</mat-icon>
-          New Issue
+          Nueva incidencia
         </button>
       </div>
 
         <div class="filters">
           <mat-form-field class="search-field" appearance="outline">
-            <mat-label>Search issues</mat-label>
+            <mat-label>Buscar incidencias</mat-label>
             <input
               matInput
               [value]="searchTerm()"
               (input)="onSearchChange($event)"
-              placeholder="Search by title...">
+              placeholder="Buscar por título...">
             <mat-icon matPrefix>search</mat-icon>
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Filter by Status</mat-label>
+            <mat-label>Filtrar por estado</mat-label>
             <mat-select [value]="selectedStatus()" (selectionChange)="onStatusChange($event.value)">
-              <mat-option [value]="null">All Statuses</mat-option>
+              <mat-option [value]="null">Todos los estados</mat-option>
               <mat-option [value]="IssueStatus.ToDo">{{ IssueStatus.ToDo | enumLabel:'IssueStatus' }}</mat-option>
               <mat-option [value]="IssueStatus.InProgress">{{ IssueStatus.InProgress | enumLabel:'IssueStatus' }}</mat-option>
               <mat-option [value]="IssueStatus.Testing">{{ IssueStatus.Testing | enumLabel:'IssueStatus' }}</mat-option>
@@ -73,9 +73,9 @@ import { Company } from '../../../company/interfaces/company.interface';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Filter by Type</mat-label>
+            <mat-label>Filtrar por tipo</mat-label>
             <mat-select [value]="selectedType()" (selectionChange)="onTypeChange($event.value)">
-              <mat-option [value]="null">All Types</mat-option>
+              <mat-option [value]="null">Todos los tipos</mat-option>
               <mat-option [value]="IssueType.UserStory">{{ IssueType.UserStory | enumLabel:'IssueType' }}</mat-option>
               <mat-option [value]="IssueType.Bug">{{ IssueType.Bug | enumLabel:'IssueType' }}</mat-option>
               <mat-option [value]="IssueType.Task">{{ IssueType.Task | enumLabel:'IssueType' }}</mat-option>
@@ -83,9 +83,9 @@ import { Company } from '../../../company/interfaces/company.interface';
           </mat-form-field>
 
           <mat-form-field appearance="outline">
-            <mat-label>Filter by Priority</mat-label>
+            <mat-label>Filtrar por prioridad</mat-label>
             <mat-select [value]="selectedPriority()" (selectionChange)="onPriorityChange($event.value)">
-              <mat-option [value]="null">All Priorities</mat-option>
+              <mat-option [value]="null">Todas las prioridades</mat-option>
               <mat-option [value]="IssuePriority.Low">{{ IssuePriority.Low | enumLabel:'IssuePriority' }}</mat-option>
               <mat-option [value]="IssuePriority.Medium">{{ IssuePriority.Medium | enumLabel:'IssuePriority' }}</mat-option>
               <mat-option [value]="IssuePriority.High">{{ IssuePriority.High | enumLabel:'IssuePriority' }}</mat-option>
@@ -95,7 +95,7 @@ import { Company } from '../../../company/interfaces/company.interface';
         </div>
 
         <div class="results-info">
-          <span>{{ filteredIssues().length }} issue{{ filteredIssues().length !== 1 ? 's' : '' }} found</span>
+          <span>{{ filteredIssues().length }} {{ filteredIssues().length === 1 ? 'incidencia encontrada' : 'incidencias encontradas' }}</span>
         </div>
 
         @if (isLoading()) {
@@ -105,8 +105,8 @@ import { Company } from '../../../company/interfaces/company.interface';
         } @else if (filteredIssues().length === 0) {
           <div class="no-data">
             <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">assignment</mat-icon>
-            <h2>No Issues Found</h2>
-            <p>{{ searchTerm() || selectedStatus() !== null || selectedType() !== null || selectedPriority() !== null ? 'Try adjusting your filters' : 'Create your first issue to get started' }}</p>
+            <h2>No se encontraron incidencias</h2>
+            <p>{{ searchTerm() || selectedStatus() !== null || selectedType() !== null || selectedPriority() !== null ? 'Prueba ajustando tus filtros' : 'Crea tu primera incidencia para empezar' }}</p>
           </div>
         } @else {
           <div class="issues-grid">

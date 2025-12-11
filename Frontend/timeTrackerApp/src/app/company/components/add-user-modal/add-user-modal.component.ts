@@ -27,72 +27,72 @@ import Swal from 'sweetalert2';
     MatTabsModule
   ],
   template: `
-    <h2 mat-dialog-title>Add User to Company</h2>
+    <h2 mat-dialog-title>Agregar usuario a la empresa</h2>
 
     <mat-dialog-content>
       <mat-tab-group (selectedIndexChange)="selectedTab.set($event)">
         <!-- Tab 1: Create New User -->
-        <mat-tab label="Create New User">
+        <mat-tab label="Crear nuevo usuario">
           <div class="tab-content">
             <form [formGroup]="createUserForm" class="form-content">
               <mat-form-field class="full-width" appearance="fill">
-                <mat-label>Name</mat-label>
-                <input matInput formControlName="name" placeholder="Enter user name" required>
+                <mat-label>Nombre</mat-label>
+                <input matInput formControlName="name" placeholder="Introduce el nombre del usuario" required>
                 @if (createUserForm.get('name')?.hasError('required') && createUserForm.get('name')?.touched) {
-                  <mat-error>Name is required</mat-error>
+                  <mat-error>El nombre es obligatorio</mat-error>
                 }
               </mat-form-field>
 
               <mat-form-field class="full-width" appearance="fill">
-                <mat-label>Email</mat-label>
-                <input matInput type="email" formControlName="email" placeholder="Enter email address" required>
+                <mat-label>Correo electrónico</mat-label>
+                <input matInput type="email" formControlName="email" placeholder="Introduce el correo electrónico" required>
                 @if (createUserForm.get('email')?.hasError('required') && createUserForm.get('email')?.touched) {
-                  <mat-error>Email is required</mat-error>
+                  <mat-error>El correo electrónico es obligatorio</mat-error>
                 }
                 @if (createUserForm.get('email')?.hasError('email') && createUserForm.get('email')?.touched) {
-                  <mat-error>Invalid email format</mat-error>
+                  <mat-error>Formato de correo inválido</mat-error>
                 }
               </mat-form-field>
 
               <mat-form-field class="full-width" appearance="fill">
-                <mat-label>Hourly Rate (Optional)</mat-label>
+                <mat-label>Tarifa por hora (Opcional)</mat-label>
                 <input
                   matInput
                   type="number"
                   formControlName="hourlyRate"
-                  placeholder="Enter hourly rate"
+                  placeholder="Introduce la tarifa por hora"
                   min="0"
                   step="0.01">
                 <span matPrefix>$&nbsp;</span>
                 @if (createUserForm.get('hourlyRate')?.hasError('min')) {
-                  <mat-error>Hourly rate must be greater than 0</mat-error>
+                  <mat-error>La tarifa por hora debe ser mayor que 0</mat-error>
                 }
               </mat-form-field>
 
               <div class="info-text">
-                <p><strong>Default Password:</strong> Temporal01!</p>
-                <p><strong>Default Role:</strong> Developer</p>
+                <p><strong>Contraseña por defecto:</strong> Temporal01!</p>
+                <p><strong>Rol por defecto:</strong> Desarrollador</p>
               </div>
             </form>
           </div>
         </mat-tab>
 
         <!-- Tab 2: Add Existing User -->
-        <mat-tab label="Add Existing User">
+        <mat-tab label="Agregar usuario existente">
           <div class="tab-content">
             @if (loadingUsers()) {
               <div class="loading-spinner">
                 <mat-spinner [diameter]="40"></mat-spinner>
-                <p>Loading available users...</p>
+                <p>Cargando usuarios disponibles...</p>
               </div>
             } @else if (availableUsers().length === 0) {
               <div class="no-users">
-                <p>No available users to add. All users are already in this company.</p>
+                <p>No hay usuarios disponibles para agregar. Todos los usuarios ya están en esta empresa.</p>
               </div>
             } @else {
               <form [formGroup]="addUserForm" class="form-content">
                 <mat-form-field class="full-width" appearance="fill">
-                  <mat-label>Select User</mat-label>
+                  <mat-label>Seleccionar usuario</mat-label>
                   <mat-select formControlName="userId" required>
                     @for (user of availableUsers(); track user.id) {
                       <mat-option [value]="user.id">
@@ -101,35 +101,35 @@ import Swal from 'sweetalert2';
                     }
                   </mat-select>
                   @if (addUserForm.get('userId')?.hasError('required') && addUserForm.get('userId')?.touched) {
-                    <mat-error>Please select a user</mat-error>
+                    <mat-error>Por favor selecciona un usuario</mat-error>
                   }
                 </mat-form-field>
 
                 <mat-form-field class="full-width" appearance="fill">
-                  <mat-label>Role</mat-label>
+                  <mat-label>Rol</mat-label>
                   <mat-select formControlName="role" required>
-                    <mat-option [value]="UserRole.Admin">Admin</mat-option>
-                    <mat-option [value]="UserRole.Manager">Manager</mat-option>
-                    <mat-option [value]="UserRole.Developer">Developer</mat-option>
-                    <mat-option [value]="UserRole.Viewer">Viewer</mat-option>
+                    <mat-option [value]="UserRole.Admin">Administrador</mat-option>
+                    <mat-option [value]="UserRole.Manager">Gerente</mat-option>
+                    <mat-option [value]="UserRole.Developer">Desarrollador</mat-option>
+                    <mat-option [value]="UserRole.Viewer">Visualizador</mat-option>
                   </mat-select>
                   @if (addUserForm.get('role')?.hasError('required') && addUserForm.get('role')?.touched) {
-                    <mat-error>Please select a role</mat-error>
+                    <mat-error>Por favor selecciona un rol</mat-error>
                   }
                 </mat-form-field>
 
                 <mat-form-field class="full-width" appearance="fill">
-                  <mat-label>Hourly Rate (Optional)</mat-label>
+                  <mat-label>Tarifa por hora (Opcional)</mat-label>
                   <input
                     matInput
                     type="number"
                     formControlName="hourlyRate"
-                    placeholder="Enter hourly rate"
+                    placeholder="Introduce la tarifa por hora"
                     min="0"
                     step="0.01">
                   <span matPrefix>$&nbsp;</span>
                   @if (addUserForm.get('hourlyRate')?.hasError('min')) {
-                    <mat-error>Hourly rate must be greater than 0</mat-error>
+                    <mat-error>La tarifa por hora debe ser mayor que 0</mat-error>
                   }
                 </mat-form-field>
               </form>
@@ -141,7 +141,7 @@ import Swal from 'sweetalert2';
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()" [disabled]="isLoading()">
-        Cancel
+        Cancelar
       </button>
 
       @if (isLoading()) {
@@ -152,7 +152,7 @@ import Swal from 'sweetalert2';
           color="primary"
           (click)="onSave()"
           [disabled]="!isFormValid()">
-          Add User
+          Agregar usuario
         </button>
       }
     </mat-dialog-actions>

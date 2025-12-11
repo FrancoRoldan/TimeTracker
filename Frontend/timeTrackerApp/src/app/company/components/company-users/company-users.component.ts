@@ -39,15 +39,15 @@ import Swal from 'sweetalert2';
             <mat-icon>arrow_back</mat-icon>
           </button>
           <div>
-            <h1>{{ company()?.name }} - Users</h1>
-            <p class="subtitle">Manage company members and their roles</p>
+            <h1>{{ company()?.name }} - Usuarios</h1>
+            <p class="subtitle">Gestiona los miembros de la empresa y sus roles</p>
           </div>
         </div>
 
         @if (canAddUsers()) {
-          <button mat-raised-button color="primary" (click)="openAddUserModal()">
+            <button mat-raised-button color="primary" (click)="openAddUserModal()">
             <mat-icon>person_add</mat-icon>
-            Add User
+            Agregar usuario
           </button>
         }
       </div>
@@ -59,12 +59,12 @@ import Swal from 'sweetalert2';
       } @else if (users().length === 0) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">group</mat-icon>
-          <h2>No users yet</h2>
-          <p>Add users to this company to get started</p>
+          <h2>Aún no hay usuarios</h2>
+          <p>Agrega usuarios a esta empresa para empezar</p>
           @if (canAddUsers()) {
             <button mat-raised-button color="primary" (click)="openAddUserModal()">
               <mat-icon>person_add</mat-icon>
-              Add User
+              Agregar usuario
             </button>
           }
         </div>
@@ -73,7 +73,7 @@ import Swal from 'sweetalert2';
           <table mat-table [dataSource]="users()" class="users-table">
             <!-- Name Column -->
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <th mat-header-cell *matHeaderCellDef>Nombre</th>
               <td mat-cell *matCellDef="let user">
                 <div class="user-info">
                   <mat-icon class="user-icon">person</mat-icon>
@@ -87,7 +87,7 @@ import Swal from 'sweetalert2';
 
             <!-- Role Column -->
             <ng-container matColumnDef="role">
-              <th mat-header-cell *matHeaderCellDef>Role</th>
+              <th mat-header-cell *matHeaderCellDef>Rol</th>
               <td mat-cell *matCellDef="let user">
                 <mat-chip [style.background-color]="getRoleColor(user.role)">
                   {{ getRoleLabel(user.role) }}
@@ -97,7 +97,7 @@ import Swal from 'sweetalert2';
 
             <!-- Hourly Rate Column -->
             <ng-container matColumnDef="hourlyRate">
-              <th mat-header-cell *matHeaderCellDef>Hourly Rate</th>
+              <th mat-header-cell *matHeaderCellDef>Tarifa por hora</th>
               <td mat-cell *matCellDef="let user">
                 {{ user.hourlyRate ? '$' + user.hourlyRate : 'Not set' }}
               </td>
@@ -105,7 +105,7 @@ import Swal from 'sweetalert2';
 
             <!-- Joined At Column -->
             <ng-container matColumnDef="joinedAt">
-              <th mat-header-cell *matHeaderCellDef>Joined</th>
+              <th mat-header-cell *matHeaderCellDef>Fecha de incorporación</th>
               <td mat-cell *matCellDef="let user">
                 {{ formatDate(user.joinedAt) }}
               </td>
@@ -113,7 +113,7 @@ import Swal from 'sweetalert2';
 
             <!-- Actions Column -->
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let user">
                 @if (canManageUsers()) {
                   <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Actions">
@@ -122,11 +122,11 @@ import Swal from 'sweetalert2';
                   <mat-menu #menu="matMenu">
                     <button mat-menu-item (click)="openEditUserModal(user)">
                       <mat-icon>edit</mat-icon>
-                      <span>Edit</span>
+                      <span>Editar</span>
                     </button>
                     <button mat-menu-item (click)="removeUser(user)" style="color: #f44336;">
                       <mat-icon>delete</mat-icon>
-                      <span>Remove</span>
+                      <span>Eliminar</span>
                     </button>
                   </mat-menu>
                 }

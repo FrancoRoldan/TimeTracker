@@ -20,9 +20,9 @@ import { User } from '../auth/interfaces/user.interface';
   template: `
     <div class="container">
       <div class="header">
-        <h1>Welcome to Time Tracker</h1>
+        <h1>Bienvenido a Time Tracker</h1>
         @if(user()) {
-          <p class="subtitle">Hello, {{ user()?.name }}!</p>
+          <p class="subtitle">¡Hola, {{ user()?.name }}!</p>
         }
       </div>
 
@@ -31,15 +31,15 @@ import { User } from '../auth/interfaces/user.interface';
         <mat-card class="dashboard-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">business</mat-icon>
-            <mat-card-title>Companies</mat-card-title>
-            <mat-card-subtitle>Manage your organizations</mat-card-subtitle>
+            <mat-card-title>Empresas</mat-card-title>
+            <mat-card-subtitle>Gestiona tus organizaciones</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>View and manage companies you belong to.</p>
+            <p>Ver y gestionar las empresas a las que perteneces.</p>
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" routerLink="/companies">
-              Go to Companies
+              Ir a Empresas
             </button>
           </mat-card-actions>
         </mat-card>
@@ -48,15 +48,15 @@ import { User } from '../auth/interfaces/user.interface';
         <mat-card class="dashboard-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">folder</mat-icon>
-            <mat-card-title>Projects</mat-card-title>
-            <mat-card-subtitle>Track your projects</mat-card-subtitle>
+            <mat-card-title>Proyectos</mat-card-title>
+            <mat-card-subtitle>Gestiona tus proyectos</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>Create and manage projects across your companies.</p>
+            <p>Crea y gestiona proyectos en tus empresas.</p>
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" routerLink="/projects">
-              Go to Projects
+              Ir a Proyectos
             </button>
           </mat-card-actions>
         </mat-card>
@@ -65,18 +65,18 @@ import { User } from '../auth/interfaces/user.interface';
         <mat-card class="dashboard-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">assignment</mat-icon>
-            <mat-card-title>Issues</mat-card-title>
-            <mat-card-subtitle>Manage your tasks</mat-card-subtitle>
+            <mat-card-title>Incidencias</mat-card-title>
+            <mat-card-subtitle>Gestiona tus tareas</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>View issues, track progress, and manage assignments.</p>
+            <p>Ver incidencias, seguir el progreso y gestionar asignaciones.</p>
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" routerLink="/issues">
-              View All Issues
+              Ver todas las incidencias
             </button>
             <button mat-button routerLink="/issues/my-issues">
-              My Issues
+              Mis incidencias
             </button>
           </mat-card-actions>
         </mat-card>
@@ -85,15 +85,15 @@ import { User } from '../auth/interfaces/user.interface';
         <mat-card class="dashboard-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">timer</mat-icon>
-            <mat-card-title>Time Tracking</mat-card-title>
-            <mat-card-subtitle>Track your work hours</mat-card-subtitle>
+            <mat-card-title>Registro de tiempo</mat-card-title>
+            <mat-card-subtitle>Registra tus horas de trabajo</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>Start timers, log manual entries, and view your time logs.</p>
+            <p>Inicia temporizadores, registra entradas manuales y ve tus registros de tiempo.</p>
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" routerLink="/time">
-              Track Time
+              Registrar tiempo
             </button>
           </mat-card-actions>
         </mat-card>
@@ -102,15 +102,15 @@ import { User } from '../auth/interfaces/user.interface';
         <mat-card class="dashboard-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">assessment</mat-icon>
-            <mat-card-title>Reports</mat-card-title>
-            <mat-card-subtitle>View analytics</mat-card-subtitle>
+            <mat-card-title>Informes</mat-card-title>
+            <mat-card-subtitle>Ver análisis</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>Generate reports and analyze time tracking data.</p>
+            <p>Genera informes y analiza los datos de registro de tiempo.</p>
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" routerLink="/reports">
-              View Reports
+              Ver informes
             </button>
           </mat-card-actions>
         </mat-card>
@@ -119,15 +119,15 @@ import { User } from '../auth/interfaces/user.interface';
         <mat-card class="dashboard-card">
           <mat-card-header>
             <mat-icon mat-card-avatar color="primary">view_kanban</mat-icon>
-            <mat-card-title>Kanban Board</mat-card-title>
-            <mat-card-subtitle>Visualize workflow</mat-card-subtitle>
+            <mat-card-title>Tablero Kanban</mat-card-title>
+            <mat-card-subtitle>Visualiza el flujo de trabajo</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
-            <p>Drag and drop issues to manage status and workflow.</p>
+            <p>Arrastra y suelta incidencias para gestionar el estado y el flujo de trabajo.</p>
           </mat-card-content>
           <mat-card-actions>
             <button mat-raised-button color="primary" routerLink="/issues/board">
-              Open Board
+              Abrir tablero
             </button>
           </mat-card-actions>
         </mat-card>
@@ -135,26 +135,26 @@ import { User } from '../auth/interfaces/user.interface';
 
       <!-- Quick Start Guide -->
       <mat-card class="quick-start-card">
-        <mat-card-header>
+          <mat-card-header>
           <mat-icon mat-card-avatar color="accent">lightbulb</mat-icon>
-          <mat-card-title>Quick Start Guide</mat-card-title>
+          <mat-card-title>Guía de inicio rápido</mat-card-title>
         </mat-card-header>
         <mat-card-content>
           <ol class="quick-start-list">
             <li>
-              <strong>Create or join a company:</strong> Go to Companies to get started with your organization.
+              <strong>Crea o únete a una empresa:</strong> Ve a Empresas para comenzar con tu organización.
             </li>
             <li>
-              <strong>Set up a project:</strong> Create projects within your company to organize work.
+              <strong>Configura un proyecto:</strong> Crea proyectos dentro de tu empresa para organizar el trabajo.
             </li>
             <li>
-              <strong>Create issues:</strong> Add tasks, bugs, or user stories to your projects.
+              <strong>Crea incidencias:</strong> Añade tareas, errores o historias de usuario a tus proyectos.
             </li>
             <li>
-              <strong>Track your time:</strong> Start a timer when working on issues to log hours automatically.
+              <strong>Registra tu tiempo:</strong> Inicia un temporizador cuando trabajes en incidencias para registrar horas automáticamente.
             </li>
             <li>
-              <strong>View reports:</strong> Analyze productivity and time allocation across projects.
+              <strong>Ver informes:</strong> Analiza la productividad y la asignación de tiempo entre proyectos.
             </li>
           </ol>
         </mat-card-content>

@@ -27,7 +27,7 @@ import { Company } from '../../../company/interfaces';
   ],
   template: `
         <mat-toolbar>
-            <span>Menu</span>
+            <span>Menú</span>
             <span class="spacer"></span>
             @if(isMobile()){
               <button mat-icon-button (click)="toggle();">
@@ -39,12 +39,12 @@ import { Company } from '../../../company/interfaces';
         <!-- Company Selector -->
         <div class="selector-container">
           <mat-form-field appearance="fill" class="full-width">
-            <mat-label>Active Company</mat-label>
+            <mat-label>Empresa activa</mat-label>
             <mat-select
               [value]="selectedCompany()?.id"
               (selectionChange)="onCompanyChange($event.value)">
               <mat-option [value]="null">
-                <em>No company selected</em>
+                <em>Ninguna empresa seleccionada</em>
               </mat-option>
               @for (company of companies(); track company.id) {
                 <mat-option [value]="company.id">
@@ -78,16 +78,16 @@ export class LeftSideBarComponent implements OnInit {
   public selectedCompany = signal<Company | null>(null);
 
   menuItems: Menu[] = [
-    { tittle: "Dashboard", url: "/dashboard", icon: "home" },
-    { tittle: "Companies", url: "/companies", icon: "business" },
-    { tittle: "Projects", url: "/projects", icon: "folder" },
-    { tittle: "Issues", url: "/issues", icon: "assignment" },
-    { tittle: "My Issues", url: "/issues/my-issues", icon: "person" },
-    { tittle: "Board", url: "/issues/board", icon: "view_kanban" },
-    { tittle: "Time Tracking", url: "/time-entries", icon: "timer" },
-    { tittle: "My Reports", url: "/reports/user", icon: "bar_chart" },
-    { tittle: "Project Reports", url: "/reports/project", icon: "pie_chart" },
-    { tittle: "Company Reports", url: "/reports/company", icon: "assessment" },
+    { tittle: "Panel de control", url: "/dashboard", icon: "home" },
+    { tittle: "Empresas", url: "/companies", icon: "business" },
+    { tittle: "Proyectos", url: "/projects", icon: "folder" },
+    { tittle: "Problemas", url: "/issues", icon: "assignment" },
+    { tittle: "Mis problemas", url: "/issues/my-issues", icon: "person" },
+    { tittle: "Tablero", url: "/issues/board", icon: "view_kanban" },
+    { tittle: "Registro de tiempo", url: "/time-entries", icon: "timer" },
+    { tittle: "Mis reportes", url: "/reports/user", icon: "bar_chart" },
+    { tittle: "Reportes de proyecto", url: "/reports/project", icon: "pie_chart" },
+    { tittle: "Reportes de empresa", url: "/reports/company", icon: "assessment" },
   ];
 
   ngOnInit(): void {

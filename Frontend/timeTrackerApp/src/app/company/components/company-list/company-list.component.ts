@@ -27,10 +27,10 @@ import Swal from 'sweetalert2';
   template: `
     <div class="container">
       <div class="header">
-        <h1>Companies</h1>
+        <h1>Empresas</h1>
         <button mat-raised-button color="primary" (click)="openCreateModal()">
           <mat-icon>add</mat-icon>
-          Create Company
+          Crear empresa
         </button>
       </div>
 
@@ -41,8 +41,8 @@ import Swal from 'sweetalert2';
       } @else if (companies().length === 0) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">business</mat-icon>
-          <h2>No companies yet</h2>
-          <p>Create your first company to get started</p>
+          <h2>Aún no hay empresas</h2>
+          <p>Crea tu primera empresa para empezar</p>
           <button mat-raised-button color="primary" (click)="openCreateModal()">
             <mat-icon>add</mat-icon>
             Create Company
@@ -52,11 +52,11 @@ import Swal from 'sweetalert2';
         <div class="companies-grid">
           @for (company of companies(); track company.id) {
             <mat-card class="company-card">
-              <mat-card-header>
-                <mat-icon mat-card-avatar color="primary">business</mat-icon>
-                <mat-card-title>{{ company.name }}</mat-card-title>
-                <mat-card-subtitle>Code: {{ company.code }}</mat-card-subtitle>
-              </mat-card-header>
+                <mat-card-header>
+                  <mat-icon mat-card-avatar color="primary">business</mat-icon>
+                  <mat-card-title>{{ company.name }}</mat-card-title>
+                  <mat-card-subtitle>Código: {{ company.code }}</mat-card-subtitle>
+                </mat-card-header>
               <mat-card-content>
                 <div class="company-info">
                   <div class="info-row">
@@ -67,27 +67,27 @@ import Swal from 'sweetalert2';
                     <mat-icon class="info-icon" [style.color]="company.isActive ? '#4caf50' : '#757575'">
                       {{ company.isActive ? 'check_circle' : 'cancel' }}
                     </mat-icon>
-                    <span>{{ company.isActive ? 'Active' : 'Inactive' }}</span>
+                    <span>{{ company.isActive ? 'Activo' : 'Inactivo' }}</span>
                   </div>
                 </div>
               </mat-card-content>
               <mat-card-actions>
                 <button mat-button color="primary" (click)="selectCompany(company)">
                   <mat-icon>check</mat-icon>
-                  Select
+                  Seleccionar
                 </button>
                 <button mat-button (click)="viewUsers(company)">
                   <mat-icon>group</mat-icon>
-                  Users
+                  Usuarios
                 </button>
                 @if (canManageCompany()) {
                   <button mat-button (click)="openEditModal(company)">
                     <mat-icon>edit</mat-icon>
-                    Edit
+                    Editar
                   </button>
                   <button mat-button color="warn" (click)="deleteCompany(company)">
                     <mat-icon>delete</mat-icon>
-                    Delete
+                    Eliminar
                   </button>
                 }
               </mat-card-actions>

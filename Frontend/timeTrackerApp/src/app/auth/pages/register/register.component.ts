@@ -25,29 +25,29 @@ import { ValidatorService } from '../../services/validator-service.service';
   ],
   template: `
   <form [formGroup]="myForm">
-    <h2 class="mb-4">Registrate</h2>
+    <h2 class="mb-4">Regístrate</h2>
 
     <mat-form-field class="w-100 mb-2 form-field" appearance="fill">
-      <mat-label>Nombre Completo</mat-label>
+      <mat-label>Nombre completo</mat-label>
       <input matInput formControlName="Name" type="text" placeholder="Nombre completo">
       <mat-icon matSuffix>person</mat-icon>
     </mat-form-field>
 
     <mat-form-field class="w-100 mb-2 form-field" appearance="fill">
-      <mat-label>Email</mat-label>
-      <input matInput formControlName="Email" type="email" placeholder="Email de usuario">
+      <mat-label>Correo electrónico</mat-label>
+      <input matInput formControlName="Email" type="email" placeholder="Correo electrónico de usuario">
       <mat-icon matSuffix>email</mat-icon>
     </mat-form-field>
 
     <mat-form-field class="w-100 mb-4 form-field" appearance="fill">
-      <mat-label>Password</mat-label>
-      <input matInput formControlName="Password" [type]="hide() ? 'password' : 'text'" placeholder="Password">
+      <mat-label>Contraseña</mat-label>
+      <input matInput formControlName="Password" [type]="hide() ? 'password' : 'text'" placeholder="Contraseña">
       <mat-icon matSuffix (click)="clickEvent($event)">{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
     </mat-form-field>
 
     <mat-form-field class="w-100 mb-4 form-field" appearance="fill">
-      <mat-label>Confirm Password</mat-label>
-      <input matInput formControlName="confirmPassword" [type]="hide() ? 'password' : 'text'" placeholder="Password">
+      <mat-label>Confirmar contraseña</mat-label>
+      <input matInput formControlName="confirmPassword" [type]="hide() ? 'password' : 'text'" placeholder="Contraseña">
       <mat-icon matSuffix (click)="clickEvent($event)">{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
     </mat-form-field>
 

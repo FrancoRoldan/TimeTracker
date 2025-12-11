@@ -37,18 +37,18 @@ import Swal from 'sweetalert2';
       <div class="header">
         <div class="header-left">
           <mat-icon class="header-icon" color="primary">assessment</mat-icon>
-          <div>
-            <h1>My Time Report</h1>
+            <div>
+            <h1>Mi informe de tiempo</h1>
             @if (report()) {
               <p class="subtitle">{{ formatDateRange() }}</p>
             } @else {
-              <p class="subtitle">View your time tracking analytics</p>
+              <p class="subtitle">Ver el análisis de tu registro de tiempo</p>
             }
           </div>
         </div>
         <button mat-raised-button color="primary" (click)="exportToCSV()" [disabled]="!report()">
           <mat-icon>download</mat-icon>
-          Export CSV
+          Exportar CSV
         </button>
       </div>
 
@@ -58,7 +58,7 @@ import Swal from 'sweetalert2';
           <mat-card-content>
             <div class="filters">
               <mat-form-field appearance="outline">
-                <mat-label>Start Date</mat-label>
+                <mat-label>Fecha de inicio</mat-label>
                 <input
                   matInput
                   [matDatepicker]="startPicker"
@@ -69,7 +69,7 @@ import Swal from 'sweetalert2';
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>End Date</mat-label>
+                <mat-label>Fecha de fin</mat-label>
                 <input
                   matInput
                   [matDatepicker]="endPicker"
@@ -81,22 +81,22 @@ import Swal from 'sweetalert2';
 
               <button mat-raised-button (click)="clearFilters()">
                 <mat-icon>clear</mat-icon>
-                Clear
+                Limpiar
               </button>
 
               <button mat-raised-button (click)="loadReport()">
                 <mat-icon>refresh</mat-icon>
-                Refresh
+                Actualizar
               </button>
             </div>
 
             <!-- Quick Date Range Buttons -->
             <div class="quick-ranges">
-              <button mat-button (click)="setDateRange(7)">Last 7 Days</button>
-              <button mat-button (click)="setDateRange(30)">Last 30 Days</button>
-              <button mat-button (click)="setThisMonth()">This Month</button>
-              <button mat-button (click)="setLastMonth()">Last Month</button>
-              <button mat-button (click)="setThisYear()">This Year</button>
+              <button mat-button (click)="setDateRange(7)">Últimos 7 días</button>
+              <button mat-button (click)="setDateRange(30)">Últimos 30 días</button>
+              <button mat-button (click)="setThisMonth()">Este mes</button>
+              <button mat-button (click)="setLastMonth()">Mes anterior</button>
+              <button mat-button (click)="setThisYear()">Este año</button>
             </div>
           </mat-card-content>
         </mat-card>
@@ -109,8 +109,8 @@ import Swal from 'sweetalert2';
       } @else if (!report()) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">assessment</mat-icon>
-          <h2>No Data Available</h2>
-          <p>Select a date range to view your time report</p>
+          <h2>No hay datos disponibles</h2>
+          <p>Selecciona un rango de fechas para ver tu informe de tiempo</p>
         </div>
       } @else {
         <!-- Summary Card -->
@@ -122,7 +122,7 @@ import Swal from 'sweetalert2';
                   <mat-icon class="summary-icon">access_time</mat-icon>
                   <div class="summary-info">
                     <span class="summary-value">{{ formatTotalTime() }}</span>
-                    <span class="summary-label">Total Time</span>
+                    <span class="summary-label">Tiempo total</span>
                   </div>
                 </div>
               </mat-card-content>
@@ -136,7 +136,7 @@ import Swal from 'sweetalert2';
                   <mat-icon class="summary-icon">folder</mat-icon>
                   <div class="summary-info">
                     <span class="summary-value">{{ report()!.projectBreakdown.length }}</span>
-                    <span class="summary-label">Projects</span>
+                    <span class="summary-label">Proyectos</span>
                   </div>
                 </div>
               </mat-card-content>
@@ -150,7 +150,7 @@ import Swal from 'sweetalert2';
                   <mat-icon class="summary-icon">assignment</mat-icon>
                   <div class="summary-info">
                     <span class="summary-value">{{ report()!.issueBreakdown.length }}</span>
-                    <span class="summary-label">Issues</span>
+                    <span class="summary-label">Incidencias</span>
                   </div>
                 </div>
               </mat-card-content>
@@ -165,8 +165,8 @@ import Swal from 'sweetalert2';
             <app-line-chart
               [data]="dailyChartData()"
               [labels]="dailyChartLabels()"
-              [title]="'Daily Hours Breakdown'"
-              [label]="'Hours'"
+              [title]="'Desglose diario de horas'"
+              [label]="'Horas'"
               [isLoading]="isLoading()">
             </app-line-chart>
           </div>
@@ -176,7 +176,7 @@ import Swal from 'sweetalert2';
             <app-doughnut-chart
               [data]="projectChartData()"
               [labels]="projectChartLabels()"
-              [title]="'Hours by Project'"
+              [title]="'Horas por proyecto'"
               [isLoading]="isLoading()">
             </app-doughnut-chart>
           </div>
@@ -184,29 +184,29 @@ import Swal from 'sweetalert2';
 
         <!-- Issue Breakdown Table -->
         <mat-card class="table-card">
-          <mat-card-header>
+            <mat-card-header>
             <mat-icon mat-card-avatar color="primary">list</mat-icon>
-            <mat-card-title>Hours by Issue</mat-card-title>
-            <mat-card-subtitle>Detailed breakdown of time spent per issue</mat-card-subtitle>
+            <mat-card-title>Horas por incidencia</mat-card-title>
+            <mat-card-subtitle>Desglose detallado del tiempo dedicado por incidencia</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="table-container">
               <table mat-table [dataSource]="sortedIssues()" class="issues-table">
                 <!-- Issue Column -->
                 <ng-container matColumnDef="issue">
-                  <th mat-header-cell *matHeaderCellDef>Issue</th>
+                  <th mat-header-cell *matHeaderCellDef>Incidencia</th>
                   <td mat-cell *matCellDef="let item">{{ item.issueTitle }}</td>
                 </ng-container>
 
                 <!-- Project Column -->
                 <ng-container matColumnDef="project">
-                  <th mat-header-cell *matHeaderCellDef>Project</th>
+                  <th mat-header-cell *matHeaderCellDef>Proyecto</th>
                   <td mat-cell *matCellDef="let item">{{ item.projectName }}</td>
                 </ng-container>
 
                 <!-- Hours Column -->
                 <ng-container matColumnDef="hours">
-                  <th mat-header-cell *matHeaderCellDef>Hours</th>
+                  <th mat-header-cell *matHeaderCellDef>Horas</th>
                   <td mat-cell *matCellDef="let item">
                     <span class="hours-badge">{{ (item.totalHours ?? 0).toFixed(2) }}h</span>
                   </td>

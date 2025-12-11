@@ -26,36 +26,36 @@ import { AuthService } from '../../../auth/services/auth.service';
     MatCheckboxModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ data ? 'Edit Company' : 'Create Company' }}</h2>
+    <h2 mat-dialog-title>{{ data ? 'Editar empresa' : 'Crear empresa' }}</h2>
 
     <mat-dialog-content>
       <form [formGroup]="companyForm" class="form-content">
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Company Name</mat-label>
-          <input matInput formControlName="name" placeholder="Enter company name" required>
+          <mat-label>Nombre de la empresa</mat-label>
+          <input matInput formControlName="name" placeholder="Introduce el nombre de la empresa" required>
           @if (companyForm.get('name')?.hasError('required') && companyForm.get('name')?.touched) {
-            <mat-error>Company name is required</mat-error>
+            <mat-error>El nombre de la empresa es obligatorio</mat-error>
           }
           @if (companyForm.get('name')?.hasError('maxlength')) {
-            <mat-error>Company name cannot exceed 200 characters</mat-error>
+            <mat-error>El nombre de la empresa no puede exceder 200 caracteres</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Company Code</mat-label>
-          <input matInput formControlName="code" placeholder="Enter company code" required>
+          <mat-label>Código de empresa</mat-label>
+          <input matInput formControlName="code" placeholder="Introduce el código de la empresa" required>
           @if (companyForm.get('code')?.hasError('required') && companyForm.get('code')?.touched) {
-            <mat-error>Company code is required</mat-error>
+            <mat-error>El código de la empresa es obligatorio</mat-error>
           }
           @if (companyForm.get('code')?.hasError('maxlength')) {
-            <mat-error>Company code cannot exceed 50 characters</mat-error>
+            <mat-error>El código de la empresa no puede exceder 50 caracteres</mat-error>
           }
         </mat-form-field>
 
         @if (data) {
           <div class="checkbox-field">
             <mat-checkbox formControlName="isActive">
-              Active
+              Activo
             </mat-checkbox>
           </div>
         }
@@ -64,7 +64,7 @@ import { AuthService } from '../../../auth/services/auth.service';
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()" [disabled]="isLoading()">
-        Cancel
+        Cancelar
       </button>
 
       @if (isLoading()) {
@@ -75,7 +75,7 @@ import { AuthService } from '../../../auth/services/auth.service';
           color="primary"
           (click)="onSave()"
           [disabled]="!companyForm.valid">
-          {{ data ? 'Update' : 'Create' }}
+          {{ data ? 'Actualizar' : 'Crear' }}
         </button>
       }
     </mat-dialog-actions>

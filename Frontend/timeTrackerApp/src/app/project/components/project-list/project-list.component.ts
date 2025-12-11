@@ -39,19 +39,19 @@ import Swal from 'sweetalert2';
   template: `
     <div class="container">
       <div class="header">
-        <h1>Projects</h1>
+        <h1>Proyectos</h1>
         <button mat-raised-button color="primary" (click)="openCreateModal()" [disabled]="!selectedCompany()">
           <mat-icon>add</mat-icon>
-          Create Project
+          Crear proyecto
         </button>
       </div>
 
       <!-- Filters -->
       <div class="filters-section">
         <mat-form-field appearance="fill" class="filter-field">
-          <mat-label>Filter by Status</mat-label>
+          <mat-label>Filtrar por estado</mat-label>
           <mat-select [(value)]="statusFilter" (selectionChange)="applyFilters()">
-            <mat-option [value]="null">All Statuses</mat-option>
+            <mat-option [value]="null">Todos los estados</mat-option>
             <mat-option [value]="ProjectStatus.Active">
               {{ ProjectStatus.Active | enumLabel:'ProjectStatus' }}
             </mat-option>
@@ -68,14 +68,14 @@ import Swal from 'sweetalert2';
         </mat-form-field>
 
         <mat-form-field appearance="fill" class="filter-field">
-          <mat-label>Search</mat-label>
-          <input matInput [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Search by name...">
+          <mat-label>Buscar</mat-label>
+          <input matInput [(ngModel)]="searchTerm" (ngModelChange)="applyFilters()" placeholder="Buscar por nombre...">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
 
         @if (filteredProjects().length > 0) {
           <div class="results-count">
-            {{ filteredProjects().length }} project(s) found
+            {{ filteredProjects().length }} {{ filteredProjects().length === 1 ? 'proyecto encontrado' : 'proyectos encontrados' }}
           </div>
         }
       </div>
@@ -83,8 +83,8 @@ import Swal from 'sweetalert2';
       @if (!selectedCompany()) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">business</mat-icon>
-          <h2>Select a company first</h2>
-          <p>Please select a company from the sidebar to view projects</p>
+          <h2>Selecciona primero una empresa</h2>
+          <p>Selecciona una empresa en la barra lateral para ver proyectos</p>
         </div>
       } @else if (isLoading()) {
         <div class="loading-spinner">
@@ -93,20 +93,20 @@ import Swal from 'sweetalert2';
       } @else if (filteredProjects().length === 0 && !searchTerm && statusFilter === null) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">folder</mat-icon>
-          <h2>No projects yet</h2>
-          <p>Create your first project to get started</p>
+          <h2>Aún no hay proyectos</h2>
+          <p>Crea tu primer proyecto para empezar</p>
           <button mat-raised-button color="primary" (click)="openCreateModal()">
             <mat-icon>add</mat-icon>
-            Create Project
+            Crear proyecto
           </button>
         </div>
       } @else if (filteredProjects().length === 0) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">search_off</mat-icon>
-          <h2>No projects found</h2>
-          <p>Try adjusting your filters</p>
+          <h2>No se encontraron proyectos</h2>
+          <p>Prueba ajustando tus filtros</p>
           <button mat-button (click)="clearFilters()">
-            Clear Filters
+            Limpiar filtros
           </button>
         </div>
       } @else {

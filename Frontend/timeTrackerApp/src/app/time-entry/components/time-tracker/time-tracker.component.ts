@@ -42,15 +42,15 @@ import Swal from 'sweetalert2';
         <div class="header-left">
           <mat-icon class="header-icon" color="primary">timer</mat-icon>
           <div>
-            <h1>Time Tracker</h1>
-            <p class="subtitle">Track your work time in real-time</p>
+            <h1>Rastreador de tiempo</h1>
+            <p class="subtitle">Registra tu tiempo de trabajo en tiempo real</p>
           </div>
         </div>
         <div class="header-actions">
           <mat-slide-toggle
             [checked]="soundsEnabled()"
             (change)="toggleSounds()"
-            [matTooltip]="soundsEnabled() ? 'Sound ON' : 'Sound OFF'">
+            [matTooltip]="soundsEnabled() ? 'Sonido ACTIVADO' : 'Sonido DESACTIVADO'">
             <mat-icon>{{ soundsEnabled() ? 'volume_up' : 'volume_off' }}</mat-icon>
           </mat-slide-toggle>
         </div>
@@ -80,7 +80,7 @@ import Swal from 'sweetalert2';
                     </div>
                   </div>
                   <div class="timer-actions-mini">
-                    <button mat-icon-button (click)="minimizeTimer()" matTooltip="Minimize (Ctrl+Shift+M)">
+                    <button mat-icon-button (click)="minimizeTimer()" matTooltip="Minimizar (Ctrl+Shift+M)">
                       <mat-icon>minimize</mat-icon>
                     </button>
                   </div>
@@ -89,11 +89,11 @@ import Swal from 'sweetalert2';
                 <div class="timer-display">
                   <div class="elapsed-time">
                     <span class="time-value">{{ elapsedTime() }}</span>
-                    <span class="time-label">Elapsed Time</span>
+                    <span class="time-label">Tiempo transcurrido</span>
                   </div>
                   <div class="start-time-info">
                     <mat-icon>schedule</mat-icon>
-                    <span>Started at {{ formatTime(activeTimer()!.startTime) }}</span>
+                    <span>Iniciado a las {{ formatTime(activeTimer()!.startTime) }}</span>
                   </div>
                 </div>
 
@@ -103,9 +103,9 @@ import Swal from 'sweetalert2';
                     color="warn"
                     (click)="stopTimer()"
                     [disabled]="isStopping()"
-                    matTooltip="Stop Timer (Ctrl+Shift+P)">
+                    matTooltip="Detener temporizador (Ctrl+Shift+P)">
                     <mat-icon>stop</mat-icon>
-                    Stop Timer
+                    Detener temporizador
                   </button>
                 </div>
               </mat-card-content>
@@ -122,10 +122,10 @@ import Swal from 'sweetalert2';
                   </div>
                 </div>
                 <div class="floating-actions">
-                  <button mat-icon-button color="warn" (click)="stopTimer()" [disabled]="isStopping()" matTooltip="Stop">
+                  <button mat-icon-button color="warn" (click)="stopTimer()" [disabled]="isStopping()" matTooltip="Detener">
                     <mat-icon>stop</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="expandTimer()" matTooltip="Expand (Ctrl+Shift+M)">
+                  <button mat-icon-button (click)="expandTimer()" matTooltip="Expandir (Ctrl+Shift+M)">
                     <mat-icon>open_in_full</mat-icon>
                   </button>
                 </div>
@@ -135,12 +135,12 @@ import Swal from 'sweetalert2';
             <!-- Start Timer Form -->
             <mat-card class="timer-card">
               <mat-card-content>
-                <h2>Start Tracking Time</h2>
-                <p class="subtitle-text">Select an issue and start tracking your work</p>
+                <h2>Iniciar registro de tiempo</h2>
+                <p class="subtitle-text">Selecciona un problema y comienza a registrar tu trabajo</p>
 
                 <div class="start-form">
                   <mat-form-field class="full-width" appearance="fill">
-                    <mat-label>Select Issue</mat-label>
+                    <mat-label>Seleccionar problema</mat-label>
                     <mat-select [(value)]="selectedIssueId">
                       @for (issue of availableIssues(); track issue.id) {
                         <mat-option [value]="issue.id">
@@ -151,11 +151,11 @@ import Swal from 'sweetalert2';
                   </mat-form-field>
 
                   <mat-form-field class="full-width" appearance="fill">
-                    <mat-label>Description (Optional)</mat-label>
+                    <mat-label>Descripción (opcional)</mat-label>
                     <textarea
                       matInput
                       [(ngModel)]="description"
-                      placeholder="What are you working on?"
+                      placeholder="¿En qué estás trabajando?"
                       rows="3">
                     </textarea>
                   </mat-form-field>
@@ -166,9 +166,9 @@ import Swal from 'sweetalert2';
                     (click)="startTimer()"
                     [disabled]="!selectedIssueId || isStarting()"
                     class="start-button"
-                    matTooltip="Start Timer (Ctrl+Shift+S)">
+                    matTooltip="Iniciar temporizador (Ctrl+Shift+S)">
                     <mat-icon>play_arrow</mat-icon>
-                    Start Timer
+                    Iniciar temporizador
                   </button>
                 </div>
               </mat-card-content>
@@ -180,14 +180,14 @@ import Swal from 'sweetalert2';
             <mat-card class="recent-entries-card">
               <mat-card-header>
                 <mat-icon mat-card-avatar color="primary">history</mat-icon>
-                <mat-card-title>Recent Entries</mat-card-title>
-                <mat-card-subtitle>Your latest time tracking</mat-card-subtitle>
+                <mat-card-title>Registros recientes</mat-card-title>
+                <mat-card-subtitle>Tu último registro de tiempo</mat-card-subtitle>
               </mat-card-header>
               <mat-card-content>
                 @if (recentEntries().length === 0) {
                   <div class="no-entries">
                     <mat-icon>access_time</mat-icon>
-                    <p>No recent time entries</p>
+                    <p>Sin registros de tiempo recientes</p>
                   </div>
                 } @else {
                   <div class="entries-list">
@@ -217,10 +217,10 @@ import Swal from 'sweetalert2';
       <!-- Keyboard shortcuts help -->
       <div class="shortcuts-info">
         <mat-icon>keyboard</mat-icon>
-        <span>Keyboard shortcuts:</span>
-        <span class="shortcut">Ctrl+Shift+S</span> Start
-        <span class="shortcut">Ctrl+Shift+P</span> Stop
-        <span class="shortcut">Ctrl+Shift+M</span> Minimize
+        <span>Atajos de teclado:</span>
+        <span class="shortcut">Ctrl+Shift+S</span> Iniciar
+        <span class="shortcut">Ctrl+Shift+P</span> Detener
+        <span class="shortcut">Ctrl+Shift+M</span> Minimizar
       </div>
     </div>
   `,

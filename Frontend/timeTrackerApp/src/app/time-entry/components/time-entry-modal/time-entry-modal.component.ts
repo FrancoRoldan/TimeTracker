@@ -36,29 +36,29 @@ import { CompanyService } from '../../../company/services/company.service';
     MatProgressSpinnerModule
   ],
   template: `
-    <h2 mat-dialog-title>{{ isEditMode ? 'Edit Time Entry' : 'Create Time Entry' }}</h2>
+    <h2 mat-dialog-title>{{ isEditMode ? 'Editar registro de tiempo' : 'Crear registro de tiempo' }}</h2>
 
     <mat-dialog-content>
       <form [formGroup]="entryForm" class="form-content">
         @if (!isEditMode) {
           <!-- Project Selection -->
           <mat-form-field class="full-width" appearance="fill">
-            <mat-label>Project</mat-label>
+            <mat-label>Proyecto</mat-label>
             <mat-select formControlName="projectId" (selectionChange)="onProjectChange($event.value)" required>
               @for (project of availableProjects(); track project.id) {
                 <mat-option [value]="project.id">{{ project.name }}</mat-option>
               }
             </mat-select>
             @if (entryForm.get('projectId')?.hasError('required') && entryForm.get('projectId')?.touched) {
-              <mat-error>Project is required</mat-error>
+              <mat-error>El proyecto es obligatorio</mat-error>
             }
           </mat-form-field>
 
           <!-- Issue Selection (Optional) -->
           <mat-form-field class="full-width" appearance="fill">
-            <mat-label>Issue (Optional)</mat-label>
+            <mat-label>Problema (opcional)</mat-label>
             <mat-select formControlName="issueId" [disabled]="!entryForm.get('projectId')?.value">
-              <mat-option [value]="null">No specific issue</mat-option>
+              <mat-option [value]="null">Sin problema específico</mat-option>
               @for (issue of availableIssues(); track issue.id) {
                 <mat-option [value]="issue.id">{{ issue.title }}</mat-option>
               }
@@ -67,39 +67,39 @@ import { CompanyService } from '../../../company/services/company.service';
         }
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Description</mat-label>
+          <mat-label>Descripción</mat-label>
           <textarea
             matInput
             formControlName="description"
-            placeholder="What did you work on?"
+            placeholder="¿En qué trabajaste?"
             rows="3">
           </textarea>
           @if (entryForm.get('description')?.hasError('maxlength')) {
-            <mat-error>Description cannot exceed 500 characters</mat-error>
+            <mat-error>La descripción no puede exceder 500 caracteres</mat-error>
           }
         </mat-form-field>
 
         <div class="form-row">
           <mat-form-field appearance="fill">
-            <mat-label>Start Date & Time</mat-label>
+            <mat-label>Fecha y hora de inicio</mat-label>
             <input
               matInput
               type="datetime-local"
               formControlName="startTime"
               required>
             @if (entryForm.get('startTime')?.hasError('required') && entryForm.get('startTime')?.touched) {
-              <mat-error>Start time is required</mat-error>
+              <mat-error>La hora de inicio es obligatoria</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="fill">
-            <mat-label>End Date & Time</mat-label>
+            <mat-label>Fecha y hora de finalización</mat-label>
             <input
               matInput
               type="datetime-local"
               formControlName="endTime">
             @if (entryForm.hasError('endBeforeStart')) {
-              <mat-error>End time must be after start time</mat-error>
+              <mat-error>La hora de finalización debe ser posterior a la de inicio</mat-error>
             }
           </mat-form-field>
         </div>
@@ -107,7 +107,7 @@ import { CompanyService } from '../../../company/services/company.service';
         @if (calculatedHours() !== null) {
           <div class="calculated-hours">
             <mat-icon>schedule</mat-icon>
-            <span>Duration: <strong>{{ calculatedHours() }}h</strong></span>
+            <span>Duración: <strong>{{ calculatedHours() }}h</strong></span>
           </div>
         }
       </form>
@@ -115,7 +115,7 @@ import { CompanyService } from '../../../company/services/company.service';
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()" [disabled]="isLoading()">
-        Cancel
+        Cancelar
       </button>
 
       @if (isLoading()) {
@@ -126,7 +126,7 @@ import { CompanyService } from '../../../company/services/company.service';
           color="primary"
           (click)="onSave()"
           [disabled]="!entryForm.valid">
-          {{ isEditMode ? 'Update' : 'Create' }}
+          {{ isEditMode ? 'Actualizar' : 'Crear' }}
         </button>
       }
     </mat-dialog-actions>

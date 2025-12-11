@@ -35,19 +35,19 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
         <div class="header-left">
           <mat-icon class="header-icon" color="primary">access_time</mat-icon>
           <div>
-            <h1>Time Entries</h1>
-            <p class="subtitle">Track your work time</p>
+            <h1>Registros de tiempo</h1>
+            <p class="subtitle">Registra tu tiempo de trabajo</p>
           </div>
         </div>
         <button mat-raised-button color="primary" (click)="openCreateModal()">
           <mat-icon>add</mat-icon>
-          New Entry
+          Nuevo registro
         </button>
       </div>
 
       <div class="filters">
         <mat-form-field appearance="outline">
-          <mat-label>Start Date</mat-label>
+          <mat-label>Fecha de inicio</mat-label>
           <input
             matInput
             [matDatepicker]="startPicker"
@@ -58,7 +58,7 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>End Date</mat-label>
+          <mat-label>Fecha de finalización</mat-label>
           <input
             matInput
             [matDatepicker]="endPicker"
@@ -70,12 +70,12 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
 
         <button mat-raised-button (click)="clearFilters()">
           <mat-icon>clear</mat-icon>
-          Clear Filters
+          Limpiar filtros
         </button>
 
         <button mat-raised-button (click)="loadTimeEntries()">
           <mat-icon>refresh</mat-icon>
-          Refresh
+          Actualizar
         </button>
       </div>
 
@@ -85,7 +85,7 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
             <mat-icon class="summary-icon">access_time</mat-icon>
             <div class="summary-info">
               <span class="summary-value">{{ totalHours() }}h</span>
-              <span class="summary-label">Total Hours</span>
+              <span class="summary-label">Horas totales</span>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
             <mat-icon class="summary-icon">list</mat-icon>
             <div class="summary-info">
               <span class="summary-value">{{ timeEntries().length }}</span>
-              <span class="summary-label">Entries</span>
+              <span class="summary-label">Registros</span>
             </div>
           </div>
         </div>
@@ -105,7 +105,7 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
             <mat-icon class="summary-icon">event</mat-icon>
             <div class="summary-info">
               <span class="summary-value">{{ averageHoursPerDay() }}h</span>
-              <span class="summary-label">Avg per Day</span>
+              <span class="summary-label">Promedio por día</span>
             </div>
           </div>
         </div>
@@ -118,59 +118,59 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
       } @else if (timeEntries().length === 0) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">access_time</mat-icon>
-          <h2>No Time Entries</h2>
-          <p>Create your first time entry to start tracking your work</p>
+          <h2>Sin registros de tiempo</h2>
+          <p>Crea tu primer registro de tiempo para comenzar a registrar tu trabajo</p>
         </div>
       } @else {
         <div class="table-container">
           <table mat-table [dataSource]="timeEntries()" class="time-entries-table">
             <!-- Date Column -->
             <ng-container matColumnDef="date">
-              <th mat-header-cell *matHeaderCellDef>Date</th>
+              <th mat-header-cell *matHeaderCellDef>Fecha</th>
               <td mat-cell *matCellDef="let entry">{{ formatDate(entry.startTime) }}</td>
             </ng-container>
 
             <!-- Project Column -->
             <ng-container matColumnDef="project">
-              <th mat-header-cell *matHeaderCellDef>Project</th>
+              <th mat-header-cell *matHeaderCellDef>Proyecto</th>
               <td mat-cell *matCellDef="let entry">{{ entry.projectName }}</td>
             </ng-container>
 
             <!-- Issue Column -->
             <ng-container matColumnDef="issue">
-              <th mat-header-cell *matHeaderCellDef>Issue</th>
+              <th mat-header-cell *matHeaderCellDef>Problema</th>
               <td mat-cell *matCellDef="let entry">{{ entry.issueTitle }}</td>
             </ng-container>
 
             <!-- Description Column -->
             <ng-container matColumnDef="description">
-              <th mat-header-cell *matHeaderCellDef>Description</th>
+              <th mat-header-cell *matHeaderCellDef>Descripción</th>
               <td mat-cell *matCellDef="let entry">
-                <span class="description-text">{{ entry.description || 'No description' }}</span>
+                <span class="description-text">{{ entry.description || 'Sin descripción' }}</span>
               </td>
             </ng-container>
 
             <!-- Start Time Column -->
             <ng-container matColumnDef="startTime">
-              <th mat-header-cell *matHeaderCellDef>Start</th>
+              <th mat-header-cell *matHeaderCellDef>Inicio</th>
               <td mat-cell *matCellDef="let entry">{{ formatTime(entry.startTime) }}</td>
             </ng-container>
 
             <!-- End Time Column -->
             <ng-container matColumnDef="endTime">
-              <th mat-header-cell *matHeaderCellDef>End</th>
+              <th mat-header-cell *matHeaderCellDef>Fin</th>
               <td mat-cell *matCellDef="let entry">
                 @if (entry.endTime) {
                   {{ formatTime(entry.endTime) }}
                 } @else {
-                  <span class="active-badge">Active</span>
+                  <span class="active-badge">Activo</span>
                 }
               </td>
             </ng-container>
 
             <!-- Hours Column -->
             <ng-container matColumnDef="hours">
-              <th mat-header-cell *matHeaderCellDef>Hours</th>
+              <th mat-header-cell *matHeaderCellDef>Horas</th>
               <td mat-cell *matCellDef="let entry">
                 <span class="hours-badge">{{ ((entry.durationMinutes ?? 0) / 60).toFixed(2) }}h</span>
               </td>
@@ -178,7 +178,7 @@ import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
 
             <!-- Actions Column -->
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let entry">
                 <button mat-icon-button (click)="editEntry(entry)" [disabled]="!entry.endTime">
                   <mat-icon>edit</mat-icon>

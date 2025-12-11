@@ -33,29 +33,29 @@ import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
 
       <mat-card-content>
         <div class="project-info">
-          <div class="info-row">
+            <div class="info-row">
             <mat-icon class="info-icon">event</mat-icon>
-            <span class="info-label">Start:</span>
+            <span class="info-label">Inicio:</span>
             <span>{{ formatDate(project().startDate) }}</span>
           </div>
 
           @if (project().endDate) {
             <div class="info-row">
               <mat-icon class="info-icon">event</mat-icon>
-              <span class="info-label">End:</span>
+              <span class="info-label">Fin:</span>
               <span>{{ formatDate(project().endDate!) }}</span>
             </div>
           } @else {
             <div class="info-row">
               <mat-icon class="info-icon">event</mat-icon>
-              <span class="info-label">End:</span>
-              <span class="no-date">No end date</span>
+              <span class="info-label">Fin:</span>
+              <span class="no-date">Sin fecha de fin</span>
             </div>
           }
 
-          <div class="info-row">
+            <div class="info-row">
             <mat-icon class="info-icon">schedule</mat-icon>
-            <span class="info-label">Created:</span>
+            <span class="info-label">Creado:</span>
             <span>{{ formatDate(project().createdAt) }}</span>
           </div>
         </div>
@@ -64,15 +64,15 @@ import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
       <mat-card-actions>
         <button mat-button color="primary" (click)="onView()">
           <mat-icon>visibility</mat-icon>
-          View
+          Ver
         </button>
         <button mat-button (click)="onEdit()">
           <mat-icon>edit</mat-icon>
-          Edit
+          Editar
         </button>
         <button mat-button color="warn" (click)="onDelete()">
           <mat-icon>delete</mat-icon>
-          Delete
+          Eliminar
         </button>
       </mat-card-actions>
     </mat-card>

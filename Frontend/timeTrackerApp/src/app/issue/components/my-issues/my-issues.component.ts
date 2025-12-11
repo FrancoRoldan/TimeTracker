@@ -39,31 +39,31 @@ import { CompanyService } from '../../../company/services/company.service';
         <div class="header-left">
           <mat-icon class="header-icon" color="primary">person</mat-icon>
           <div>
-            <h1>My Issues</h1>
-            <p class="subtitle">Issues assigned to you</p>
+            <h1>Mis incidencias</h1>
+            <p class="subtitle">Incidencias asignadas a ti</p>
           </div>
         </div>
         <button mat-raised-button color="primary" (click)="refreshIssues()">
           <mat-icon>refresh</mat-icon>
-          Refresh
+          Actualizar
         </button>
       </div>
 
       <div class="filters">
         <mat-form-field class="search-field" appearance="outline">
-          <mat-label>Search issues</mat-label>
+          <mat-label>Buscar incidencias</mat-label>
           <input
             matInput
             [value]="searchTerm()"
             (input)="onSearchChange($event)"
-            placeholder="Search by title...">
+            placeholder="Buscar por título...">
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Filter by Status</mat-label>
+          <mat-label>Filtrar por estado</mat-label>
           <mat-select [value]="selectedStatus()" (selectionChange)="onStatusChange($event.value)">
-            <mat-option [value]="null">All Statuses</mat-option>
+            <mat-option [value]="null">Todos los estados</mat-option>
             <mat-option [value]="IssueStatus.ToDo">{{ IssueStatus.ToDo | enumLabel:'IssueStatus' }}</mat-option>
             <mat-option [value]="IssueStatus.InProgress">{{ IssueStatus.InProgress | enumLabel:'IssueStatus' }}</mat-option>
             <mat-option [value]="IssueStatus.Testing">{{ IssueStatus.Testing | enumLabel:'IssueStatus' }}</mat-option>
@@ -72,9 +72,9 @@ import { CompanyService } from '../../../company/services/company.service';
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Filter by Priority</mat-label>
+          <mat-label>Filtrar por prioridad</mat-label>
           <mat-select [value]="selectedPriority()" (selectionChange)="onPriorityChange($event.value)">
-            <mat-option [value]="null">All Priorities</mat-option>
+            <mat-option [value]="null">Todas las prioridades</mat-option>
             <mat-option [value]="IssuePriority.Critical">{{ IssuePriority.Critical | enumLabel:'IssuePriority' }}</mat-option>
             <mat-option [value]="IssuePriority.High">{{ IssuePriority.High | enumLabel:'IssuePriority' }}</mat-option>
             <mat-option [value]="IssuePriority.Medium">{{ IssuePriority.Medium | enumLabel:'IssuePriority' }}</mat-option>
@@ -91,7 +91,7 @@ import { CompanyService } from '../../../company/services/company.service';
               <mat-icon class="stat-icon" style="color: #757575;">assignment</mat-icon>
               <div class="stat-info">
                 <span class="stat-value">{{ myIssues().length }}</span>
-                <span class="stat-label">Total Issues</span>
+                <span class="stat-label">Total de incidencias</span>
               </div>
             </div>
           </mat-card-content>
@@ -103,7 +103,7 @@ import { CompanyService } from '../../../company/services/company.service';
               <mat-icon class="stat-icon" style="color: #2196f3;">play_circle</mat-icon>
               <div class="stat-info">
                 <span class="stat-value">{{ countByStatus(IssueStatus.InProgress) }}</span>
-                <span class="stat-label">In Progress</span>
+                <span class="stat-label">En progreso</span>
               </div>
             </div>
           </mat-card-content>
@@ -115,7 +115,7 @@ import { CompanyService } from '../../../company/services/company.service';
               <mat-icon class="stat-icon" style="color: #f44336;">priority_high</mat-icon>
               <div class="stat-info">
                 <span class="stat-value">{{ countByPriority(IssuePriority.High) + countByPriority(IssuePriority.Critical) }}</span>
-                <span class="stat-label">High Priority</span>
+                <span class="stat-label">Alta prioridad</span>
               </div>
             </div>
           </mat-card-content>
@@ -127,26 +127,26 @@ import { CompanyService } from '../../../company/services/company.service';
               <mat-icon class="stat-icon" style="color: #4caf50;">check_circle</mat-icon>
               <div class="stat-info">
                 <span class="stat-value">{{ countByStatus(IssueStatus.Done) }}</span>
-                <span class="stat-label">Completed</span>
+                <span class="stat-label">Completadas</span>
               </div>
             </div>
           </mat-card-content>
         </mat-card>
       </div>
 
-      <div class="results-info">
-        <span>{{ filteredIssues().length }} issue{{ filteredIssues().length !== 1 ? 's' : '' }} found</span>
+        <div class="results-info">
+        <span>{{ filteredIssues().length }} {{ filteredIssues().length === 1 ? 'incidencia encontrada' : 'incidencias encontradas' }}</span>
       </div>
 
       @if (isLoading()) {
         <div class="loading-spinner">
           <mat-spinner [diameter]="50"></mat-spinner>
         </div>
-      } @else if (filteredIssues().length === 0) {
+        } @else if (filteredIssues().length === 0) {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">inbox</mat-icon>
-          <h2>No Issues Found</h2>
-          <p>{{ myIssues().length === 0 ? 'You have no assigned issues' : 'Try adjusting your filters' }}</p>
+          <h2>No se encontraron incidencias</h2>
+          <p>{{ myIssues().length === 0 ? 'No tienes incidencias asignadas' : 'Prueba ajustando tus filtros' }}</p>
         </div>
       } @else {
         <div class="issues-grid">

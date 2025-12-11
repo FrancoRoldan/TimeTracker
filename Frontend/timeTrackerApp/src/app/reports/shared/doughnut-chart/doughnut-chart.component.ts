@@ -21,7 +21,7 @@ import { MatCardModule } from '@angular/material/card';
         </div>
       } @else if (_data().length === 0) {
         <div class="no-data">
-          <p>No data available</p>
+          <p>No hay datos disponibles</p>
         </div>
       } @else {
         <div class="chart-wrapper">

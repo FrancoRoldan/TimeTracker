@@ -26,7 +26,7 @@ import { HttpErrorResponse } from '@angular/common/http';
   template: `
   <form [formGroup]="myForm">
             
-    <h2 class="mb-4">iniciar sesión</h2>
+    <h2 class="mb-4">Iniciar sesión</h2>
 
     <mat-form-field class="w-100 mb-2 form-field" appearance="fill">
       <mat-label>Email</mat-label>
@@ -35,8 +35,8 @@ import { HttpErrorResponse } from '@angular/common/http';
     </mat-form-field>
 
     <mat-form-field class="w-100 mb-4 form-field" appearance="fill">
-      <mat-label>Password</mat-label>
-      <input matInput formControlName="password" [type]="hide() ? 'password' : 'text'" placeholder="Password">
+      <mat-label>Contraseña</mat-label>
+      <input matInput formControlName="password" [type]="hide() ? 'password' : 'text'" placeholder="Contraseña">
       <mat-icon matSuffix (click)="clickEvent($event)">{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
     </mat-form-field>
 

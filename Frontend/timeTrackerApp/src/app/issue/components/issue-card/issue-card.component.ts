@@ -38,30 +38,30 @@ import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
 
       <mat-card-content>
         <div class="issue-info">
-          <div class="info-row">
+            <div class="info-row">
             <mat-icon class="info-icon">folder</mat-icon>
-            <span class="info-label">Project:</span>
+            <span class="info-label">Proyecto:</span>
             <span class="info-value">{{ issue().projectName }}</span>
           </div>
 
           @if (issue().assignedUserName) {
             <div class="info-row">
               <mat-icon class="info-icon">person</mat-icon>
-              <span class="info-label">Assigned:</span>
+              <span class="info-label">Asignado:</span>
               <span class="info-value">{{ issue().assignedUserName }}</span>
             </div>
           } @else {
             <div class="info-row">
               <mat-icon class="info-icon">person_outline</mat-icon>
-              <span class="info-label">Assigned:</span>
-              <span class="info-value unassigned">Unassigned</span>
+              <span class="info-label">Asignado:</span>
+              <span class="info-value unassigned">Sin asignar</span>
             </div>
           }
 
           @if (issue().estimatedHours) {
             <div class="info-row">
               <mat-icon class="info-icon">schedule</mat-icon>
-              <span class="info-label">Estimated:</span>
+              <span class="info-label">Estimado:</span>
               <span class="info-value">{{ issue().estimatedHours }}h</span>
             </div>
           }
@@ -77,15 +77,15 @@ import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
       <mat-card-actions>
         <button mat-button color="primary" (click)="onView()">
           <mat-icon>visibility</mat-icon>
-          View
+          Ver
         </button>
         <button mat-button (click)="onEdit()">
           <mat-icon>edit</mat-icon>
-          Edit
+          Editar
         </button>
         <button mat-button color="warn" (click)="onDelete()">
           <mat-icon>delete</mat-icon>
-          Delete
+          Eliminar
         </button>
       </mat-card-actions>
     </mat-card>

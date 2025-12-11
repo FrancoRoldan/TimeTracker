@@ -29,7 +29,7 @@ import { filter } from 'rxjs/operators';
           color="primary"
           class="floating-timer-btn"
           (click)="openStartTimerModal()"
-          matTooltip="Start Timer"
+          matTooltip="Iniciar temporizador"
           matTooltipPosition="right">
           <mat-icon>play_arrow</mat-icon>
         </button>
@@ -51,7 +51,7 @@ import { filter } from 'rxjs/operators';
             color="warn"
             class="stop-btn"
             (click)="stopTimer()"
-            matTooltip="Stop Timer"
+            matTooltip="Detener temporizador"
             matTooltipPosition="right">
             <mat-icon>stop</mat-icon>
           </button>

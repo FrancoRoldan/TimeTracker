@@ -32,23 +32,23 @@ import Swal from 'sweetalert2';
     EnumLabelPipe
   ],
   template: `
-    <h2 mat-dialog-title>{{ isEditMode ? 'Edit Project' : 'Create Project' }}</h2>
+    <h2 mat-dialog-title>{{ isEditMode ? 'Editar proyecto' : 'Crear proyecto' }}</h2>
 
     <mat-dialog-content>
       <form [formGroup]="projectForm" class="form-content">
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Project Name</mat-label>
-          <input matInput formControlName="name" placeholder="Enter project name" required>
+          <mat-label>Nombre del proyecto</mat-label>
+          <input matInput formControlName="name" placeholder="Ingrese el nombre del proyecto" required>
           @if (projectForm.get('name')?.hasError('required') && projectForm.get('name')?.touched) {
-            <mat-error>Project name is required</mat-error>
+            <mat-error>El nombre del proyecto es obligatorio</mat-error>
           }
           @if (projectForm.get('name')?.hasError('maxlength')) {
-            <mat-error>Project name cannot exceed 200 characters</mat-error>
+            <mat-error>El nombre del proyecto no puede exceder los 200 caracteres</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Status</mat-label>
+          <mat-label>Estado</mat-label>
           <mat-select formControlName="status" required>
             <mat-option [value]="ProjectStatus.Active">
               {{ ProjectStatus.Active | enumLabel:'ProjectStatus' }}
@@ -64,27 +64,27 @@ import Swal from 'sweetalert2';
             </mat-option>
           </mat-select>
           @if (projectForm.get('status')?.hasError('required') && projectForm.get('status')?.touched) {
-            <mat-error>Status is required</mat-error>
+            <mat-error>El estado es obligatorio</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Start Date</mat-label>
+          <mat-label>Fecha de inicio</mat-label>
           <input matInput [matDatepicker]="startPicker" formControlName="startDate" required>
           <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
           <mat-datepicker #startPicker></mat-datepicker>
           @if (projectForm.get('startDate')?.hasError('required') && projectForm.get('startDate')?.touched) {
-            <mat-error>Start date is required</mat-error>
+            <mat-error>La fecha de inicio es obligatoria</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>End Date (Optional)</mat-label>
+          <mat-label>Fecha de finalización (opcional)</mat-label>
           <input matInput [matDatepicker]="endPicker" formControlName="endDate">
           <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
           <mat-datepicker #endPicker></mat-datepicker>
           @if (projectForm.hasError('endDateBeforeStart')) {
-            <mat-error>End date must be after start date</mat-error>
+            <mat-error>La fecha de finalización debe ser posterior a la de inicio</mat-error>
           }
         </mat-form-field>
       </form>
@@ -92,7 +92,7 @@ import Swal from 'sweetalert2';
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()" [disabled]="isLoading()">
-        Cancel
+        Cancelar
       </button>
 
       @if (isLoading()) {
@@ -103,7 +103,7 @@ import Swal from 'sweetalert2';
           color="primary"
           (click)="onSave()"
           [disabled]="!projectForm.valid">
-          {{ isEditMode ? 'Update' : 'Create' }}
+          {{ isEditMode ? 'Actualizar' : 'Crear' }}
         </button>
       }
     </mat-dialog-actions>

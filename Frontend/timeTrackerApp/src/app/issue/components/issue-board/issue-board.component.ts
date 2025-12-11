@@ -34,8 +34,8 @@ import { CompanyService } from '../../../company/services/company.service';
         <div class="header-left">
           <mat-icon class="header-icon" color="primary">view_kanban</mat-icon>
           <div>
-            <h1>Issue Board</h1>
-            <p class="subtitle">Kanban view for managing issues</p>
+            <h1>Tablero de incidencias</h1>
+            <p class="subtitle">Vista Kanban para gestionar incidencias</p>
           </div>
         </div>
         <button
@@ -44,7 +44,7 @@ import { CompanyService } from '../../../company/services/company.service';
           (click)="openCreateModal()"
           >
           <mat-icon>add</mat-icon>
-          New Issue
+          Nueva incidencia
         </button>
       </div>
 
@@ -58,7 +58,7 @@ import { CompanyService } from '../../../company/services/company.service';
           <div class="board-column">
             <div class="column-header todo">
               <mat-icon>inbox</mat-icon>
-              <h3>To Do</h3>
+              <h3>Por hacer</h3>
               <span class="count">{{ todoIssues().length }}</span>
             </div>
             <div
@@ -92,7 +92,7 @@ import { CompanyService } from '../../../company/services/company.service';
               } @empty {
                 <div class="empty-column">
                   <mat-icon>inbox</mat-icon>
-                  <p>No issues</p>
+                  <p>No hay incidencias</p>
                 </div>
               }
             </div>
@@ -102,7 +102,7 @@ import { CompanyService } from '../../../company/services/company.service';
           <div class="board-column">
             <div class="column-header in-progress">
               <mat-icon>play_circle</mat-icon>
-              <h3>In Progress</h3>
+              <h3>En progreso</h3>
               <span class="count">{{ inProgressIssues().length }}</span>
             </div>
             <div
@@ -136,7 +136,7 @@ import { CompanyService } from '../../../company/services/company.service';
               } @empty {
                 <div class="empty-column">
                   <mat-icon>play_circle</mat-icon>
-                  <p>No issues</p>
+                  <p>No hay incidencias</p>
                 </div>
               }
             </div>
@@ -146,7 +146,7 @@ import { CompanyService } from '../../../company/services/company.service';
           <div class="board-column">
             <div class="column-header testing">
               <mat-icon>science</mat-icon>
-              <h3>Testing</h3>
+              <h3>En pruebas</h3>
               <span class="count">{{ testingIssues().length }}</span>
             </div>
             <div
@@ -180,7 +180,7 @@ import { CompanyService } from '../../../company/services/company.service';
               } @empty {
                 <div class="empty-column">
                   <mat-icon>science</mat-icon>
-                  <p>No issues</p>
+                  <p>No hay incidencias</p>
                 </div>
               }
             </div>
@@ -190,7 +190,7 @@ import { CompanyService } from '../../../company/services/company.service';
           <div class="board-column">
             <div class="column-header done">
               <mat-icon>check_circle</mat-icon>
-              <h3>Done</h3>
+              <h3>Hecho</h3>
               <span class="count">{{ doneIssues().length }}</span>
             </div>
             <div
@@ -224,7 +224,7 @@ import { CompanyService } from '../../../company/services/company.service';
               } @empty {
                 <div class="empty-column">
                   <mat-icon>check_circle</mat-icon>
-                  <p>No issues</p>
+                  <p>No hay incidencias</p>
                 </div>
               }
             </div>

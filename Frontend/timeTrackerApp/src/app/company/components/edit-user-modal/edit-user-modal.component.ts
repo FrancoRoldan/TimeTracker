@@ -33,28 +33,28 @@ export interface EditUserDialogData {
     MatSelectModule
   ],
   template: `
-    <h2 mat-dialog-title>Edit User: {{ data.userName }}</h2>
+    <h2 mat-dialog-title>Editar usuario: {{ data.userName }}</h2>
 
     <mat-dialog-content>
       <form [formGroup]="userForm" class="form-content">
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Role</mat-label>
+          <mat-label>Rol</mat-label>
           <mat-select formControlName="role" required>
-            <mat-option [value]="UserRole.Admin">Admin</mat-option>
-            <mat-option [value]="UserRole.Manager">Manager</mat-option>
-            <mat-option [value]="UserRole.Developer">Developer</mat-option>
-            <mat-option [value]="UserRole.Viewer">Viewer</mat-option>
+            <mat-option [value]="UserRole.Admin">Administrador</mat-option>
+            <mat-option [value]="UserRole.Manager">Gerente</mat-option>
+            <mat-option [value]="UserRole.Developer">Desarrollador</mat-option>
+            <mat-option [value]="UserRole.Viewer">Visualizador</mat-option>
           </mat-select>
           @if (userForm.get('role')?.hasError('required') && userForm.get('role')?.touched) {
-            <mat-error>Role is required</mat-error>
+            <mat-error>El rol es obligatorio</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Hourly Rate</mat-label>
-          <input matInput formControlName="hourlyRate" type="number" placeholder="Enter hourly rate" min="0" step="0.01">
+          <mat-label>Tarifa por hora</mat-label>
+          <input matInput formControlName="hourlyRate" type="number" placeholder="Introduce la tarifa por hora" min="0" step="0.01">
           @if (userForm.get('hourlyRate')?.hasError('min')) {
-            <mat-error>Hourly rate must be greater than or equal to 0</mat-error>
+            <mat-error>La tarifa por hora debe ser mayor o igual a 0</mat-error>
           }
         </mat-form-field>
       </form>
@@ -62,7 +62,7 @@ export interface EditUserDialogData {
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()" [disabled]="isLoading()">
-        Cancel
+        Cancelar
       </button>
 
       @if (isLoading()) {
@@ -73,7 +73,7 @@ export interface EditUserDialogData {
           color="primary"
           (click)="onSave()"
           [disabled]="!userForm.valid">
-          Update
+          Actualizar
         </button>
       }
     </mat-dialog-actions>

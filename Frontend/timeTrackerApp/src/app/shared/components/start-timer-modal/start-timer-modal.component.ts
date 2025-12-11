@@ -31,32 +31,32 @@ import { CompanyService } from '../../../company/services/company.service';
     MatProgressSpinnerModule
   ],
   template: `
-    <h2 mat-dialog-title>Start Timer</h2>
+    <h2 mat-dialog-title>Iniciar temporizador</h2>
     <mat-dialog-content>
       <form [formGroup]="timerForm" class="form-content">
         <!-- Project Selection -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Project</mat-label>
+          <mat-label>Proyecto</mat-label>
           <mat-select formControlName="projectId" (selectionChange)="onProjectChange($event.value)">
             @if (isLoadingProjects()) {
-              <mat-option disabled>Loading projects...</mat-option>
+              <mat-option disabled>Cargando proyectos...</mat-option>
             }
             @for (project of projects(); track project.id) {
               <mat-option [value]="project.id">{{ project.name }}</mat-option>
             }
           </mat-select>
           @if (timerForm.get('projectId')?.hasError('required') && timerForm.get('projectId')?.touched) {
-            <mat-error>Project is required</mat-error>
+            <mat-error>El proyecto es obligatorio</mat-error>
           }
         </mat-form-field>
 
         <!-- Issue Selection (Optional) -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Issue (Optional)</mat-label>
+          <mat-label>Problema (opcional)</mat-label>
           <mat-select formControlName="issueId" [disabled]="!timerForm.get('projectId')?.value">
-            <mat-option [value]="null">No specific issue</mat-option>
+            <mat-option [value]="null">Sin problema específico</mat-option>
             @if (isLoadingIssues()) {
-              <mat-option disabled>Loading issues...</mat-option>
+              <mat-option disabled>Cargando problemas...</mat-option>
             }
             @for (issue of issues(); track issue.id) {
               <mat-option [value]="issue.id">{{ issue.title }}</mat-option>
@@ -66,12 +66,12 @@ import { CompanyService } from '../../../company/services/company.service';
 
         <!-- Description (Optional) -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Description (Optional)</mat-label>
+          <mat-label>Descripción (opcional)</mat-label>
           <textarea
             matInput
             formControlName="description"
             rows="3"
-            placeholder="Add notes about what you're working on..."></textarea>
+            placeholder="Agrega notas sobre en qué estás trabajando..."></textarea>
         </mat-form-field>
       </form>
 
@@ -83,14 +83,14 @@ import { CompanyService } from '../../../company/services/company.service';
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()" [disabled]="isSubmitting()">Cancel</button>
+      <button mat-button (click)="onCancel()" [disabled]="isSubmitting()">Cancelar</button>
       <button
         mat-raised-button
         color="primary"
         (click)="onStartTimer()"
         [disabled]="timerForm.invalid || isSubmitting()">
         <mat-icon>play_arrow</mat-icon>
-        Start Timer
+        Iniciar temporizador
       </button>
     </mat-dialog-actions>
   `,

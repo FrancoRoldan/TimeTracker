@@ -32,16 +32,16 @@ import Swal from 'sweetalert2';
     EnumLabelPipe
   ],
   template: `
-    <h2 mat-dialog-title>{{ isEditMode ? 'Edit Issue' : 'Create Issue' }}</h2>
+    <h2 mat-dialog-title>{{ isEditMode ? 'Editar incidencia' : 'Crear incidencia' }}</h2>
 
     <mat-dialog-content>
       <form [formGroup]="issueForm" class="form-content">
         @if (!data.projectId) {
           <mat-form-field class="full-width" appearance="fill">
-            <mat-label>Project</mat-label>
+            <mat-label>Proyecto</mat-label>
             <mat-select formControlName="projectId" required>
               <mat-option [value]="null">
-                <em>Select a project</em>
+                <em>Selecciona un proyecto</em>
               </mat-option>
               @for (project of projects(); track project.id) {
                 <mat-option [value]="project.id">
@@ -50,38 +50,38 @@ import Swal from 'sweetalert2';
               }
             </mat-select>
             @if (issueForm.get('projectId')?.hasError('required') && issueForm.get('projectId')?.touched) {
-              <mat-error>Project is required</mat-error>
+              <mat-error>El proyecto es obligatorio</mat-error>
             }
           </mat-form-field>
         }
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Title</mat-label>
-          <input matInput formControlName="title" placeholder="Enter issue title" required>
+          <mat-label>Título</mat-label>
+          <input matInput formControlName="title" placeholder="Introduce el título de la incidencia" required>
           @if (issueForm.get('title')?.hasError('required') && issueForm.get('title')?.touched) {
-            <mat-error>Title is required</mat-error>
+            <mat-error>El título es obligatorio</mat-error>
           }
           @if (issueForm.get('title')?.hasError('maxlength')) {
-            <mat-error>Title cannot exceed 200 characters</mat-error>
+            <mat-error>El título no puede exceder 200 caracteres</mat-error>
           }
         </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Description</mat-label>
+          <mat-label>Descripción</mat-label>
           <textarea
             matInput
             formControlName="description"
-            placeholder="Enter issue description"
+            placeholder="Introduce la descripción de la incidencia"
             rows="4">
           </textarea>
           @if (issueForm.get('description')?.hasError('maxlength')) {
-            <mat-error>Description cannot exceed 1000 characters</mat-error>
+            <mat-error>La descripción no puede exceder 1000 caracteres</mat-error>
           }
         </mat-form-field>
 
         <div class="form-row">
           <mat-form-field appearance="fill">
-            <mat-label>Type</mat-label>
+            <mat-label>Tipo</mat-label>
             <mat-select formControlName="type" required>
               <mat-option [value]="IssueType.UserStory">
                 {{ IssueType.UserStory | enumLabel:'IssueType' }}
@@ -94,12 +94,12 @@ import Swal from 'sweetalert2';
               </mat-option>
             </mat-select>
             @if (issueForm.get('type')?.hasError('required') && issueForm.get('type')?.touched) {
-              <mat-error>Type is required</mat-error>
+              <mat-error>El tipo es obligatorio</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="fill">
-            <mat-label>Status</mat-label>
+            <mat-label>Estado</mat-label>
             <mat-select formControlName="status" required>
               <mat-option [value]="IssueStatus.ToDo">
                 {{ IssueStatus.ToDo | enumLabel:'IssueStatus' }}
@@ -115,14 +115,14 @@ import Swal from 'sweetalert2';
               </mat-option>
             </mat-select>
             @if (issueForm.get('status')?.hasError('required') && issueForm.get('status')?.touched) {
-              <mat-error>Status is required</mat-error>
+              <mat-error>El estado es obligatorio</mat-error>
             }
           </mat-form-field>
         </div>
 
         <div class="form-row">
           <mat-form-field appearance="fill">
-            <mat-label>Priority</mat-label>
+            <mat-label>Prioridad</mat-label>
             <mat-select formControlName="priority" required>
               <mat-option [value]="IssuePriority.Low">
                 {{ IssuePriority.Low | enumLabel:'IssuePriority' }}
@@ -138,32 +138,32 @@ import Swal from 'sweetalert2';
               </mat-option>
             </mat-select>
             @if (issueForm.get('priority')?.hasError('required') && issueForm.get('priority')?.touched) {
-              <mat-error>Priority is required</mat-error>
+              <mat-error>La prioridad es obligatoria</mat-error>
             }
           </mat-form-field>
 
           <mat-form-field appearance="fill">
-            <mat-label>Estimated Hours</mat-label>
+            <mat-label>Horas estimadas</mat-label>
             <input
               matInput
               type="number"
               formControlName="estimatedHours"
-              placeholder="Optional"
+              placeholder="Opcional"
               min="0"
               step="0.5">
             @if (issueForm.get('estimatedHours')?.hasError('min')) {
-              <mat-error>Hours must be positive</mat-error>
+              <mat-error>Las horas deben ser positivas</mat-error>
             }
           </mat-form-field>
         </div>
 
         <mat-form-field class="full-width" appearance="fill">
-          <mat-label>Assign To</mat-label>
+          <mat-label>Asignar a</mat-label>
           <mat-select formControlName="assignedUserId">
-            <mat-option [value]="null">Unassigned</mat-option>
+            <mat-option [value]="null">Sin asignar</mat-option>
             @if (companyUsers().length === 0) {
               <mat-option [value]="null" disabled>
-                <em>{{ issueForm.get('projectId')?.value ? 'No users found in this company' : 'Select a project first' }}</em>
+                <em>{{ issueForm.get('projectId')?.value ? 'No se encontraron usuarios en esta empresa' : 'Selecciona primero un proyecto' }}</em>
               </mat-option>
             }
             @for (user of companyUsers(); track user.userId) {

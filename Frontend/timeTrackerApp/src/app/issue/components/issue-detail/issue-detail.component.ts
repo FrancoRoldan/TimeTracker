@@ -65,11 +65,11 @@ import Swal from 'sweetalert2';
           <div class="header-actions">
             <button mat-raised-button color="primary" (click)="editIssue()">
               <mat-icon>edit</mat-icon>
-              Edit
+              Editar
             </button>
             <button mat-raised-button color="warn" (click)="confirmDelete()">
               <mat-icon>delete</mat-icon>
-              Delete
+              Eliminar
             </button>
           </div>
         </div>
@@ -79,14 +79,14 @@ import Swal from 'sweetalert2';
           <mat-card class="info-card">
             <mat-card-header>
               <mat-icon mat-card-avatar color="primary">info</mat-icon>
-              <mat-card-title>Issue Information</mat-card-title>
+              <mat-card-title>Información de la incidencia</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               <div class="info-list">
                 <div class="info-item">
                   <mat-icon class="info-icon">folder</mat-icon>
                   <div class="info-content">
-                    <span class="info-label">Project</span>
+                    <span class="info-label">Proyecto</span>
                     <span class="info-value">{{ issue()!.projectName }}</span>
                   </div>
                 </div>
@@ -95,7 +95,7 @@ import Swal from 'sweetalert2';
                   <div class="info-item">
                     <mat-icon class="info-icon">person</mat-icon>
                     <div class="info-content">
-                      <span class="info-label">Assigned To</span>
+                      <span class="info-label">Asignado a</span>
                       <span class="info-value">{{ issue()!.assignedUserName }}</span>
                     </div>
                   </div>
@@ -103,8 +103,8 @@ import Swal from 'sweetalert2';
                   <div class="info-item">
                     <mat-icon class="info-icon">person_outline</mat-icon>
                     <div class="info-content">
-                      <span class="info-label">Assigned To</span>
-                      <span class="info-value unassigned">Unassigned</span>
+                      <span class="info-label">Asignado a</span>
+                      <span class="info-value unassigned">Sin asignar</span>
                     </div>
                   </div>
                 }
@@ -113,7 +113,7 @@ import Swal from 'sweetalert2';
                   <div class="info-item">
                     <mat-icon class="info-icon">schedule</mat-icon>
                     <div class="info-content">
-                      <span class="info-label">Estimated Hours</span>
+                      <span class="info-label">Horas estimadas</span>
                       <span class="info-value">{{ issue()!.estimatedHours }}h</span>
                     </div>
                   </div>
@@ -122,7 +122,7 @@ import Swal from 'sweetalert2';
                 <div class="info-item">
                   <mat-icon class="info-icon">event</mat-icon>
                   <div class="info-content">
-                    <span class="info-label">Created</span>
+                    <span class="info-label">Creado</span>
                     <span class="info-value">{{ formatDate(issue()!.createdAt) }}</span>
                   </div>
                 </div>
@@ -130,7 +130,7 @@ import Swal from 'sweetalert2';
                 <div class="info-item">
                   <mat-icon class="info-icon">update</mat-icon>
                   <div class="info-content">
-                    <span class="info-label">Last Updated</span>
+                    <span class="info-label">Última actualización</span>
                     <span class="info-value">{{ formatDate(issue()!.updatedAt) }}</span>
                   </div>
                 </div>
@@ -142,13 +142,13 @@ import Swal from 'sweetalert2';
           <mat-card class="description-card">
             <mat-card-header>
               <mat-icon mat-card-avatar color="primary">description</mat-icon>
-              <mat-card-title>Description</mat-card-title>
+              <mat-card-title>Descripción</mat-card-title>
             </mat-card-header>
             <mat-card-content>
               @if (issue()!.description) {
                 <p class="description-text">{{ issue()!.description }}</p>
               } @else {
-                <p class="no-description">No description provided</p>
+                <p class="no-description">No se proporcionó descripción</p>
               }
             </mat-card-content>
           </mat-card>
@@ -157,15 +157,15 @@ import Swal from 'sweetalert2';
           <mat-card class="time-card">
             <mat-card-header>
               <mat-icon mat-card-avatar color="primary">access_time</mat-icon>
-              <mat-card-title>Time Tracking</mat-card-title>
-              <mat-card-subtitle>Logged time for this issue</mat-card-subtitle>
+              <mat-card-title>Registro de tiempo</mat-card-title>
+              <mat-card-subtitle>Tiempo registrado para esta incidencia</mat-card-subtitle>
             </mat-card-header>
             <mat-card-content>
               @if (timeEntries().length === 0) {
                 <div class="placeholder">
                   <mat-icon style="font-size: 48px; width: 48px; height: 48px; opacity: 0.5;">access_time</mat-icon>
-                  <p>No time entries yet</p>
-                  <p class="hint">Start tracking time for this issue</p>
+                  <p>Aún no hay entradas de tiempo</p>
+                  <p class="hint">Empieza a registrar tiempo para esta incidencia</p>
                 </div>
               } @else {
                 <div class="time-summary">
@@ -173,7 +173,7 @@ import Swal from 'sweetalert2';
                     <mat-icon>schedule</mat-icon>
                     <div>
                       <span class="summary-value">{{ totalHours() }}h</span>
-                      <span class="summary-label">Total Logged</span>
+                      <span class="summary-label">Total registrado</span>
                     </div>
                   </div>
                   @if (issue()!.estimatedHours) {
@@ -181,7 +181,7 @@ import Swal from 'sweetalert2';
                       <mat-icon>compare_arrows</mat-icon>
                       <div>
                         <span class="summary-value">{{ (totalHours() / issue()!.estimatedHours! * 100).toFixed(0) }}%</span>
-                        <span class="summary-label">Progress</span>
+                        <span class="summary-label">Progreso</span>
                       </div>
                     </div>
                   }
@@ -189,22 +189,22 @@ import Swal from 'sweetalert2';
 
                 <table mat-table [dataSource]="timeEntries()" class="time-entries-table">
                   <ng-container matColumnDef="date">
-                    <th mat-header-cell *matHeaderCellDef>Date</th>
+                    <th mat-header-cell *matHeaderCellDef>Fecha</th>
                     <td mat-cell *matCellDef="let entry">{{ formatDateShort(entry.startTime) }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="user">
-                    <th mat-header-cell *matHeaderCellDef>User</th>
+                    <th mat-header-cell *matHeaderCellDef>Usuario</th>
                     <td mat-cell *matCellDef="let entry">{{ entry.userName }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="description">
-                    <th mat-header-cell *matHeaderCellDef>Description</th>
+                    <th mat-header-cell *matHeaderCellDef>Descripción</th>
                     <td mat-cell *matCellDef="let entry">{{ entry.description || 'No description' }}</td>
                   </ng-container>
 
                   <ng-container matColumnDef="hours">
-                    <th mat-header-cell *matHeaderCellDef>Hours</th>
+                    <th mat-header-cell *matHeaderCellDef>Horas</th>
                     <td mat-cell *matCellDef="let entry">
                       <span class="hours-badge">{{ (entry.durationMinutes ?? 0).toFixed(2) }}h</span>
                     </td>
@@ -220,10 +220,10 @@ import Swal from 'sweetalert2';
       } @else {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">error</mat-icon>
-          <h2>Issue not found</h2>
-          <p>The issue you're looking for doesn't exist or you don't have access to it.</p>
+          <h2>Incidencia no encontrada</h2>
+          <p>La incidencia que buscas no existe o no tienes acceso a ella.</p>
           <button mat-raised-button color="primary" (click)="goBack()">
-            Go Back
+            Volver
           </button>
         </div>
       }
