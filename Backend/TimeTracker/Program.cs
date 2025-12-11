@@ -119,23 +119,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-string configSectionName = "HttpClients";
-var clientsConfig = builder.Configuration.GetSection(configSectionName)
-            .Get<Dictionary<string, HttpClientOptions>>();
-
-foreach (var (clientName, options) in clientsConfig!)
-{
-    builder.Services.AddHttpClient<IHttpClientService, HttpClientService>(clientName, client =>
-    {
-        client.BaseAddress = new Uri(options.BaseUrl);
-        client.Timeout = TimeSpan.FromSeconds(options.Timeout);
-
-        foreach (var (key, value) in options.DefaultHeaders)
-        {
-            client.DefaultRequestHeaders.Add(key, value);
-        }
-    });
-}
 
 var app = builder.Build();
 
