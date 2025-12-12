@@ -200,7 +200,7 @@ export class StartTimerModalComponent implements OnInit {
   private loadIssues(projectId: number): void {
     debugger;
     this.isLoadingIssues.set(true);
-    this.issueService.getIssuesByProject(projectId).subscribe({
+    this.issueService.getMyIssues(projectId).subscribe({
       next: (issues) => {
         this.issues.set(issues);
         this.isLoadingIssues.set(false);

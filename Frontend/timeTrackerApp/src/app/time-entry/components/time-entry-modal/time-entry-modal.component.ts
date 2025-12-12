@@ -262,7 +262,7 @@ export class TimeEntryModalComponent implements OnInit {
   }
 
   loadIssuesForProject(projectId: number): void {
-    this.issueService.getIssuesByProject(projectId).subscribe({
+    this.issueService.getMyIssues(projectId).subscribe({
       next: (issues) => {
         this.availableIssues.set(issues);
       },

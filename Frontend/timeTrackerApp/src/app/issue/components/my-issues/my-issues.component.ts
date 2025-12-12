@@ -118,7 +118,7 @@ import { ToastService } from '../../../shared/services/toast.service';
               <mat-icon class="stat-icon" style="color: #f44336;">priority_high</mat-icon>
               <div class="stat-info">
                 <span class="stat-value">{{ countByPriority(IssuePriority.High) + countByPriority(IssuePriority.Critical) }}</span>
-                <span class="stat-label">Alta prioridad</span>
+                <span class="stat-label">Alta prioridad o críticas</span>
               </div>
             </div>
           </mat-card-content>
@@ -379,7 +379,7 @@ export class MyIssuesComponent implements OnInit {
 
   loadMyIssues(): void {
     this.isLoading.set(true);
-    this.issueService.getIssuesByProject(this.projectId).subscribe({
+    this.issueService.getMyIssues(this.projectId).subscribe({
       next: (issues) => {
         this.myIssues.set(issues);
         this.isLoading.set(false);
