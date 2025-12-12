@@ -70,7 +70,7 @@ import { ToastService } from '../../../shared/services/toast.service';
              #rla1="routerLinkActive"
              [active]="rla1.isActive">
             <mat-icon>info</mat-icon>
-            <span>Overview</span>
+            <span>Información del proyecto</span>
           </a>
           <a mat-tab-link
              [routerLink]="['issues']"
@@ -78,7 +78,7 @@ import { ToastService } from '../../../shared/services/toast.service';
              #rla2="routerLinkActive"
              [active]="rla2.isActive">
             <mat-icon>assignment</mat-icon>
-            <span>Issues</span>
+            <span>Incidencias</span>
           </a>
           <a mat-tab-link
              [routerLink]="['board']"
@@ -86,7 +86,7 @@ import { ToastService } from '../../../shared/services/toast.service';
              #rla3="routerLinkActive"
              [active]="rla3.isActive">
             <mat-icon>view_kanban</mat-icon>
-            <span>Board</span>
+            <span>Tablero</span>
           </a>
         </nav>
 

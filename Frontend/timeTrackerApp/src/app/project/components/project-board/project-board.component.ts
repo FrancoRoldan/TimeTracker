@@ -7,6 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
+import { MatChipsModule } from '@angular/material/chips'; // Opcional, para contadores bonitos
+
+// Tus imports de servicios e interfaces...
 import { IssueService } from '../../../issue/services/issue.service';
 import { Issue } from '../../../issue/interfaces';
 import { IssueStatus } from '../../../core/enums';
@@ -19,6 +22,7 @@ interface BoardColumn {
   id: IssueStatus;
   title: string;
   issues: Issue[];
+  colorClass: string; // Nueva propiedad para estilos
 }
 
 @Component({
@@ -31,181 +35,283 @@ interface BoardColumn {
     MatIconModule,
     MatCardModule,
     MatProgressSpinnerModule,
-    IssueCardComponent
+    IssueCardComponent,
+    MatChipsModule
   ],
   template: `
-    <div class="board-container">
-      <!-- Header -->
+    <div class="board-wrapper">
       <div class="header">
-        <h2>Project Board</h2>
-        <button mat-raised-button color="primary" (click)="openCreateModal()">
-          <mat-icon>add</mat-icon>
-          New Issue
-        </button>
+        <div class="header-content">
+          <div>
+            <h2 class="mat-headline-small">Tablero del Proyecto</h2>
+            <p class="subtitle mat-body-medium">Gestiona y rastrea tus incidencias</p>
+          </div>
+          <button mat-flat-button color="primary" (click)="openCreateModal()">
+            <mat-icon>add</mat-icon>
+            Nueva Incidencia
+          </button>
+        </div>
       </div>
 
-      <!-- Board -->
-      @if (isLoading()) {
-        <div class="loading-spinner">
-          <mat-spinner [diameter]="50"></mat-spinner>
-        </div>
-      } @else {
-        <div class="board-columns" cdkDropListGroup>
-          @for (column of columns(); track column.id) {
-            <div class="column">
-              <div class="column-header">
-                <h3>{{ column.title }}</h3>
-                <span class="issue-count">{{ column.issues.length }}</span>
-              </div>
-              <div
-                class="column-content"
-                cdkDropList
-                [cdkDropListData]="column.issues"
-                (cdkDropListDropped)="onDrop($event, column.id)">
-                @for (issue of column.issues; track issue.id) {
-                  <div class="issue-card-wrapper" cdkDrag>
-                    <app-issue-card
-                      [issue]="issue"
-                      (viewIssue)="viewIssue($event)"
-                      (editIssue)="openEditModal($event)"
-                      (deleteIssue)="confirmDeleteIssue($event)"
-                    />
+      <div class="board-content">
+        @if (isLoading()) {
+          <div class="loading-overlay">
+            <mat-spinner [diameter]="48"></mat-spinner>
+          </div>
+        } @else {
+          <div class="board-columns" cdkDropListGroup>
+            @for (column of columns(); track column.id) {
+              <div class="column {{column.colorClass}}">
+                
+                <div class="column-header">
+                  <div class="header-title">
+                    <span class="status-indicator"></span>
+                    <h3>{{ column.title }}</h3>
                   </div>
-                }
-                @if (column.issues.length === 0) {
-                  <div class="empty-column">
-                    <mat-icon>inbox</mat-icon>
-                    <p>No issues</p>
-                  </div>
-                }
+                  <div class="badge">{{ column.issues.length }}</div>
+                </div>
+
+                <div
+                  class="column-list custom-scrollbar"
+                  cdkDropList
+                  [cdkDropListData]="column.issues"
+                  (cdkDropListDropped)="onDrop($event, column.id)">
+                  
+                  @for (issue of column.issues; track issue.id) {
+                    <div class="issue-card-wrapper" cdkDrag>
+                      <div class="custom-placeholder" *cdkDragPlaceholder></div>
+                      
+                      <app-issue-card
+                        [issue]="issue"
+                        (viewIssue)="viewIssue($event)"
+                        (editIssue)="openEditModal($event)"
+                        (deleteIssue)="confirmDeleteIssue($event)"
+                      />
+                    </div>
+                  }
+
+                  @if (column.issues.length === 0) {
+                    <div class="empty-state">
+                      <mat-icon class="empty-icon">dashboard_customize</mat-icon>
+                      <p>Sin tareas</p>
+                    </div>
+                  }
+                </div>
               </div>
-            </div>
-          }
-        </div>
-      }
+            }
+          </div>
+        }
+      </div>
     </div>
   `,
   styles: [`
-    .board-container {
-      padding: 20px 0;
+    :host {
+      display: block;
+      height: 100%;
+      overflow: hidden;
     }
 
+    .board-wrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--mat-sys-background);
+    }
+
+    /* --- Header --- */
     .header {
+      padding: 1rem 2rem;
+      background-color: var(--mat-sys-surface);
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .header-content {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      max-width: 1600px;
+      margin: 0 auto;
     }
 
     .header h2 {
       margin: 0;
-      font-size: 24px;
-      font-weight: 500;
       color: var(--mat-sys-on-surface);
+      font-weight: 600;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    /* --- Board Layout --- */
+    .board-content {
+      flex: 1;
+      overflow-x: auto; /* Scroll horizontal para el tablero */
+      overflow-y: hidden;
+      padding: 24px;
+      /* Scrollbar styling for the main board area */
+      scrollbar-width: thin;
+      scrollbar-color: var(--mat-sys-outline-variant) transparent;
     }
 
     .board-columns {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      min-height: 500px;
+      display: flex;
+      gap: 24px;
+      height: 100%;
+      min-width: fit-content; /* Asegura que las columnas no se aplasten */
     }
 
+    /* --- Column Styling --- */
     .column {
-      background-color: var(--mat-sys-tertiary-container);
-      border-radius: 8px;
+      width: 320px; /* Ancho fijo óptimo para lectura */
+      min-width: 320px;
       display: flex;
       flex-direction: column;
-      min-height: 500px;
+      background-color: var(--mat-sys-surface-container-low); /* Fondo sutil */
+      border-radius: 12px;
+      height: 100%;
+      max-height: calc(100vh - 180px); /* Ajuste para evitar doble scroll */
+      transition: background-color 0.2s ease;
+      border: 1px solid var(--mat-sys-outline-variant);
     }
 
     .column-header {
+      padding: 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px;
+      cursor: grab;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
+      background: var(--mat-sys-surface-container);
+      border-radius: 12px 12px 0 0;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .column-header h3 {
       margin: 0;
-      font-size: 16px;
-      font-weight: 500;
-      color: var(--mat-sys-on-tertiary-container);
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--mat-sys-on-surface);
     }
 
-    .issue-count {
-      background-color: var(--mat-sys-on-tertiary-container);
-      color: var(--mat-sys-tertiary-container);
+    /* Badge count style */
+    .badge {
+      background-color: var(--mat-sys-surface-variant);
+      color: var(--mat-sys-on-surface-variant);
+      padding: 2px 10px;
       border-radius: 12px;
-      padding: 2px 8px;
       font-size: 12px;
-      font-weight: 500;
+      font-weight: 600;
     }
 
-    .column-content {
+    /* Status Colors */
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .col-todo .status-indicator { background-color: var(--mat-sys-outline); }
+    .col-todo { border-top: 3px solid var(--mat-sys-outline); }
+
+    .col-progress .status-indicator { background-color: #3b82f6; } /* Azul manual o var custom */
+    .col-progress { border-top: 3px solid #3b82f6; }
+
+    .col-testing .status-indicator { background-color: #f59e0b; } /* Ambar */
+    .col-testing { border-top: 3px solid #f59e0b; }
+
+    .col-done .status-indicator { background-color: #10b981; } /* Verde */
+    .col-done { border-top: 3px solid #10b981; }
+
+    /* --- List & Content --- */
+    .column-list {
       flex: 1;
-      padding: 8px;
       overflow-y: auto;
-      min-height: 400px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Custom Scrollbar for columns */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: var(--mat-sys-outline-variant);
+      border-radius: 10px;
     }
 
     .issue-card-wrapper {
-      margin-bottom: 8px;
+      cursor: pointer;
     }
 
-    .issue-card-wrapper.cdk-drag-animating {
+    /* --- CDK Drag & Drop Visuals --- */
+    
+    /* El elemento que se está moviendo (la "fantasma") */
+    .cdk-drag-preview {
+      box-sizing: border-box;
+      border-radius: 8px;
+      box-shadow: 0 5px 5px -3px rgba(0, 0, 0, 0.2),
+                  0 8px 10px 1px rgba(0, 0, 0, 0.14),
+                  0 3px 14px 2px rgba(0, 0, 0, 0.12);
+      /* Importante para que mantenga el estilo al arrastrar */
+      background-color: var(--mat-sys-surface); 
+    }
+
+    /* El hueco donde va a caer */
+    .custom-placeholder {
+      min-height: 100px;
+      border: 2px dashed var(--mat-sys-outline);
+      background-color: var(--mat-sys-surface-variant);
+      border-radius: 8px;
+      opacity: 0.6;
+      margin-bottom: 12px;
+    }
+
+    .cdk-drag-animating {
       transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
     }
 
-    .column-content.cdk-drop-list-dragging .issue-card-wrapper:not(.cdk-drag-placeholder) {
+    .column-list.cdk-drop-list-dragging .issue-card-wrapper:not(.cdk-drag-placeholder) {
       transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
     }
 
-    .empty-column {
+    /* --- Empty State --- */
+    .empty-state {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
-      color: var(--mat-sys-on-tertiary-container);
-      opacity: 0.5;
+      opacity: 0.6;
+      color: var(--mat-sys-on-surface-variant);
     }
-
-    .empty-column mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
+    
+    .empty-icon {
+      font-size: 40px;
+      height: 40px;
+      width: 40px;
       margin-bottom: 8px;
+      color: var(--mat-sys-outline);
     }
 
-    .empty-column p {
-      margin: 0;
-      font-size: 14px;
-    }
-
-    .loading-spinner {
+    .loading-overlay {
       display: flex;
       justify-content: center;
-      padding: 40px;
-    }
-
-    @media (max-width: 1200px) {
-      .board-columns {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-      }
-
-      .board-columns {
-        grid-template-columns: 1fr;
-      }
+      align-items: center;
+      height: 300px;
     }
   `]
 })
@@ -223,18 +329,18 @@ export class ProjectIssueBoardComponent implements OnInit {
   private projectId: number = 0;
 
   ngOnInit(): void {
-    // Get projectId from parent route
     this.projectId = Number(this.route.parent?.snapshot.paramMap.get('id'));
     this.initializeColumns();
     this.loadIssues();
   }
 
   initializeColumns(): void {
+    // Agregamos 'colorClass' para estilar cada columna distintamente
     this.columns.set([
-      { id: IssueStatus.ToDo, title: 'To Do', issues: [] },
-      { id: IssueStatus.InProgress, title: 'In Progress', issues: [] },
-      { id: IssueStatus.Testing, title: 'Testing', issues: [] },
-      { id: IssueStatus.Done, title: 'Done', issues: [] }
+      { id: IssueStatus.ToDo, title: 'Por hacer', issues: [], colorClass: 'col-todo' },
+      { id: IssueStatus.InProgress, title: 'En Progreso', issues: [], colorClass: 'col-progress' },
+      { id: IssueStatus.Testing, title: 'En Pruebas', issues: [], colorClass: 'col-testing' },
+      { id: IssueStatus.Done, title: 'Completado', issues: [], colorClass: 'col-done' }
     ]);
   }
 
@@ -249,7 +355,7 @@ export class ProjectIssueBoardComponent implements OnInit {
       error: (error: any) => {
         console.error('Error loading issues:', error);
         this.isLoading.set(false);
-        this.toastService.showError('Failed to load issues');
+        this.toastService.showError('Error al cargar incidencias');
       }
     });
   }
@@ -266,18 +372,14 @@ export class ProjectIssueBoardComponent implements OnInit {
     const issue = event.previousContainer.data[event.previousIndex];
 
     if (event.previousContainer === event.container) {
-      // Same column - just reorder
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
     } else {
-      // Different column - transfer and update status
       transferArrayItem(
         event.previousContainer.data,
         event.container.data,
         event.previousIndex,
         event.currentIndex
       );
-
-      // Update issue status in backend
       this.updateIssueStatus(issue, newStatus);
     }
   }
@@ -285,13 +387,12 @@ export class ProjectIssueBoardComponent implements OnInit {
   updateIssueStatus(issue: Issue, newStatus: IssueStatus): void {
     this.issueService.updateIssueStatus(issue.id, newStatus).subscribe({
       next: () => {
-        this.toastService.showSuccess('Issue status updated');
+        this.toastService.showSuccess('Estado actualizado');
       },
       error: (error) => {
         console.error('Error updating issue status:', error);
-        this.toastService.showError('Failed to update issue status');
-        // Reload to revert the UI change
-        this.loadIssues();
+        this.toastService.showError('Error al actualizar estado');
+        this.loadIssues(); // Revertir cambios visuales
       }
     });
   }
@@ -299,13 +400,14 @@ export class ProjectIssueBoardComponent implements OnInit {
   openCreateModal(): void {
     const dialogRef = this.dialog.open(IssueModalComponent, {
       width: '600px',
-      data: { projectId: this.projectId }
+      data: { projectId: this.projectId },
+      // Opcional: panelClass para estilos del modal
     });
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadIssues();
-        this.toastService.showSuccess('Issue created successfully');
+        this.toastService.showSuccess('Incidencia creada');
       }
     });
   }
@@ -323,7 +425,7 @@ export class ProjectIssueBoardComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadIssues();
-        this.toastService.showSuccess('Issue updated successfully');
+        this.toastService.showSuccess('Incidencia actualizada');
       }
     });
   }
@@ -331,8 +433,8 @@ export class ProjectIssueBoardComponent implements OnInit {
   confirmDeleteIssue(issue: Issue): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        title: 'Delete Issue?',
-        message: `Are you sure you want to delete "${issue.title}"? This action cannot be undone.`
+        title: 'Eliminar incidencia',
+        message: `¿Estás seguro de que quieres eliminar "${issue.title}"?`
       } as ConfirmDialogData
     });
 
@@ -347,11 +449,10 @@ export class ProjectIssueBoardComponent implements OnInit {
     this.issueService.deleteIssue(issueId).subscribe({
       next: () => {
         this.loadIssues();
-        this.toastService.showSuccess('Issue deleted successfully');
+        this.toastService.showSuccess('Incidencia eliminada');
       },
       error: (error: any) => {
-        console.error('Error deleting issue:', error);
-        this.toastService.showError('Failed to delete issue');
+        this.toastService.showError('Error al eliminar');
       }
     });
   }
