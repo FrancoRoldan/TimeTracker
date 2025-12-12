@@ -379,7 +379,7 @@ export class MyIssuesComponent implements OnInit {
 
   loadMyIssues(): void {
     this.isLoading.set(true);
-    this.issueService.getMyIssues(this.projectId).subscribe({
+    this.issueService.getMyIssuesByProject(this.projectId).subscribe({
       next: (issues) => {
         this.myIssues.set(issues);
         this.isLoading.set(false);

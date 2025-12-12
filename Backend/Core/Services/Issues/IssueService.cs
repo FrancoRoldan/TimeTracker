@@ -169,6 +169,34 @@ namespace Core.Services.Issues
             return Result<List<IssueResponse>>.Success(responses);
         }
 
+        public async Task<Result<List<IssueResponse>>> GetProjectAssignedIssuesAsync(int projectId)
+        {
+            var userId = _tenantService.GetCurrentUserId();
+            if (userId == null)
+                return Result<List<IssueResponse>>.Failure("User not authenticated");
+
+            IQueryable<Issue> query = _unitOfWork.Issues
+                .Query()
+                .Where(i => i.AssignedUserId == userId.Value && i.ProjectId == projectId);
+
+            var issues = await query
+                .Include(i => i.Project)
+                .Include(i => i.AssignedUser)
+                .ToListAsync();
+
+            var responses = issues.Select(i =>
+            {
+                var response = i.Adapt<IssueResponse>();
+                return response with
+                {
+                    ProjectName = i.Project?.Name ?? string.Empty,
+                    AssignedUserName = i.AssignedUser?.Nombre
+                };
+            }).ToList();
+
+            return Result<List<IssueResponse>>.Success(responses);
+        }
+
         public async Task<Result<List<IssueResponse>>> GetUserIssuesWithFiltersAsync(int? companyId,IssueStatus? status = null, IssueType? type = null, IssuePriority? priority = null)
         {
             List<int> projectIds;

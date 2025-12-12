@@ -97,6 +97,25 @@ namespace TimeTracker.Controllers
             }
         }
 
+        [HttpGet("project/{projectId}/assigned-to-me")]
+        public async Task<IActionResult> GetProjectAssignedIssues(int projectId)
+        {
+            try
+            {
+                var result = await _issueService.GetProjectAssignedIssuesAsync(projectId);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error });
+
+                return Ok(result.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting assigned issues");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
         [HttpGet("my-companies")]
         public async Task<IActionResult> GetUserIssuesWithFilters(
             [FromQuery] int? companyId = null,
