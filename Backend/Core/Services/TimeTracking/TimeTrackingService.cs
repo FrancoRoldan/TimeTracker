@@ -1,5 +1,6 @@
 using Core.Common;
 using Core.Services.Tenant;
+using Data.Dtos;
 using Data.Dtos.TimeEntry;
 using Data.Interfaces;
 using Data.Models;
@@ -256,6 +257,69 @@ namespace Core.Services.TimeTracking
             return Result<List<TimeEntryResponse>>.Success(responses);
         }
 
+        public async Task<Result<PaginatedResult<TimeEntryResponse>>> GetUserEntriesPaginatedAsync(
+            int pageNumber = 0,
+            int pageSize = 10,
+            DateTime? dateFrom = null,
+            DateTime? dateTo = null,
+            int? projectId = null,
+            int? issueId = null,
+            string? searchTerm = null)
+        {
+            var userId = _tenantService.GetCurrentUserId();
+            if (userId == null)
+                return Result<PaginatedResult<TimeEntryResponse>>.Failure("User not authenticated");
+
+            var query = _unitOfWork.TimeEntries
+                .Query()
+                .Include(te => te.Issue)
+                    .ThenInclude(i => i.Project)
+                .Include(te => te.User)
+                .Include(te => te.Project)
+                .Where(te => te.UserId == userId);
+
+            if (dateFrom.HasValue)
+                query = query.Where(te => te.StartTime >= dateFrom.Value);
+
+            if (dateTo.HasValue)
+                query = query.Where(te => te.StartTime <= dateTo.Value);
+
+            if (projectId.HasValue)
+                query = query.Where(te => te.ProjectId == projectId.Value);
+
+            if (issueId.HasValue)
+                query = query.Where(te => te.IssueId == issueId.Value);
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var searchLower = searchTerm.ToLower();
+                query = query.Where(te =>
+                    (te.Description != null && te.Description.ToLower().Contains(searchLower)) ||
+                    (te.Issue != null && te.Issue.Title.ToLower().Contains(searchLower)) ||
+                    (te.Project != null && te.Project.Name.ToLower().Contains(searchLower)));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var entries = await query
+                .OrderByDescending(te => te.StartTime)
+                .Skip(pageNumber * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var responses = entries.Select(te => BuildTimeEntryResponse(te, te.Issue)).ToList();
+
+            var paginatedResult = new PaginatedResult<TimeEntryResponse>
+            {
+                Items = responses,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return Result<PaginatedResult<TimeEntryResponse>>.Success(paginatedResult);
+        }
+
         public async Task<Result<TimeEntryResponse>> GetEntryByIdAsync(int entryId)
         {
             var userId = _tenantService.GetCurrentUserId();
@@ -332,14 +396,14 @@ namespace Core.Services.TimeTracking
             return Result.Success();
         }
 
-        private TimeEntryResponse BuildTimeEntryResponse(TimeEntry entry, Issue issue)
+        private TimeEntryResponse BuildTimeEntryResponse(TimeEntry entry, Issue? issue)
         {
             return new TimeEntryResponse
             {
                 Id = entry.Id,
                 IssueId = entry.IssueId ?? 0,
-                IssueTitle = issue.Title,
-                ProjectName = issue.Project?.Name ?? string.Empty,
+                IssueTitle = issue?.Title ?? string.Empty,
+                ProjectName = issue?.Project?.Name ?? entry.Project?.Name ?? string.Empty,
                 UserId = entry.UserId,
                 UserName = entry.User?.Nombre ?? string.Empty,
                 StartTime = entry.StartTime,

@@ -123,6 +123,33 @@ namespace TimeTracker.Controllers
             }
         }
 
+        [HttpGet("entries/paginated")]
+        public async Task<IActionResult> GetMyEntriesPaginated(
+            [FromQuery] int pageNumber = 0,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] DateTime? dateFrom = null,
+            [FromQuery] DateTime? dateTo = null,
+            [FromQuery] int? projectId = null,
+            [FromQuery] int? issueId = null,
+            [FromQuery] string? searchTerm = null)
+        {
+            try
+            {
+                var result = await _timeTrackingService.GetUserEntriesPaginatedAsync(
+                    pageNumber, pageSize, dateFrom, dateTo, projectId, issueId, searchTerm);
+
+                if (!result.IsSuccess)
+                    return BadRequest(new { error = result.Error });
+
+                return Ok(result.Value);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting paginated entries");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
         [HttpGet("entries/{id}")]
         public async Task<IActionResult> GetEntryById(int id)
         {

@@ -1,4 +1,5 @@
 using Core.Common;
+using Data.Dtos;
 using Data.Dtos.TimeEntry;
 
 namespace Core.Services.TimeTracking
@@ -14,6 +15,14 @@ namespace Core.Services.TimeTracking
             DateTime? dateTo = null,
             int? projectId = null,
             int? issueId = null);
+        Task<Result<PaginatedResult<TimeEntryResponse>>> GetUserEntriesPaginatedAsync(
+            int pageNumber = 0,
+            int pageSize = 10,
+            DateTime? dateFrom = null,
+            DateTime? dateTo = null,
+            int? projectId = null,
+            int? issueId = null,
+            string? searchTerm = null);
         Task<Result<TimeEntryResponse>> GetEntryByIdAsync(int entryId);
         Task<Result<TimeEntryResponse>> UpdateEntryAsync(int entryId, UpdateTimeEntryRequest request);
         Task<Result> DeleteEntryAsync(int entryId);

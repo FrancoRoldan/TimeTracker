@@ -9,6 +9,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginatorModule, PageEvent, MatPaginatorIntl } from '@angular/material/paginator';
+import { MatChipsModule } from '@angular/material/chips';
 import { TimeEntryService } from '../../services/time-entry.service';
 import { TimeEntry } from '../../interfaces';
 import { TimeEntryModalComponent } from '../time-entry-modal/time-entry-modal.component';
@@ -17,6 +19,7 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/compo
 import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 import { ToastService } from '../../../shared/services/toast.service';
+import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator-intl.service';
 
 @Component({
   selector: 'app-time-entry-list',
@@ -30,8 +33,13 @@ import { ToastService } from '../../../shared/services/toast.service';
     MatInputModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatProgressSpinnerModule
-],
+    MatProgressSpinnerModule,
+    MatPaginatorModule,
+    MatChipsModule
+  ],
+  providers: [
+    { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }
+  ],
   template: `
     <div class="container">
       <div class="header">
@@ -49,8 +57,36 @@ import { ToastService } from '../../../shared/services/toast.service';
       </div>
 
       <div class="filters">
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha de inicio</mat-label>
+        <div class="date-filter-buttons">
+          <button mat-stroked-button
+                  [class.active]="selectedDateFilter() === 'last7days'"
+                  (click)="setDateFilter('last7days')">
+            Últimos 7 días
+          </button>
+          <button mat-stroked-button
+                  [class.active]="selectedDateFilter() === 'last30days'"
+                  (click)="setDateFilter('last30days')">
+            Últimos 30 días
+          </button>
+          <button mat-stroked-button
+                  [class.active]="selectedDateFilter() === 'thisMonth'"
+                  (click)="setDateFilter('thisMonth')">
+            Este mes
+          </button>
+          <button mat-stroked-button
+                  [class.active]="selectedDateFilter() === 'lastMonth'"
+                  (click)="setDateFilter('lastMonth')">
+            Mes anterior
+          </button>
+          <button mat-stroked-button
+                  [class.active]="selectedDateFilter() === 'thisYear'"
+                  (click)="setDateFilter('thisYear')">
+            Este año
+          </button>
+        </div>
+
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>Fecha desde</mat-label>
           <input
             matInput
             [matDatepicker]="startPicker"
@@ -60,8 +96,8 @@ import { ToastService } from '../../../shared/services/toast.service';
           <mat-datepicker #startPicker></mat-datepicker>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha de finalización</mat-label>
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>Fecha hasta</mat-label>
           <input
             matInput
             [matDatepicker]="endPicker"
@@ -73,7 +109,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 
         <button mat-raised-button (click)="clearFilters()">
           <mat-icon>clear</mat-icon>
-          Limpiar filtros
+          Limpiar
         </button>
 
         <button mat-raised-button (click)="loadTimeEntries()">
@@ -97,8 +133,8 @@ import { ToastService } from '../../../shared/services/toast.service';
           <div class="summary-content">
             <mat-icon class="summary-icon">list</mat-icon>
             <div class="summary-info">
-              <span class="summary-value">{{ timeEntries().length }}</span>
-              <span class="summary-label">Registros</span>
+              <span class="summary-value">{{ totalItems() }}</span>
+              <span class="summary-label">Registros totales</span>
             </div>
           </div>
         </div>
@@ -196,6 +232,16 @@ import { ToastService } from '../../../shared/services/toast.service';
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
           </table>
         </div>
+
+        <mat-paginator
+          [length]="totalItems()"
+          [pageIndex]="currentPage()"
+          [pageSize]="pageSize()"
+          [pageSizeOptions]="[10, 25, 50, 100]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons="false"
+          aria-label="Seleccionar página">
+        </mat-paginator>
       }
     </div>
   `,
@@ -249,6 +295,25 @@ import { ToastService } from '../../../shared/services/toast.service';
       margin-bottom: 20px;
       flex-wrap: wrap;
       align-items: center;
+    }
+
+    .date-filter-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .date-filter-buttons button {
+      transition: all 0.3s ease;
+    }
+
+    .date-filter-buttons button.active {
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
+
+    .date-field {
+      min-width: 180px;
     }
 
     .summary-cards {
@@ -381,6 +446,12 @@ export class TimeEntryListComponent implements OnInit {
   public isLoading = signal<boolean>(false);
   public startDate = signal<Date | null>(null);
   public endDate = signal<Date | null>(null);
+  public selectedDateFilter = signal<string>('last7days');
+
+  // Pagination properties
+  public totalItems = signal<number>(0);
+  public pageSize = signal<number>(10);
+  public currentPage = signal<number>(0);
 
   public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'actions'];
 
@@ -398,12 +469,45 @@ export class TimeEntryListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Subscribe to time entries from service
-    this.timeEntryService.timeEntries$.subscribe(entries => {
-      this.timeEntries.set(entries);
-    });
+    // Set default date filter to last 7 days
+    this.setDateFilter('last7days');
+  }
 
-    // Load initial time entries
+  setDateFilter(filter: string): void {
+    this.selectedDateFilter.set(filter);
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = now;
+
+    switch (filter) {
+      case 'last7days':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'last30days':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case 'thisMonth':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        break;
+      case 'lastMonth':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+        break;
+      case 'thisYear':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+        break;
+      default:
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+    }
+
+    this.startDate.set(startDate);
+    this.endDate.set(endDate);
+    this.currentPage.set(0); // Reset to first page
     this.loadTimeEntries();
   }
 
@@ -412,9 +516,15 @@ export class TimeEntryListComponent implements OnInit {
     const startDateStr = this.startDate() ? this.startDate()!.toISOString() : undefined;
     const endDateStr = this.endDate() ? this.endDate()!.toISOString() : undefined;
 
-    this.timeEntryService.getTimeEntries(startDateStr, endDateStr).subscribe({
-      next: () => {
-        // Entries are automatically updated via timeEntries$ subscription
+    this.timeEntryService.getPaginatedTimeEntries(
+      this.currentPage(),
+      this.pageSize(),
+      startDateStr,
+      endDateStr
+    ).subscribe({
+      next: (data) => {
+        this.timeEntries.set(data.items);
+        this.totalItems.set(data.totalCount);
         this.isLoading.set(false);
       },
       error: (error: any) => {
@@ -430,19 +540,31 @@ export class TimeEntryListComponent implements OnInit {
     });
   }
 
+  onPageChange(event: PageEvent): void {
+    this.currentPage.set(event.pageIndex);
+    this.pageSize.set(event.pageSize);
+    this.loadTimeEntries();
+  }
+
   onStartDateChange(date: Date | null): void {
     this.startDate.set(date);
+    this.selectedDateFilter.set(''); // Deseleccionar filtro predefinido
+    this.currentPage.set(0);
     this.loadTimeEntries();
   }
 
   onEndDateChange(date: Date | null): void {
     this.endDate.set(date);
+    this.selectedDateFilter.set(''); // Deseleccionar filtro predefinido
+    this.currentPage.set(0);
     this.loadTimeEntries();
   }
 
   clearFilters(): void {
     this.startDate.set(null);
     this.endDate.set(null);
+    this.selectedDateFilter.set('');
+    this.currentPage.set(0);
     this.loadTimeEntries();
   }
 

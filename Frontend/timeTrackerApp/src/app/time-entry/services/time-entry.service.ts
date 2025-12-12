@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { TimeEntry, CreateTimeEntryRequest, UpdateTimeEntryRequest, StartTimerRequest } from '../interfaces';
+import { TimeEntry, CreateTimeEntryRequest, UpdateTimeEntryRequest, StartTimerRequest, PaginatedResult } from '../interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -37,6 +37,39 @@ export class TimeEntryService {
     return this.http.get<TimeEntry[]>(`${this.baseUrl}/entries`, { params }).pipe(
       tap(entries => this.timeEntriesSubject.next(entries))
     );
+  }
+
+  // Get paginated time entries with optional filters
+  getPaginatedTimeEntries(
+    pageNumber: number = 0,
+    pageSize: number = 10,
+    dateFrom?: string,
+    dateTo?: string,
+    projectId?: number,
+    issueId?: number,
+    searchTerm?: string
+  ): Observable<PaginatedResult<TimeEntry>> {
+    let params = new HttpParams()
+      .set('pageNumber', pageNumber.toString())
+      .set('pageSize', pageSize.toString());
+
+    if (dateFrom) {
+      params = params.set('dateFrom', dateFrom);
+    }
+    if (dateTo) {
+      params = params.set('dateTo', dateTo);
+    }
+    if (projectId !== undefined) {
+      params = params.set('projectId', projectId.toString());
+    }
+    if (issueId !== undefined) {
+      params = params.set('issueId', issueId.toString());
+    }
+    if (searchTerm) {
+      params = params.set('searchTerm', searchTerm);
+    }
+
+    return this.http.get<PaginatedResult<TimeEntry>>(`${this.baseUrl}/entries/paginated`, { params });
   }
 
   // Get time entry by ID
