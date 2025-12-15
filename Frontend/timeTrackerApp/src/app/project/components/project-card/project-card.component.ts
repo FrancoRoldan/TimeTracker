@@ -56,7 +56,7 @@ import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
             <div class="info-row">
             <mat-icon class="info-icon">schedule</mat-icon>
             <span class="info-label">Creado:</span>
-            <span>{{ formatDate(project().createdAt) }}</span>
+            <span>{{ formatDate(project().startDate) }}</span>
           </div>
         </div>
       </mat-card-content>

@@ -71,7 +71,7 @@ import { User } from '../../auth/interfaces/user.interface';
     </mat-sidenav-container>
   `,
     styles: `
-    profile-avatar {
+    .profile-avatar {
         background: linear-gradient(135deg, var(--mat-sys-primary) 0%, var(--mat-sys-tertiary) 100%);
         display: flex;
         align-items: center;
