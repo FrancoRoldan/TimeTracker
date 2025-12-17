@@ -65,7 +65,6 @@ namespace Core.Services.Issues
             }
 
             var issue = request.Adapt<Issue>();
-            issue.Status = IssueStatus.ToDo;
             issue.CompanyId = companyId;
 
             await _unitOfWork.Issues.AddAsync(issue);
@@ -197,21 +196,21 @@ namespace Core.Services.Issues
             return Result<List<IssueResponse>>.Success(responses);
         }
 
-        public async Task<Result<List<IssueResponse>>> GetUserIssuesWithFiltersAsync(int? companyId,IssueStatus? status = null, IssueType? type = null, IssuePriority? priority = null)
+        public async Task<Result<List<IssueResponse>>> GetUserIssuesWithFiltersAsync(int? companyId, IssueStatus? status = null, IssueType? type = null, IssuePriority? priority = null)
         {
             List<int> projectIds;
 
             if (companyId.HasValue)
             {
-                        projectIds = await _unitOfWork.Projects
-                            .Query()
-                            .Where(p => p.CompanyId == companyId.Value)
-                            .Select(p => p.Id)
-                            .ToListAsync();
+                projectIds = await _unitOfWork.Projects
+                    .Query()
+                    .Where(p => p.CompanyId == companyId.Value)
+                    .Select(p => p.Id)
+                    .ToListAsync();
 
-                        if (!projectIds.Any())
-                            return Result<List<IssueResponse>>.Success(new List<IssueResponse>());
-                    }
+                if (!projectIds.Any())
+                    return Result<List<IssueResponse>>.Success(new List<IssueResponse>());
+            }
             else
             {
                 var userId = _tenantService.GetCurrentUserId();

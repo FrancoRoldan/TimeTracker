@@ -8,6 +8,7 @@ namespace Data.Dtos.Issue
         public string Title { get; init; } = string.Empty;
         public string? Description { get; init; }
         public IssueType Type { get; init; }
+        public IssueStatus Status { get; init; }
         public IssuePriority Priority { get; init; }
         public decimal? EstimatedHours { get; init; }
         public int? AssignedUserId { get; set; }
