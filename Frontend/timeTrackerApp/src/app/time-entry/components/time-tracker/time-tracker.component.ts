@@ -843,7 +843,7 @@ export class TimeTrackerComponent implements OnInit, OnDestroy {
 
   formatTime(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -851,9 +851,11 @@ export class TimeTrackerComponent implements OnInit, OnDestroy {
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    // Use UTC to avoid timezone offset issues when displaying dates
+    return date.toLocaleDateString('es-ES', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'UTC'
     });
   }
 }

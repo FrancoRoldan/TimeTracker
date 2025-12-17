@@ -112,11 +112,21 @@ import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 
             <!-- Quick Date Range Buttons -->
             <div class="quick-ranges">
-              <button mat-button (click)="setDateRange(7)">Últimos 7 días</button>
-              <button mat-button (click)="setDateRange(30)">Últimos 30 días</button>
-              <button mat-button (click)="setThisMonth()">Este mes</button>
-              <button mat-button (click)="setLastMonth()">Mes anterior</button>
-              <button mat-button (click)="setThisYear()">Este año</button>
+              <button mat-button
+                      [class.active]="selectedDateFilter() === 'last7days'"
+                      (click)="setDateRange(7)">Últimos 7 días</button>
+              <button mat-button
+                      [class.active]="selectedDateFilter() === 'last30days'"
+                      (click)="setDateRange(30)">Últimos 30 días</button>
+              <button mat-button
+                      [class.active]="selectedDateFilter() === 'thisMonth'"
+                      (click)="setThisMonth()">Este mes</button>
+              <button mat-button
+                      [class.active]="selectedDateFilter() === 'lastMonth'"
+                      (click)="setLastMonth()">Mes anterior</button>
+              <button mat-button
+                      [class.active]="selectedDateFilter() === 'thisYear'"
+                      (click)="setThisYear()">Este año</button>
             </div>
           </mat-card-content>
         </mat-card>
@@ -365,6 +375,12 @@ import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 
     .quick-ranges button {
       font-size: 13px;
+      transition: all 0.3s ease;
+    }
+
+    .quick-ranges button.active {
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
     }
 
     .loading-spinner {
@@ -518,6 +534,7 @@ export class CompanyReportComponent implements OnInit {
   public startDate = signal<Date | null>(null);
   public endDate = signal<Date | null>(null);
   public selectedCompanyId: number | null = null;
+  public selectedDateFilter = signal<string>('');
 
   public userColumns: string[] = ['user', 'hours'];
   public projectColumns: string[] = ['project', 'hours'];
@@ -571,10 +588,11 @@ export class CompanyReportComponent implements OnInit {
     // Set default date range: last 30 days
     const end = new Date();
     const start = new Date();
-    start.setDate(start.getDate() - 30);
+    start.setDate(start.getDate() - 29);
 
     this.startDate.set(start);
     this.endDate.set(end);
+    this.selectedDateFilter.set('last30days');
 
     // Load available companies
     this.loadCompanies();
@@ -630,6 +648,7 @@ export class CompanyReportComponent implements OnInit {
 
   onStartDateChange(date: Date | null): void {
     this.startDate.set(date);
+    this.selectedDateFilter.set(''); // Deselect predefined filter
     if (this.startDate() && this.endDate() && this.selectedCompanyId) {
       this.loadReport();
     }
@@ -637,6 +656,7 @@ export class CompanyReportComponent implements OnInit {
 
   onEndDateChange(date: Date | null): void {
     this.endDate.set(date);
+    this.selectedDateFilter.set(''); // Deselect predefined filter
     if (this.startDate() && this.endDate() && this.selectedCompanyId) {
       this.loadReport();
     }
@@ -645,10 +665,11 @@ export class CompanyReportComponent implements OnInit {
   clearFilters(): void {
     const end = new Date();
     const start = new Date();
-    start.setDate(start.getDate() - 30);
+    start.setDate(start.getDate() - 29);
 
     this.startDate.set(start);
     this.endDate.set(end);
+    this.selectedDateFilter.set('last30days');
 
     if (this.selectedCompanyId) {
       this.loadReport();
@@ -658,10 +679,11 @@ export class CompanyReportComponent implements OnInit {
   setDateRange(days: number): void {
     const end = new Date();
     const start = new Date();
-    start.setDate(start.getDate() - days);
+    start.setDate(start.getDate() - (days - 1));
 
     this.startDate.set(start);
     this.endDate.set(end);
+    this.selectedDateFilter.set(`last${days}days`);
     if (this.selectedCompanyId) {
       this.loadReport();
     }
@@ -674,6 +696,7 @@ export class CompanyReportComponent implements OnInit {
 
     this.startDate.set(start);
     this.endDate.set(end);
+    this.selectedDateFilter.set('thisMonth');
     if (this.selectedCompanyId) {
       this.loadReport();
     }
@@ -686,6 +709,7 @@ export class CompanyReportComponent implements OnInit {
 
     this.startDate.set(start);
     this.endDate.set(end);
+    this.selectedDateFilter.set('lastMonth');
     if (this.selectedCompanyId) {
       this.loadReport();
     }
@@ -698,6 +722,7 @@ export class CompanyReportComponent implements OnInit {
 
     this.startDate.set(start);
     this.endDate.set(end);
+    this.selectedDateFilter.set('thisYear');
     if (this.selectedCompanyId) {
       this.loadReport();
     }
@@ -744,10 +769,12 @@ export class CompanyReportComponent implements OnInit {
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    // Use UTC to avoid timezone offset issues
+    return date.toLocaleDateString('es-ES', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'UTC'
     });
   }
 
@@ -775,9 +802,10 @@ export class CompanyReportComponent implements OnInit {
     const formatOptions: Intl.DateTimeFormatOptions = {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'UTC'
     };
 
-    return `${startDate.toLocaleDateString('en-US', formatOptions)} - ${endDate.toLocaleDateString('en-US', formatOptions)}`;
+    return `${startDate.toLocaleDateString('es-ES', formatOptions)} - ${endDate.toLocaleDateString('es-ES', formatOptions)}`;
   }
 }

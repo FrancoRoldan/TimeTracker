@@ -452,6 +452,7 @@ export class TimeEntryListComponent implements OnInit {
   public totalItems = signal<number>(0);
   public pageSize = signal<number>(10);
   public currentPage = signal<number>(0);
+  public totalMinutes = signal<number>(0);
 
   public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'actions'];
 
@@ -486,7 +487,7 @@ export class TimeEntryListComponent implements OnInit {
         break;
       case 'last30days':
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - 30);
+        startDate.setDate(now.getDate() - 29);
         break;
       case 'thisMonth':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -525,6 +526,7 @@ export class TimeEntryListComponent implements OnInit {
       next: (data) => {
         this.timeEntries.set(data.items);
         this.totalItems.set(data.totalCount);
+        this.totalMinutes.set(data.totalMinutes ?? 0);
         this.isLoading.set(false);
       },
       error: (error: any) => {
@@ -629,16 +631,18 @@ export class TimeEntryListComponent implements OnInit {
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    // Use UTC to avoid timezone offset issues when displaying dates
+    return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'UTC'
     });
   }
 
   formatTime(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString('es-ES', {
       hour: '2-digit',
       minute: '2-digit'
     });

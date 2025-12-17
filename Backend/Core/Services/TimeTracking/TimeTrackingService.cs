@@ -301,6 +301,12 @@ namespace Core.Services.TimeTracking
 
             var totalCount = await query.CountAsync();
 
+            // Calculate total minutes for all filtered records
+            // DurationMinutes is a NotMapped computed property, so we need to calculate it directly in SQL
+            var totalMinutes = await query
+                .Where(te => te.EndTime.HasValue)
+                .SumAsync(te => (int)(te.EndTime.Value - te.StartTime).TotalMinutes);
+
             var entries = await query
                 .OrderByDescending(te => te.StartTime)
                 .Skip(pageNumber * pageSize)
@@ -314,7 +320,8 @@ namespace Core.Services.TimeTracking
                 Items = responses,
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
-                PageSize = pageSize
+                PageSize = pageSize,
+                TotalMinutes = totalMinutes
             };
 
             return Result<PaginatedResult<TimeEntryResponse>>.Success(paginatedResult);

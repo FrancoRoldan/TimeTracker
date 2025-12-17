@@ -6,4 +6,5 @@ export interface PaginatedResult<T> {
   totalPages: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
+  totalMinutes?: number;
 }

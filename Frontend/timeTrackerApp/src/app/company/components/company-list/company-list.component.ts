@@ -48,7 +48,7 @@ import { ToastService } from '../../../shared/services/toast.service';
           <p>Crea tu primera empresa para empezar</p>
           <button mat-raised-button color="primary" (click)="openCreateModal()">
             <mat-icon>add</mat-icon>
-            Create Company
+            Crear empresa
           </button>
         </div>
       } @else {
@@ -64,7 +64,7 @@ import { ToastService } from '../../../shared/services/toast.service';
                 <div class="company-info">
                   <div class="info-row">
                     <mat-icon class="info-icon">event</mat-icon>
-                    <span>Created: {{ formatDate(company.createdAt) }}</span>
+                    <span>Creado: {{ formatDate(company.createdAt) }}</span>
                   </div>
                   <div class="info-row">
                     <mat-icon class="info-icon" [style.color]="company.isActive ? '#4caf50' : '#757575'">
@@ -76,20 +76,16 @@ import { ToastService } from '../../../shared/services/toast.service';
               </mat-card-content>
               <mat-card-actions>
                 <button mat-button color="primary" (click)="selectCompany(company)">
-                  <mat-icon>check</mat-icon>
                   Seleccionar
                 </button>
                 <button mat-button (click)="viewUsers(company)">
-                  <mat-icon>group</mat-icon>
                   Usuarios
                 </button>
                 @if (canManageCompany()) {
                   <button mat-button (click)="openEditModal(company)">
-                    <mat-icon>edit</mat-icon>
                     Editar
                   </button>
                   <button mat-button color="warn" (click)="deleteCompany(company)">
-                    <mat-icon>delete</mat-icon>
                     Eliminar
                   </button>
                 }
@@ -263,10 +259,12 @@ export class CompanyListComponent implements OnInit {
 
   formatDate(dateString: string): string {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    // Use UTC to avoid timezone offset issues when displaying dates
+    return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'UTC'
     });
   }
 

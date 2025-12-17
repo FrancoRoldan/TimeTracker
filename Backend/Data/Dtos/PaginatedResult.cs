@@ -9,5 +9,6 @@ namespace Data.Dtos
         public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
         public bool HasPreviousPage => PageNumber > 0;
         public bool HasNextPage => PageNumber < TotalPages - 1;
+        public int? TotalMinutes { get; init; }
     }
 }
