@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: timetracker-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: TimeTracker
+      POSTGRES_USER: timetracker_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-TimeTracker2024!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - timetracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timetracker_user -d TimeTracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: timetracker-backend
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_URLS: http://+:80
+      ConnectionStrings__DbConnString: "Host=postgres;Port=5432;Database=TimeTracker;Username=timetracker_user;Password=${DB_PASSWORD:-TimeTracker2024!}"
+      Jwt__Key: ${JWT_KEY:-tu-clave-secreta-muy-larga-de-al-menos-256-bits-para-jwt-token-seguro}
+      Jwt__Issuer: ${JWT_ISSUER:-TimeTrackerApi}
+      Jwt__Audience: ${JWT_AUDIENCE:-TimeTrackerApp}
+      SeedDatabase__Value: ${SEED_DATABASE:-true}
+      TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
+    ports:
+      - "${BACKEND_PORT:-5083}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - timetracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Angular
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        # URL del API para el frontend (debe ser accesible desde el navegador)
+        # Configúrala en el archivo .env
+        API_URL: ${API_URL:-http://localhost:5083/api}
+    container_name: timetracker-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      - backend
+    networks:
+      - timetracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  timetracker-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

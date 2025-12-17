@@ -177,7 +177,33 @@ color: #f44336; /* Error */
 
 ## Comandos Comunes
 
-### Backend
+### Docker Compose (Recomendado)
+```bash
+# Iniciar toda la aplicación
+docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Detener servicios
+docker-compose down
+
+# Backup de BD
+docker-compose exec postgres pg_dump -U timetracker_user TimeTracker > backup.sql
+```
+
+**Servicios disponibles:**
+- Frontend: http://localhost:4200
+- Backend: http://localhost:5083
+- PostgreSQL: localhost:5432
+
+**Archivos de configuración:**
+- `docker-compose.yml`: Definición de servicios
+- `.env`: Variables de entorno (crear desde `.env.example`)
+- `Backend/Dockerfile`: Build del backend
+- `Frontend/Dockerfile`: Build del frontend con Nginx
+
+### Backend (Local)
 ```bash
 cd Backend/TimeTracker
 dotnet restore
@@ -188,7 +214,7 @@ cd ../Data
 dotnet ef database update
 ```
 
-### Frontend
+### Frontend (Local)
 ```bash
 cd Frontend/timeTrackerApp
 npm install
@@ -196,7 +222,7 @@ ng serve  # App en http://localhost:4200
 ng build --configuration production
 ```
 
-### Database
+### Database (Manual)
 ```sql
 -- PostgreSQL
 CREATE DATABASE TimeTracker;
@@ -256,6 +282,8 @@ this.form = this.fb.group({
 - Temas: `Frontend/timeTrackerApp/public/themes/`
 
 ### Documentación Detallada
+- `README.md`: Documentación principal con Quick Start
+- `DOCKER.md`: Guía completa de Docker y Docker Compose
 - `GUIA_RAPIDA.md`: Setup y troubleshooting
 - `DOCUMENTACION_BACKEND.md`: Backend exhaustivo
 - `DOCUMENTACION_FRONTEND.md`: Frontend exhaustivo

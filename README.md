@@ -110,8 +110,8 @@ La aplicación estará disponible en: **http://localhost:4200**
 ### 5. Credenciales de Prueba
 
 ```
-Email: admin@test.com
-Contraseña: Admin@123456
+Email: john@acme.com
+Contraseña: Admin123!
 ```
 
 ---
@@ -292,24 +292,317 @@ ng lint
 
 ## 🐳 Docker & Docker Compose
 
+**🚀 Guía Rápida:** Ver `INICIO-RAPIDO-DOCKER.md` para un tutorial paso a paso.
+
+### Requisitos Previos
+
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+
+### Configuración Inicial
+
+1. Crear archivo de variables de entorno:
+
+```bash
+# Copiar el archivo de ejemplo
+cp .env.example .env
+
+# Editar el archivo .env con tus valores
+nano .env
+```
+
+2. **IMPORTANTE - Configurar API_URL:** El frontend necesita saber dónde está el backend. Esta URL debe ser accesible desde tu navegador:
+
+```env
+# Para acceso local
+API_URL=http://localhost:5083/api
+
+# Para acceso en red local (reemplaza con tu IP)
+API_URL=http://192.168.1.10:5083/api
+
+# Para producción
+API_URL=https://api.tudominio.com/api
+```
+
+⚠️ **NO uses nombres de contenedores Docker** (ej: `http://backend:80/api`) - el navegador no puede resolverlos.
+
+3. Variables de entorno disponibles (`.env`):
+
+```env
+# Database
+DB_PASSWORD=TimeTracker2024!
+DB_PORT=5432
+
+# Backend
+BACKEND_PORT=5083
+BACKEND_HOST=localhost
+ASPNETCORE_ENVIRONMENT=Production
+
+# JWT
+JWT_KEY=tu-clave-secreta-muy-larga-de-al-menos-256-bits
+JWT_ISSUER=TimeTrackerApi
+JWT_AUDIENCE=TimeTrackerApp
+
+# Frontend
+FRONTEND_PORT=4200
+
+# API URL (configuración build-time del frontend)
+API_URL=http://localhost:5083/api
+
+# Timezone
+TIMEZONE=America/Argentina/Buenos_Aires
+
+# Seed Database
+SEED_DATABASE=false
+```
+
+**📖 Más información sobre configuración de API_URL:** Ver `Frontend/timeTrackerApp/CONFIGURACION-API.md`
+
 ### Ejecutar con Docker Compose
 
 ```bash
-# Construir e iniciar
+# Construir e iniciar todos los servicios
 docker-compose up -d
 
-# Verificar servicios
+# Construir sin usar cache (útil después de cambios)
+docker-compose build --no-cache
+
+# Iniciar servicios específicos
+docker-compose up -d postgres backend
+
+# Verificar estado de servicios
 docker-compose ps
 
-# Ver logs
+# Ver logs en tiempo real
 docker-compose logs -f
+
+# Ver logs de un servicio específico
+docker-compose logs -f backend
+
+# Detener servicios
+docker-compose stop
+
+# Detener y eliminar contenedores
+docker-compose down
+
+# Detener y eliminar contenedores + volúmenes (⚠️ elimina datos)
+docker-compose down -v
 ```
 
-**Servicios:**
+⚠️ **Importante:** Si cambias `API_URL` en `.env`, debes reconstruir el frontend:
 
-- API Backend: http://localhost:5000
-- Frontend: http://localhost:80
-- PostgreSQL: localhost:5432
+```bash
+docker-compose build --no-cache frontend
+docker-compose up -d frontend
+```
+
+### Arquitectura de Servicios
+
+El `docker-compose.yml` configura 3 servicios:
+
+| Servicio   | Puerto    | URL                       | Health Check                  | Descripción                    |
+| ---------- | --------- | ------------------------- | ----------------------------- | ------------------------------ |
+| postgres   | 5432      | localhost:5432            | `pg_isready`                  | Base de datos PostgreSQL 16    |
+| backend    | 5083      | http://localhost:5083     | http://localhost:5083/health  | API ASP.NET Core               |
+| frontend   | 4200      | http://localhost:4200     | http://localhost:4200/health  | Angular App con Nginx          |
+
+### Volúmenes Persistentes
+
+```bash
+# Listar volúmenes
+docker volume ls
+
+# Inspeccionar volumen de PostgreSQL
+docker volume inspect timetracker_postgres_data
+
+# Backup de base de datos
+docker-compose exec postgres pg_dump -U timetracker_user TimeTracker > backup.sql
+
+# Restaurar base de datos
+docker-compose exec -T postgres psql -U timetracker_user TimeTracker < backup.sql
+```
+
+### Salud de Servicios (Health Checks)
+
+Todos los servicios incluyen health checks:
+
+```bash
+# Ver estado de health checks
+docker inspect timetracker-backend --format='{{.State.Health.Status}}'
+docker inspect timetracker-frontend --format='{{.State.Health.Status}}'
+docker inspect timetracker-postgres --format='{{.State.Health.Status}}'
+```
+
+### Acceso a Contenedores
+
+```bash
+# Acceder a shell del backend
+docker-compose exec backend sh
+
+# Acceder a PostgreSQL
+docker-compose exec postgres psql -U timetracker_user -d TimeTracker
+
+# Ver variables de entorno del backend
+docker-compose exec backend env
+```
+
+### Solución de Problemas
+
+#### Servicios no inician
+
+```bash
+# Ver logs detallados
+docker-compose logs backend
+docker-compose logs postgres
+
+# Reconstruir imágenes
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+#### Error de conexión a base de datos
+
+```bash
+# Verificar que postgres esté healthy
+docker-compose ps
+
+# Reiniciar servicio de base de datos
+docker-compose restart postgres
+
+# Verificar logs de postgres
+docker-compose logs postgres
+```
+
+#### Cambios en código no se reflejan
+
+```bash
+# Reconstruir imagen específica
+docker-compose build backend
+docker-compose up -d backend
+
+# O reconstruir todo
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+#### Frontend no conecta con Backend
+
+```bash
+# 1. Verificar que backend responde
+curl http://localhost:5083/health
+
+# 2. Verificar API_URL en .env
+cat .env | grep API_URL
+
+# 3. Si cambiaste API_URL, reconstruir frontend
+docker-compose build --no-cache frontend
+docker-compose up -d frontend
+```
+
+**📖 Más información:** Ver `CONFIGURACION-PUERTOS.md` para entender cómo funcionan los puertos.
+
+### Entornos de Desarrollo vs Producción
+
+#### Desarrollo (con hot-reload)
+
+Para desarrollo local, es recomendable ejecutar backend y frontend directamente:
+
+```bash
+# Backend
+cd Backend/TimeTracker
+dotnet run
+
+# Frontend
+cd Frontend/timeTrackerApp
+ng serve
+```
+
+#### Producción
+
+Para producción, usar Docker Compose con las siguientes consideraciones:
+
+1. Cambiar `ASPNETCORE_ENVIRONMENT=Production` en `.env`
+2. Usar un JWT_KEY seguro y único
+3. Configurar DB_PASSWORD complejo
+4. Considerar usar un proxy reverso (Nginx/Traefik) adicional
+5. Configurar SSL/TLS con certificados
+6. Limitar puertos expuestos solo a los necesarios
+
+### Dockerfile Multi-Stage
+
+Los Dockerfiles utilizan builds multi-stage para optimizar tamaño:
+
+**Backend:**
+- Stage 1 (build-env): SDK para compilar
+- Stage 2 (final): Runtime Alpine (imagen pequeña)
+- Tamaño final: ~150MB
+
+**Frontend:**
+- Stage 1 (build): Node para compilar Angular
+- Stage 2 (final): Nginx Alpine para servir
+- Tamaño final: ~25MB
+
+### Red Docker
+
+Los servicios comparten una red bridge (`timetracker-network`) que permite:
+
+- Resolución DNS por nombre de servicio
+- Aislamiento de red
+- Comunicación inter-contenedores segura
+
+### URLs de Acceso
+
+Después de ejecutar `docker-compose up -d`:
+
+- **Frontend**: http://localhost:4200
+- **Backend API**: http://localhost:5083
+- **PostgreSQL**: localhost:5432
+
+### Monitoreo
+
+```bash
+# Uso de recursos
+docker stats
+
+# Logs de todos los servicios
+docker-compose logs --tail=100 -f
+
+# Inspeccionar configuración de un servicio
+docker-compose config
+```
+
+### Ejecutar Servicios Independientes
+
+También puedes ejecutar **solo el frontend** o **solo el backend** usando sus Dockerfiles dedicados:
+
+#### Frontend Standalone
+
+```bash
+cd Frontend/timeTrackerApp
+
+# Linux/macOS
+./docker-build.sh && ./docker-run.sh
+
+# Windows PowerShell
+.\docker-build.ps1; .\docker-run.ps1
+
+# Manual
+docker build -t timetracker-frontend .
+docker run -d -p 4200:80 --name timetracker-frontend timetracker-frontend
+```
+
+**Documentación completa:** `Frontend/timeTrackerApp/DOCKER.md`
+
+#### Backend Standalone
+
+```bash
+cd Backend
+docker build -t timetracker-backend .
+docker run -d -p 5083:8080 --name timetracker-backend timetracker-backend
+```
+
+**Más información:** Ver `DOCKER.md` - Sección "Ejecutar Servicios de Forma Independiente"
 
 ---
 
