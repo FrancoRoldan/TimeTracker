@@ -7,8 +7,18 @@ namespace Data.Validators
     {
         public AddManualEntryRequestValidator()
         {
+            // At least one of ProjectId or IssueId must be provided
+            RuleFor(x => x)
+                .Must(x => x.ProjectId.HasValue || x.IssueId.HasValue)
+                .WithMessage("Either ProjectId or IssueId must be provided");
+
+            RuleFor(x => x.ProjectId)
+                .GreaterThan(0).WithMessage("Valid project ID is required")
+                .When(x => x.ProjectId.HasValue);
+
             RuleFor(x => x.IssueId)
-                .GreaterThan(0).WithMessage("Valid issue ID is required");
+                .GreaterThan(0).WithMessage("Valid issue ID is required")
+                .When(x => x.IssueId.HasValue);
 
             RuleFor(x => x.StartTime)
                 .NotEmpty().WithMessage("Start time is required")

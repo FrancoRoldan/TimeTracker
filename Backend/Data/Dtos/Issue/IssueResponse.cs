@@ -15,5 +15,7 @@ namespace Data.Dtos.Issue
         public decimal? EstimatedHours { get; init; }
         public int? AssignedUserId { get; init; }
         public string? AssignedUserName { get; init; }
+        public DateTime CreatedAt { get; init; }
+        public DateTime UpdatedAt { get; init; }
     }
 }

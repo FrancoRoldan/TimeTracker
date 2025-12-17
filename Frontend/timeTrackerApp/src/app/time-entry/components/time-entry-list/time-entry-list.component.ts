@@ -178,7 +178,7 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
             <!-- Issue Column -->
             <ng-container matColumnDef="issue">
               <th mat-header-cell *matHeaderCellDef>Problema</th>
-              <td mat-cell *matCellDef="let entry">{{ entry.issueTitle }}</td>
+              <td mat-cell *matCellDef="let entry">{{ entry.issueTitle || '-' }}</td>
             </ng-container>
 
             <!-- Description Column -->
@@ -487,7 +487,7 @@ export class TimeEntryListComponent implements OnInit {
         break;
       case 'last30days':
         startDate = new Date(now);
-        startDate.setDate(now.getDate() - 29);
+        startDate.setDate(now.getDate() - 30);
         break;
       case 'thisMonth':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);

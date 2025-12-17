@@ -12,5 +12,6 @@ namespace Data.Dtos.Project
         public DateTime? EndDate { get; init; }
         public ProjectStatus Status { get; init; }
         public int IssueCount { get; init; }
+        public DateTime CreatedAt { get; init; }
     }
 }

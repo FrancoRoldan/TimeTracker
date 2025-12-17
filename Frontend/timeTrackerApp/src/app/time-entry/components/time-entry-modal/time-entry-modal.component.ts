@@ -21,6 +21,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 import { ToastService } from '../../../shared/services/toast.service';
+import { forkJoin, of } from 'rxjs';
 
 @Component({
   selector: 'app-time-entry-modal',
@@ -43,31 +44,29 @@ import { ToastService } from '../../../shared/services/toast.service';
 
     <mat-dialog-content>
       <form [formGroup]="entryForm" class="form-content">
-        @if (!isEditMode) {
-          <!-- Project Selection -->
-          <mat-form-field class="full-width" appearance="fill">
-            <mat-label>Proyecto</mat-label>
-            <mat-select formControlName="projectId" (selectionChange)="onProjectChange($event.value)" required>
-              @for (project of availableProjects(); track project.id) {
-                <mat-option [value]="project.id">{{ project.name }}</mat-option>
-              }
-            </mat-select>
-            @if (entryForm.get('projectId')?.hasError('required') && entryForm.get('projectId')?.touched) {
-              <mat-error>El proyecto es obligatorio</mat-error>
+        <!-- Project Selection -->
+        <mat-form-field class="full-width" appearance="fill">
+          <mat-label>Proyecto</mat-label>
+          <mat-select formControlName="projectId" (selectionChange)="onProjectChange($event.value)" required>
+            @for (project of availableProjects(); track project.id) {
+              <mat-option [value]="project.id">{{ project.name }}</mat-option>
             }
-          </mat-form-field>
+          </mat-select>
+          @if (entryForm.get('projectId')?.hasError('required') && entryForm.get('projectId')?.touched) {
+            <mat-error>El proyecto es obligatorio</mat-error>
+          }
+        </mat-form-field>
 
-          <!-- Issue Selection (Optional) -->
-          <mat-form-field class="full-width" appearance="fill">
-            <mat-label>Problema (opcional)</mat-label>
-            <mat-select formControlName="issueId" [disabled]="!entryForm.get('projectId')?.value">
-              <mat-option [value]="null">Sin problema específico</mat-option>
-              @for (issue of availableIssues(); track issue.id) {
-                <mat-option [value]="issue.id">{{ issue.title }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        }
+        <!-- Issue Selection (Optional) -->
+        <mat-form-field class="full-width" appearance="fill">
+          <mat-label>Problema (opcional)</mat-label>
+          <mat-select formControlName="issueId" [disabled]="!entryForm.get('projectId')?.value">
+            <mat-option [value]="null">Sin problema específico</mat-option>
+            @for (issue of availableIssues(); track issue.id) {
+              <mat-option [value]="issue.id">{{ issue.title }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
 
         <mat-form-field class="full-width" appearance="fill">
           <mat-label>Descripción</mat-label>
@@ -82,24 +81,52 @@ import { ToastService } from '../../../shared/services/toast.service';
           }
         </mat-form-field>
 
+        <!-- Start Date and Time -->
         <div class="form-row">
           <mat-form-field appearance="fill">
-            <mat-label>Fecha y hora de inicio</mat-label>
+            <mat-label>Fecha de inicio</mat-label>
             <input
               matInput
-              type="datetime-local"
+              [matDatepicker]="startDatePicker"
+              formControlName="startDate"
+              required>
+            <mat-datepicker-toggle matSuffix [for]="startDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #startDatePicker></mat-datepicker>
+            @if (entryForm.get('startDate')?.hasError('required') && entryForm.get('startDate')?.touched) {
+              <mat-error>La fecha de inicio es obligatoria</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Hora de inicio</mat-label>
+            <input
+              matInput
+              type="time"
               formControlName="startTime"
               required>
             @if (entryForm.get('startTime')?.hasError('required') && entryForm.get('startTime')?.touched) {
               <mat-error>La hora de inicio es obligatoria</mat-error>
             }
           </mat-form-field>
+        </div>
 
+        <!-- End Date and Time -->
+        <div class="form-row">
           <mat-form-field appearance="fill">
-            <mat-label>Fecha y hora de finalización</mat-label>
+            <mat-label>Fecha de finalización</mat-label>
             <input
               matInput
-              type="datetime-local"
+              [matDatepicker]="endDatePicker"
+              formControlName="endDate">
+            <mat-datepicker-toggle matSuffix [for]="endDatePicker"></mat-datepicker-toggle>
+            <mat-datepicker #endDatePicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="fill">
+            <mat-label>Hora de finalización</mat-label>
+            <input
+              matInput
+              type="time"
               formControlName="endTime">
             @if (entryForm.hasError('endBeforeStart')) {
               <mat-error>La hora de finalización debe ser posterior a la de inicio</mat-error>
@@ -211,34 +238,67 @@ export class TimeEntryModalComponent implements OnInit {
     projectId: [null, Validators.required],
     issueId: [null], // Optional - can track time on project without specific issue
     description: ['', [Validators.maxLength(500)]],
+    startDate: [null, Validators.required],
     startTime: ['', Validators.required],
+    endDate: [null],
     endTime: ['']
   }, {
-    validators: this.timeValidator
+    validators: this.timeValidator.bind(this)
   });
 
   public calculatedHours = signal<string | null>(null);
 
   ngOnInit(): void {
-    if (this.data.entry) {
-      this.isEditMode = true;
-      this.entryForm.patchValue({
-        description: this.data.entry.description,
-        startTime: this.formatDateTimeLocal(this.data.entry.startTime),
-        endTime: this.data.entry.endTime ? this.formatDateTimeLocal(this.data.entry.endTime) : ''
-      });
-      this.entryForm.get('projectId')?.disable();
-      this.entryForm.get('issueId')?.disable();
-    } else {
-      this.loadProjects();
-    }
-
     // Watch for changes to calculate hours
     this.entryForm.valueChanges.subscribe(() => {
       this.calculateHours();
     });
 
-    this.calculateHours();
+    if (this.data.entry) {
+      this.isEditMode = true;
+      const startDate = new Date(this.data.entry.startTime);
+      const endDate = this.data.entry.endTime ? new Date(this.data.entry.endTime) : null;
+
+      // Load projects and issues in parallel, then set form values
+      const projects$ = this.projectService.getProjects();
+      const issues$ = this.data.entry.projectId
+        ? this.issueService.getMyIssuesByProject(this.data.entry.projectId)
+        : of([]);
+
+      forkJoin({ projects: projects$, issues: issues$ }).subscribe({
+        next: ({ projects, issues }) => {
+          this.availableProjects.set(projects);
+          this.availableIssues.set(issues);
+
+          // Now set form values after data is loaded
+          this.entryForm.patchValue({
+            projectId: this.data.entry!.projectId,
+            issueId: this.data.entry!.issueId,
+            description: this.data.entry!.description,
+            startDate: startDate,
+            startTime: this.formatTimeOnly(startDate),
+            endDate: endDate,
+            endTime: endDate ? this.formatTimeOnly(endDate) : ''
+          });
+
+          this.calculateHours();
+        },
+        error: (error) => {
+          console.error('Error loading data:', error);
+          // Still set time values even if projects/issues fail to load
+          this.entryForm.patchValue({
+            description: this.data.entry!.description,
+            startDate: startDate,
+            startTime: this.formatTimeOnly(startDate),
+            endDate: endDate,
+            endTime: endDate ? this.formatTimeOnly(endDate) : ''
+          });
+        }
+      });
+    } else {
+      // Create mode: just load projects
+      this.loadProjects();
+    }
   }
 
   loadProjects(): void {
@@ -273,22 +333,48 @@ export class TimeEntryModalComponent implements OnInit {
   }
 
   timeValidator(form: FormGroup) {
+    const startDate = form.get('startDate')?.value;
     const startTime = form.get('startTime')?.value;
+    let endDate = form.get('endDate')?.value;
     const endTime = form.get('endTime')?.value;
 
-    if (startTime && endTime && new Date(endTime) <= new Date(startTime)) {
-      return { endBeforeStart: true };
+    if (startDate && startTime && endTime) {
+      // Si no hay fecha de fin, asumir misma fecha que inicio
+      if (!endDate) {
+        endDate = startDate;
+      }
+
+      const start = this.combineDateTime(startDate, startTime);
+      const end = this.combineDateTime(endDate, endTime);
+
+      if (end <= start) {
+        return { endBeforeStart: true };
+      }
     }
     return null;
   }
 
+  private combineDateTime(date: Date, time: string): Date {
+    const [hours, minutes] = time.split(':').map(Number);
+    const combined = new Date(date);
+    combined.setHours(hours, minutes, 0, 0);
+    return combined;
+  }
+
   calculateHours(): void {
+    const startDate = this.entryForm.get('startDate')?.value;
     const startTime = this.entryForm.get('startTime')?.value;
+    let endDate = this.entryForm.get('endDate')?.value;
     const endTime = this.entryForm.get('endTime')?.value;
 
-    if (startTime && endTime) {
-      const start = new Date(startTime);
-      const end = new Date(endTime);
+    // Si hay fecha y hora de inicio, y hora de fin (pero no fecha de fin), asumir misma fecha
+    if (startDate && startTime && endTime) {
+      if (!endDate) {
+        endDate = startDate;
+      }
+
+      const start = this.combineDateTime(startDate, startTime);
+      const end = this.combineDateTime(endDate, endTime);
       const diffMs = end.getTime() - start.getTime();
       const hours = diffMs / (1000 * 60 * 60);
       if (hours > 0) {
@@ -301,14 +387,10 @@ export class TimeEntryModalComponent implements OnInit {
     }
   }
 
-  formatDateTimeLocal(dateString: string): string {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+  formatTimeOnly(date: Date): string {
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
+    return `${hours}:${minutes}`;
   }
 
   onSave(): void {
@@ -318,16 +400,29 @@ export class TimeEntryModalComponent implements OnInit {
 
     this.isLoading.set(true);
 
-    const formData = { ...this.entryForm.value };
+    const formValue = this.entryForm.getRawValue();
 
-    // Convert to ISO strings
-    if (formData.startTime) {
-      formData.startTime = new Date(formData.startTime).toISOString();
+    // Combine date and time fields
+    const formData: any = {
+      projectId: formValue.projectId,
+      issueId: formValue.issueId,
+      description: formValue.description
+    };
+
+    // Combine start date and time
+    if (formValue.startDate && formValue.startTime) {
+      const startDateTime = this.combineDateTime(formValue.startDate, formValue.startTime);
+      formData.startTime = startDateTime.toISOString();
     }
-    if (formData.endTime) {
-      formData.endTime = new Date(formData.endTime).toISOString();
-    } else {
-      delete formData.endTime;
+
+    // Combine end date and time (if provided)
+    if (formValue.endTime) {
+      // Si no hay fecha de fin, usar fecha de inicio
+      const endDateToUse = formValue.endDate || formValue.startDate;
+      if (endDateToUse) {
+        const endDateTime = this.combineDateTime(endDateToUse, formValue.endTime);
+        formData.endTime = endDateTime.toISOString();
+      }
     }
 
     // Remove empty description

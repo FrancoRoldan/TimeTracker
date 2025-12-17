@@ -1,14 +1,15 @@
 export interface TimeEntry {
   id: number;
-  issueId: number;
-  issueTitle: string;
+  projectId: number | null;
   projectName: string;
+  issueId: number | null;
+  issueTitle: string;
   userId: number;
   userName: string;
   description: string | null;
   startTime: string;
   endTime: string | null;
   durationMinutes: number | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
