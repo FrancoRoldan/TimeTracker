@@ -38,47 +38,47 @@ import { ToastService } from '../../../shared/services/toast.service';
         <h2>Project Issues</h2>
         <button mat-raised-button color="primary" (click)="openCreateModal()">
           <mat-icon>add</mat-icon>
-          New Issue
+          Nueva incidencias
         </button>
       </div>
 
       <!-- Filters -->
       <div class="filters">
         <mat-form-field class="search-field">
-          <mat-label>Search</mat-label>
+          <mat-label>Buscar</mat-label>
           <input matInput [(ngModel)]="searchTerm" placeholder="Search by title">
           <mat-icon matPrefix>search</mat-icon>
         </mat-form-field>
 
         <mat-form-field>
-          <mat-label>Status</mat-label>
+          <mat-label>Estado</mat-label>
           <mat-select [(ngModel)]="statusFilter">
-            <mat-option [value]="null">All</mat-option>
-            <mat-option [value]="IssueStatus.ToDo">To Do</mat-option>
-            <mat-option [value]="IssueStatus.InProgress">In Progress</mat-option>
-            <mat-option [value]="IssueStatus.Testing">Testing</mat-option>
-            <mat-option [value]="IssueStatus.Done">Done</mat-option>
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option [value]="IssueStatus.ToDo">En análisis</mat-option>
+            <mat-option [value]="IssueStatus.InProgress">En progreso</mat-option>
+            <mat-option [value]="IssueStatus.Testing">En pruebas</mat-option>
+            <mat-option [value]="IssueStatus.Done">Listo</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field>
-          <mat-label>Type</mat-label>
+          <mat-label>Tipo</mat-label>
           <mat-select [(ngModel)]="typeFilter">
-            <mat-option [value]="null">All</mat-option>
+            <mat-option [value]="null">Todos</mat-option>
             <mat-option [value]="IssueType.Bug">Bug</mat-option>
-            <mat-option [value]="IssueType.Task">Task</mat-option>
-            <mat-option [value]="IssueType.UserStory">User Story</mat-option>
+            <mat-option [value]="IssueType.Task">Tarea</mat-option>
+            <mat-option [value]="IssueType.UserStory">Historia de Usuario</mat-option>
           </mat-select>
         </mat-form-field>
 
         <mat-form-field>
-          <mat-label>Priority</mat-label>
+          <mat-label>Prioridad</mat-label>
           <mat-select [(ngModel)]="priorityFilter">
             <mat-option [value]="null">All</mat-option>
-            <mat-option [value]="IssuePriority.Low">Low</mat-option>
-            <mat-option [value]="IssuePriority.Medium">Medium</mat-option>
-            <mat-option [value]="IssuePriority.High">High</mat-option>
-            <mat-option [value]="IssuePriority.Critical">Critical</mat-option>
+            <mat-option [value]="IssuePriority.Low">Baja</mat-option>
+            <mat-option [value]="IssuePriority.Medium">Media</mat-option>
+            <mat-option [value]="IssuePriority.High">Alta</mat-option>
+            <mat-option [value]="IssuePriority.Critical">Crítica</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
@@ -102,8 +102,8 @@ import { ToastService } from '../../../shared/services/toast.service';
       } @else {
         <div class="no-data">
           <mat-icon color="primary" style="font-size: 64px; width: 64px; height: 64px;">assignment</mat-icon>
-          <h3>No issues found</h3>
-          <p>There are no issues for this project yet. Create your first issue to get started.</p>
+          <h3>No hay incidencias encontradas</h3>
+          <p>No hay incidencias para este proyecto aún. Crea tu primera incidencia para comenzar.</p>
           <button mat-raised-button color="primary" (click)="openCreateModal()">
             <mat-icon>add</mat-icon>
             Create Issue

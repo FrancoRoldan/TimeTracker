@@ -1,18 +1,22 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatDialog } from '@angular/material/dialog';
 import { MatChipsModule } from '@angular/material/chips'; // Opcional, para contadores bonitos
 
 // Tus imports de servicios e interfaces...
 import { IssueService } from '../../../issue/services/issue.service';
 import { Issue } from '../../../issue/interfaces';
-import { IssueStatus } from '../../../core/enums';
+import { IssueStatus, IssueType, IssuePriority } from '../../../core/enums';
 import { IssueCardComponent } from '../../../issue/components/issue-card/issue-card.component';
 import { IssueModalComponent } from '../../../issue/components/issue-modal/issue-modal.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
@@ -30,11 +34,15 @@ interface BoardColumn {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     DragDropModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
     MatProgressSpinnerModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
     IssueCardComponent,
     MatChipsModule
   ],
@@ -51,6 +59,46 @@ interface BoardColumn {
             Nueva Incidencia
           </button>
         </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <mat-form-field class="search-field">
+          <mat-label>Buscar</mat-label>
+          <input matInput [(ngModel)]="searchTerm" placeholder="Buscar por título">
+          <mat-icon matPrefix>search</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Estados</mat-label>
+          <mat-select [(ngModel)]="statusFilter" multiple>
+            <mat-option [value]="IssueStatus.ToDo">Por hacer</mat-option>
+            <mat-option [value]="IssueStatus.InProgress">En Progreso</mat-option>
+            <mat-option [value]="IssueStatus.Testing">En Pruebas</mat-option>
+            <mat-option [value]="IssueStatus.Done">Completado</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Tipo</mat-label>
+          <mat-select [(ngModel)]="typeFilter">
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option [value]="IssueType.Bug">Bug</mat-option>
+            <mat-option [value]="IssueType.Task">Tarea</mat-option>
+            <mat-option [value]="IssueType.UserStory">Historia de Usuario</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field>
+          <mat-label>Prioridad</mat-label>
+          <mat-select [(ngModel)]="priorityFilter">
+            <mat-option [value]="null">Todas</mat-option>
+            <mat-option [value]="IssuePriority.Low">Baja</mat-option>
+            <mat-option [value]="IssuePriority.Medium">Media</mat-option>
+            <mat-option [value]="IssuePriority.High">Alta</mat-option>
+            <mat-option [value]="IssuePriority.Critical">Crítica</mat-option>
+          </mat-select>
+        </mat-form-field>
       </div>
 
       <div class="board-content">
@@ -142,6 +190,31 @@ interface BoardColumn {
     .subtitle {
       margin: 0;
       color: var(--mat-sys-on-surface-variant);
+    }
+
+    /* --- Filters --- */
+    .filters {
+      padding: 1rem 2rem;
+      background-color: var(--mat-sys-surface);
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .search-field {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filters mat-form-field {
+      min-width: 150px;
+    }
+
+    .filters mat-form-field:has(mat-select[multiple]) {
+      min-width: 180px;
     }
 
     /* --- Board Layout --- */
@@ -313,6 +386,38 @@ interface BoardColumn {
       align-items: center;
       height: 300px;
     }
+
+    /* --- Responsive --- */
+    @media (max-width: 768px) {
+      .header {
+        padding: 0.75rem 1rem;
+      }
+
+      .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .filters {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+      }
+
+      .filters mat-form-field {
+        width: 100%;
+        min-width: unset;
+      }
+
+      .board-content {
+        padding: 12px;
+      }
+
+      .column {
+        width: 280px;
+        min-width: 280px;
+      }
+    }
   `]
 })
 export class ProjectIssueBoardComponent implements OnInit {
@@ -324,24 +429,83 @@ export class ProjectIssueBoardComponent implements OnInit {
 
   public issues = signal<Issue[]>([]);
   public isLoading = signal<boolean>(false);
-  public columns = signal<BoardColumn[]>([]);
+
+  // Filtros - signals internos
+  private _searchTerm = signal<string>('');
+  private _statusFilter = signal<IssueStatus[]>([]);
+  private _typeFilter = signal<IssueType | null>(null);
+  private _priorityFilter = signal<IssuePriority | null>(null);
+
+  // Getters y setters para ngModel
+  get searchTerm(): string { return this._searchTerm(); }
+  set searchTerm(value: string) { this._searchTerm.set(value); }
+
+  get statusFilter(): IssueStatus[] { return this._statusFilter(); }
+  set statusFilter(value: IssueStatus[]) { this._statusFilter.set(value); }
+
+  get typeFilter(): IssueType | null { return this._typeFilter(); }
+  set typeFilter(value: IssueType | null) { this._typeFilter.set(value); }
+
+  get priorityFilter(): IssuePriority | null { return this._priorityFilter(); }
+  set priorityFilter(value: IssuePriority | null) { this._priorityFilter.set(value); }
+
+  // Filtrado computado
+  public filteredIssues = computed(() => {
+    let filtered = this.issues();
+
+    const search = this._searchTerm().toLowerCase();
+    if (search) {
+      filtered = filtered.filter(issue =>
+        issue.title.toLowerCase().includes(search)
+      );
+    }
+
+    const statuses = this._statusFilter();
+    if (statuses.length > 0) {
+      filtered = filtered.filter(issue => statuses.includes(issue.status));
+    }
+
+    const type = this._typeFilter();
+    if (type !== null) {
+      filtered = filtered.filter(issue => issue.type === type);
+    }
+
+    const priority = this._priorityFilter();
+    if (priority !== null) {
+      filtered = filtered.filter(issue => issue.priority === priority);
+    }
+
+    return filtered;
+  });
+
+  // Columnas computadas - se recalculan automáticamente cuando cambian los filtros
+  public columns = computed<BoardColumn[]>(() => {
+    const filtered = this.filteredIssues();
+
+    const baseColumns: BoardColumn[] = [
+      { id: IssueStatus.ToDo, title: 'Por hacer', issues: [], colorClass: 'col-todo' },
+      { id: IssueStatus.InProgress, title: 'En Progreso', issues: [], colorClass: 'col-progress' },
+      { id: IssueStatus.Testing, title: 'En Pruebas', issues: [], colorClass: 'col-testing' },
+      { id: IssueStatus.Done, title: 'Completado', issues: [], colorClass: 'col-done' }
+    ];
+
+    // Siempre mostrar todas las columnas, pero solo con las issues filtradas
+    return baseColumns.map(column => ({
+      ...column,
+      issues: filtered.filter(issue => issue.status === column.id)
+    }));
+  });
+
+  // Exponer enums al template
+  public readonly IssueStatus = IssueStatus;
+  public readonly IssueType = IssueType;
+  public readonly IssuePriority = IssuePriority;
 
   private projectId: number = 0;
 
   ngOnInit(): void {
     this.projectId = Number(this.route.parent?.snapshot.paramMap.get('id'));
-    this.initializeColumns();
     this.loadIssues();
-  }
-
-  initializeColumns(): void {
-    // Agregamos 'colorClass' para estilar cada columna distintamente
-    this.columns.set([
-      { id: IssueStatus.ToDo, title: 'Por hacer', issues: [], colorClass: 'col-todo' },
-      { id: IssueStatus.InProgress, title: 'En Progreso', issues: [], colorClass: 'col-progress' },
-      { id: IssueStatus.Testing, title: 'En Pruebas', issues: [], colorClass: 'col-testing' },
-      { id: IssueStatus.Done, title: 'Completado', issues: [], colorClass: 'col-done' }
-    ]);
   }
 
   loadIssues(): void {
@@ -349,7 +513,6 @@ export class ProjectIssueBoardComponent implements OnInit {
     this.issueService.getIssuesByProject(this.projectId).subscribe({
       next: (issues: Issue[]) => {
         this.issues.set(issues);
-        this.organizeIssuesByStatus(issues);
         this.isLoading.set(false);
       },
       error: (error: any) => {
@@ -360,26 +523,30 @@ export class ProjectIssueBoardComponent implements OnInit {
     });
   }
 
-  organizeIssuesByStatus(issues: Issue[]): void {
-    const newColumns = this.columns().map(column => ({
-      ...column,
-      issues: issues.filter(issue => issue.status === column.id)
-    }));
-    this.columns.set(newColumns);
-  }
-
   onDrop(event: CdkDragDrop<Issue[]>, newStatus: IssueStatus): void {
     const issue = event.previousContainer.data[event.previousIndex];
 
     if (event.previousContainer === event.container) {
+      // Mover dentro de la misma columna (solo reordenar)
       moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
     } else {
+      // Mover a otra columna (cambiar estado)
       transferArrayItem(
         event.previousContainer.data,
         event.container.data,
         event.previousIndex,
         event.currentIndex
       );
+
+      // Actualizar el estado visual inmediatamente en el array de issues
+      const issueIndex = this.issues().findIndex(i => i.id === issue.id);
+      if (issueIndex !== -1) {
+        const updatedIssues = [...this.issues()];
+        updatedIssues[issueIndex] = { ...updatedIssues[issueIndex], status: newStatus };
+        this.issues.set(updatedIssues);
+      }
+
+      // Luego actualizar en el servidor
       this.updateIssueStatus(issue, newStatus);
     }
   }
