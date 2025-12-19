@@ -17,6 +17,7 @@ import { CompanyService } from '../../../company/services/company.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ErrorDialogComponent, ErrorDialogData } from '../error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../utils/error-handler.util';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-start-timer-modal',
@@ -144,7 +145,7 @@ export class StartTimerModalComponent implements OnInit {
   private issueService = inject(IssueService);
   private timeEntryService = inject(TimeEntryService);
   private dialog = inject(MatDialog);
-
+  private toastService = inject(ToastService);
   public timerForm!: FormGroup;
   public projects = signal<Project[]>([]);
   public issues = signal<Issue[]>([]);
@@ -152,6 +153,7 @@ export class StartTimerModalComponent implements OnInit {
   public isLoadingIssues = signal<boolean>(false);
   public isSubmitting = signal<boolean>(false);
   public selectedCompany = signal<any>(null);
+  
 
   ngOnInit(): void {
     this.initForm();
@@ -235,15 +237,11 @@ export class StartTimerModalComponent implements OnInit {
     }
 
     this.timeEntryService.startTimer(request).subscribe({
-      next: () => {
+      next: (newEntry) => {
         this.isSubmitting.set(false);
-        this.dialog.open(ErrorDialogComponent, {
-          data: {
-            title: 'Timer Started!',
-            message: 'Your timer is now running'
-          } as ErrorDialogData
-        });
-        this.dialogRef.close(true);
+        this.toastService.showSuccess(`Entrada de tiempo iniciada correctamente.`);
+        // Close with the new entry to trigger reload in parent components
+        this.dialogRef.close(newEntry);
       },
       error: (error) => {
         console.error('Error starting timer:', error);

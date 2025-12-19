@@ -123,8 +123,8 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
           <div class="summary-content">
             <mat-icon class="summary-icon">access_time</mat-icon>
             <div class="summary-info">
-              <span class="summary-value">{{ totalHours() }}h</span>
-              <span class="summary-label">Horas totales</span>
+              <span class="summary-value">{{ totalHours() }}</span>
+              <span class="summary-label">Tiempo total</span>
             </div>
           </div>
         </div>
@@ -143,7 +143,7 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
           <div class="summary-content">
             <mat-icon class="summary-icon">event</mat-icon>
             <div class="summary-info">
-              <span class="summary-value">{{ averageHoursPerDay() }}h</span>
+              <span class="summary-value">{{ averageHoursPerDay() }}</span>
               <span class="summary-label">Promedio por día</span>
             </div>
           </div>
@@ -209,9 +209,9 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
 
             <!-- Hours Column -->
             <ng-container matColumnDef="hours">
-              <th mat-header-cell *matHeaderCellDef>Horas</th>
+              <th mat-header-cell *matHeaderCellDef>Duración</th>
               <td mat-cell *matCellDef="let entry">
-                <span class="hours-badge">{{ ((entry.durationMinutes ?? 0) / 60).toFixed(2) }}h</span>
+                <span class="hours-badge">{{ formatDuration(entry.durationMinutes) }}</span>
               </td>
             </ng-container>
 
@@ -457,19 +457,45 @@ export class TimeEntryListComponent implements OnInit {
   public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'actions'];
 
   public totalHours = computed(() => {
-    return this.timeEntries().reduce((sum, entry) => sum + ((entry.durationMinutes ?? 0) / 60), 0).toFixed(2);
+    const totalMinutes = this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
+    return this.formatDuration(totalMinutes);
   });
 
   public averageHoursPerDay = computed(() => {
     const entries = this.timeEntries();
-    if (entries.length === 0) return '0.00';
+    if (entries.length === 0) return '0h 0m';
 
     const uniqueDates = new Set(entries.map(e => this.formatDate(e.startTime)));
-    const total = entries.reduce((sum, entry) => sum + ((entry.durationMinutes ?? 0)/60), 0);
-    return (total / uniqueDates.size).toFixed(2);
+    const totalMinutes = entries.reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
+    const averageMinutes = Math.floor(totalMinutes / uniqueDates.size);
+    return this.formatDuration(averageMinutes);
   });
 
   ngOnInit(): void {
+    // Subscribe to time entries observable for automatic updates
+    this.timeEntryService.timeEntries$.subscribe(entries => {
+      // Only update if we're not in the middle of loading paginated results
+      if (!this.isLoading()) {
+        // This handles real-time updates from start/stop timer
+        const currentEntries = this.timeEntries();
+        const currentEntryIds = new Set(currentEntries.map(e => e.id));
+        const hasNewEntries = entries.some(e => !currentEntryIds.has(e.id));
+
+        // Check if any existing entry has been updated (e.g., timer stopped)
+        const hasUpdatedEntries = entries.some(entry => {
+          const current = currentEntries.find(e => e.id === entry.id);
+          return current && (
+            current.endTime !== entry.endTime ||
+            current.durationMinutes !== entry.durationMinutes
+          );
+        });
+
+        if (hasNewEntries || hasUpdatedEntries || entries.length !== currentEntries.length) {
+          this.loadTimeEntries();
+        }
+      }
+    });
+
     // Set default date filter to last 7 days
     this.setDateFilter('last7days');
   }
@@ -646,5 +672,17 @@ export class TimeEntryListComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  formatDuration(minutes: number | null | undefined): string {
+    if (!minutes && minutes !== 0) return '0h 0m';
+
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+
+    if (mins === 0) {
+      return `${hours}h`;
+    }
+    return `${hours}h ${mins}m`;
   }
 }

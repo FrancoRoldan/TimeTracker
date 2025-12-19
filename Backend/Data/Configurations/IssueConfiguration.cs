@@ -30,10 +30,18 @@ namespace Data.Configurations
                 .HasForeignKey(i => i.AssignedUserId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            // Optimized indexes for frequent queries
             builder.HasIndex(i => new { i.ProjectId, i.Status });
             builder.HasIndex(i => i.AssignedUserId);
             builder.HasIndex(i => i.CompanyId);
             builder.HasIndex(i => i.IsDeleted);
+
+            // Additional index for combined queries (AssignedUser + Project)
+            builder.HasIndex(i => new { i.AssignedUserId, i.ProjectId });
+
+            // Index for filtering by Type and Priority
+            builder.HasIndex(i => new { i.Type, i.Status });
+            builder.HasIndex(i => new { i.Priority, i.Status });
         }
     }
 }

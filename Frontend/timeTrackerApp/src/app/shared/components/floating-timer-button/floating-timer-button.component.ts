@@ -10,6 +10,7 @@ import { TimeEntry } from '../../../time-entry/interfaces';
 import { StartTimerModalComponent } from '../start-timer-modal/start-timer-modal.component';
 import { interval, Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-floating-timer-button',
@@ -158,6 +159,7 @@ export class FloatingTimerButtonComponent implements OnInit, OnDestroy {
   private timeEntryService = inject(TimeEntryService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private toastService = inject(ToastService);
 
   public activeTimer = signal<TimeEntry | null>(null);
   public elapsedTime = signal<string>('00:00:00');
@@ -218,10 +220,12 @@ export class FloatingTimerButtonComponent implements OnInit, OnDestroy {
   stopTimer(): void {
     this.timeEntryService.stopTimer().subscribe({
       next: () => {
-        // Timer stopped successfully
+        this.toastService.showSuccess(`Entrada de tiempo detenida correctamente.`);
+        // The service already updates the BehaviorSubjects, which will trigger updates in subscribed components
       },
       error: (error) => {
         console.error('Error stopping timer:', error);
+        this.toastService.showError('Error al detener el temporizador. Por favor, intenta de nuevo.');
       }
     });
   }

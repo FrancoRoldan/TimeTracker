@@ -40,10 +40,11 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<TimeEntryResponse>.Failure("User not authenticated");
 
-            // CRITICAL: Check for active timer
-            var activeTimer = await _unitOfWork.TimeEntries.FindAsync(
-                te => te.UserId == userId && te.EndTime == null
-            );
+            // CRITICAL: Check for active timer (optimized with AsNoTracking)
+            var activeTimer = await _unitOfWork.TimeEntries
+                .Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(te => te.UserId == userId && te.EndTime == null);
 
             if (activeTimer != null)
                 return Result<TimeEntryResponse>.Failure(
@@ -58,44 +59,52 @@ namespace Core.Services.TimeTracking
             // Handle two cases: tracking time on an issue OR directly on a project
             if (request.IssueId.HasValue)
             {
-                // CRITICAL: Verify issue exists and user has access
-                issue = await _unitOfWork.Issues
+                // CRITICAL: Verify issue exists and user has access (optimized - only load needed fields)
+                var issueValidation = await _unitOfWork.Issues
                     .Query()
-                    .Include(i => i.Project)
-                        .ThenInclude(p => p.Company)
-                    .Include(i => i.AssignedUser)
-                    .FirstOrDefaultAsync(i => i.Id == request.IssueId);
+                    .AsNoTracking()
+                    .Where(i => i.Id == request.IssueId)
+                    .Select(i => new { i.Id, i.ProjectId, i.AssignedUserId, ProjectCompanyId = i.Project.CompanyId, i.Title })
+                    .FirstOrDefaultAsync();
 
-                if (issue == null)
+                if (issueValidation == null)
                     return Result<TimeEntryResponse>.Failure("Issue not found");
 
                 // CRITICAL: Security - Verify issue belongs to user's company
-                if (issue.Project.CompanyId != companyId)
+                if (issueValidation.ProjectCompanyId != companyId)
                     return Result<TimeEntryResponse>.Failure(
                         "You cannot track time on issues from other companies"
                     );
 
                 // CRITICAL: Security - Verify issue is assigned to the user
-                if (issue.AssignedUserId != userId)
+                if (issueValidation.AssignedUserId != userId)
                     return Result<TimeEntryResponse>.Failure(
                         "You can only track time on issues assigned to you"
                     );
 
-                projectId = issue.ProjectId;
+                projectId = issueValidation.ProjectId;
+                // Load full issue for response building (only if validation passes)
+                issue = await _unitOfWork.Issues
+                    .Query()
+                    .AsNoTracking()
+                    .Include(i => i.Project)
+                    .FirstOrDefaultAsync(i => i.Id == request.IssueId);
             }
             else if (request.ProjectId.HasValue)
             {
-                // Tracking time directly on project (no specific issue)
-                var project = await _unitOfWork.Projects
+                // Tracking time directly on project (optimized - only load CompanyId for validation)
+                var projectCompanyId = await _unitOfWork.Projects
                     .Query()
-                    .Include(p => p.Company)
-                    .FirstOrDefaultAsync(p => p.Id == request.ProjectId);
+                    .AsNoTracking()
+                    .Where(p => p.Id == request.ProjectId)
+                    .Select(p => p.CompanyId)
+                    .FirstOrDefaultAsync();
 
-                if (project == null)
+                if (projectCompanyId == 0)
                     return Result<TimeEntryResponse>.Failure("Project not found");
 
                 // CRITICAL: Security - Verify project belongs to user's company
-                if (project.CompanyId != companyId)
+                if (projectCompanyId != companyId)
                     return Result<TimeEntryResponse>.Failure(
                         "You cannot track time on projects from other companies"
                     );
@@ -128,11 +137,9 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<TimeEntryResponse>.Failure("User not authenticated");
 
+            // Optimized: Load with tracking only what needs to be updated
             var activeTimer = await _unitOfWork.TimeEntries
                 .Query()
-                .Include(te => te.Issue)
-                    .ThenInclude(i => i.Project)
-                .Include(te => te.User)
                 .FirstOrDefaultAsync(te => te.UserId == userId && te.EndTime == null);
 
             if (activeTimer == null)
@@ -142,7 +149,16 @@ namespace Core.Services.TimeTracking
             _unitOfWork.TimeEntries.Update(activeTimer);
             await _unitOfWork.SaveChangesAsync();
 
-            return Result<TimeEntryResponse>.Success(BuildTimeEntryResponse(activeTimer, activeTimer.Issue));
+            // Load related data separately for response (AsNoTracking)
+            var issue = activeTimer.IssueId.HasValue
+                ? await _unitOfWork.Issues
+                    .Query()
+                    .AsNoTracking()
+                    .Include(i => i.Project)
+                    .FirstOrDefaultAsync(i => i.Id == activeTimer.IssueId)
+                : null;
+
+            return Result<TimeEntryResponse>.Success(BuildTimeEntryResponse(activeTimer, issue));
         }
 
         public async Task<Result<TimeEntryResponse>> GetActiveTimerAsync()
@@ -151,8 +167,10 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<TimeEntryResponse>.Failure("User not authenticated");
 
+            // Optimized: AsNoTracking for read-only query
             var activeTimer = await _unitOfWork.TimeEntries
                 .Query()
+                .AsNoTracking()
                 .Include(te => te.Issue)
                     .ThenInclude(i => i.Project)
                 .Include(te => te.User)
@@ -184,44 +202,52 @@ namespace Core.Services.TimeTracking
             // Handle two cases: tracking time on an issue OR directly on a project
             if (request.IssueId.HasValue)
             {
-                // CRITICAL: Verify issue exists and user has access
-                issue = await _unitOfWork.Issues
+                // CRITICAL: Verify issue exists and user has access (optimized - only load needed fields)
+                var issueValidation = await _unitOfWork.Issues
                     .Query()
-                    .Include(i => i.Project)
-                        .ThenInclude(p => p.Company)
-                    .Include(i => i.AssignedUser)
-                    .FirstOrDefaultAsync(i => i.Id == request.IssueId);
+                    .AsNoTracking()
+                    .Where(i => i.Id == request.IssueId)
+                    .Select(i => new { i.Id, i.ProjectId, i.AssignedUserId, ProjectCompanyId = i.Project.CompanyId, i.Title })
+                    .FirstOrDefaultAsync();
 
-                if (issue == null)
+                if (issueValidation == null)
                     return Result<TimeEntryResponse>.Failure("Issue not found");
 
                 // CRITICAL: Security - Verify issue belongs to user's company
-                if (issue.Project.CompanyId != companyId)
+                if (issueValidation.ProjectCompanyId != companyId)
                     return Result<TimeEntryResponse>.Failure(
                         "You cannot track time on issues from other companies"
                     );
 
                 // CRITICAL: Security - Verify issue is assigned to the user
-                if (issue.AssignedUserId != userId)
+                if (issueValidation.AssignedUserId != userId)
                     return Result<TimeEntryResponse>.Failure(
                         "You can only track time on issues assigned to you"
                     );
 
-                projectId = issue.ProjectId;
+                projectId = issueValidation.ProjectId;
+                // Load full issue for response building (only if validation passes)
+                issue = await _unitOfWork.Issues
+                    .Query()
+                    .AsNoTracking()
+                    .Include(i => i.Project)
+                    .FirstOrDefaultAsync(i => i.Id == request.IssueId);
             }
             else if (request.ProjectId.HasValue)
             {
-                // Tracking time directly on project (no specific issue)
-                var project = await _unitOfWork.Projects
+                // Tracking time directly on project (optimized - only load CompanyId for validation)
+                var projectCompanyId = await _unitOfWork.Projects
                     .Query()
-                    .Include(p => p.Company)
-                    .FirstOrDefaultAsync(p => p.Id == request.ProjectId);
+                    .AsNoTracking()
+                    .Where(p => p.Id == request.ProjectId)
+                    .Select(p => p.CompanyId)
+                    .FirstOrDefaultAsync();
 
-                if (project == null)
+                if (projectCompanyId == 0)
                     return Result<TimeEntryResponse>.Failure("Project not found");
 
                 // CRITICAL: Security - Verify project belongs to user's company
-                if (project.CompanyId != companyId)
+                if (projectCompanyId != companyId)
                     return Result<TimeEntryResponse>.Failure(
                         "You cannot track time on projects from other companies"
                     );
@@ -231,9 +257,10 @@ namespace Core.Services.TimeTracking
                 return Result<TimeEntryResponse>.Failure("Either IssueId or ProjectId must be provided");
             }
 
-            // CRITICAL: Check for overlapping entries
+            // CRITICAL: Check for overlapping entries (optimized with AsNoTracking)
             var hasOverlap = await _unitOfWork.TimeEntries
                 .Query()
+                .AsNoTracking()
                 .AnyAsync(te =>
                     te.UserId == userId &&
                     (
@@ -276,8 +303,10 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<List<TimeEntryResponse>>.Failure("User not authenticated");
 
+            // Optimized: AsNoTracking for read-only query
             var query = _unitOfWork.TimeEntries
                 .Query()
+                .AsNoTracking()
                 .Where(te => te.UserId == userId);
 
             if (dateFrom.HasValue)
@@ -287,7 +316,7 @@ namespace Core.Services.TimeTracking
                 query = query.Where(te => te.EndTime <= dateTo.Value || te.EndTime == null);
 
             if (projectId.HasValue)
-                query = query.Where(te => te.Issue.ProjectId == projectId.Value);
+                query = query.Where(te => te.ProjectId == projectId.Value);
 
             if (issueId.HasValue)
                 query = query.Where(te => te.IssueId == issueId.Value);
@@ -376,8 +405,10 @@ namespace Core.Services.TimeTracking
         public async Task<Result<TimeEntryResponse>> GetEntryByIdAsync(int entryId)
         {
             var userId = _tenantService.GetCurrentUserId();
+            // Optimized: AsNoTracking for read-only query
             var entry = await _unitOfWork.TimeEntries
                 .Query()
+                .AsNoTracking()
                 .Include(te => te.Issue)
                     .ThenInclude(i => i.Project)
                 .Include(te => te.User)
@@ -397,9 +428,9 @@ namespace Core.Services.TimeTracking
         {
             var userId = _tenantService.GetCurrentUserId();
             var companyId = _tenantService.GetTenantId();
+            // Load with tracking for update (don't use AsNoTracking here)
             var entry = await _unitOfWork.TimeEntries
                 .Query()
-                .Include(te => te.Issue)
                 .FirstOrDefaultAsync(te => te.Id == entryId);
 
             if (entry == null)
@@ -423,27 +454,35 @@ namespace Core.Services.TimeTracking
                 // If IssueId is provided, validate it belongs to the user and get its project
                 if (request.IssueId.HasValue)
                 {
-                    var issue = await _unitOfWork.Issues
+                    // Optimized: Only load needed fields for validation
+                    var issueValidation = await _unitOfWork.Issues
                         .Query()
-                        .Include(i => i.Project)
-                        .FirstOrDefaultAsync(i => i.Id == request.IssueId.Value && i.Project.CompanyId == companyId);
+                        .AsNoTracking()
+                        .Where(i => i.Id == request.IssueId.Value)
+                        .Select(i => new { i.ProjectId, i.AssignedUserId, ProjectCompanyId = i.Project.CompanyId })
+                        .FirstOrDefaultAsync();
 
-                    if (issue == null)
+                    if (issueValidation == null || issueValidation.ProjectCompanyId != companyId)
                         return Result<TimeEntryResponse>.Failure("Issue not found");
 
                     // Validate issue is assigned to the user
-                    if (issue.AssignedUserId != userId)
+                    if (issueValidation.AssignedUserId != userId)
                         return Result<TimeEntryResponse>.Failure("You can only track time on issues assigned to you");
 
                     entry.IssueId = request.IssueId.Value;
-                    entry.ProjectId = issue.ProjectId; // Set project from issue
+                    entry.ProjectId = issueValidation.ProjectId; // Set project from issue
                 }
                 else if (request.ProjectId.HasValue)
                 {
-                    // If only ProjectId is provided, validate access
-                    var project = await _unitOfWork.Projects.GetByIdAsync(request.ProjectId.Value);
+                    // Optimized: Only load CompanyId for validation
+                    var projectCompanyId = await _unitOfWork.Projects
+                        .Query()
+                        .AsNoTracking()
+                        .Where(p => p.Id == request.ProjectId.Value)
+                        .Select(p => p.CompanyId)
+                        .FirstOrDefaultAsync();
 
-                    if (project == null || project.CompanyId != companyId)
+                    if (projectCompanyId == 0 || projectCompanyId != companyId)
                         return Result<TimeEntryResponse>.Failure("Project not found");
 
                     entry.ProjectId = request.ProjectId.Value;

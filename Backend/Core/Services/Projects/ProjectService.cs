@@ -35,9 +35,10 @@ namespace Core.Services.Projects
             if (currentUserId == null)
                 return Result<int>.Failure("User not authenticated");
 
-            // Get companies the user belongs to
+            // Optimized: Get companies the user belongs to with AsNoTracking
             var userCompanyIds = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => uc.UserId == currentUserId.Value)
                 .Select(uc => uc.CompanyId)
                 .ToListAsync();
@@ -45,9 +46,10 @@ namespace Core.Services.Projects
             if (!userCompanyIds.Any())
                 return Result<int>.Failure("User is not associated with any company");
 
-            // Verify project belongs to one of user's companies
+            // Optimized: Verify project belongs to one of user's companies (AsNoTracking)
             var project = await _unitOfWork.Projects
                 .Query()
+                .AsNoTracking()
                 .Where(p => p.Id == projectId && userCompanyIds.Contains(p.CompanyId))
                 .FirstOrDefaultAsync();
 
@@ -78,12 +80,18 @@ namespace Core.Services.Projects
             await _unitOfWork.Projects.AddAsync(project);
             await _unitOfWork.SaveChangesAsync();
 
-            // Load company name for response
-            var company = await _unitOfWork.Companies.GetByIdAsync(companyId.Value);
+            // Optimized: Load only company name for response
+            var companyName = await _unitOfWork.Companies
+                .Query()
+                .AsNoTracking()
+                .Where(c => c.Id == companyId.Value)
+                .Select(c => c.Name)
+                .FirstOrDefaultAsync();
+
             var response = project.Adapt<ProjectResponse>();
             response = response with
             {
-                CompanyName = company?.Name ?? string.Empty,
+                CompanyName = companyName ?? string.Empty,
                 IssueCount = 0
             };
 
@@ -97,20 +105,27 @@ namespace Core.Services.Projects
             if (!validationResult.IsSuccess)
                 return Result<ProjectResponse>.Failure(validationResult.Error);
 
-            var project = await _unitOfWork.Projects
+            // Optimized: Load project with only needed data
+            var projectData = await _unitOfWork.Projects
                 .Query()
-                .Include(p => p.Company)
-                .Include(p => p.Issues)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .AsNoTracking()
+                .Where(p => p.Id == id)
+                .Select(p => new
+                {
+                    Project = p,
+                    CompanyName = p.Company.Name,
+                    IssueCount = p.Issues.Count(i => !i.IsDeleted)
+                })
+                .FirstOrDefaultAsync();
 
-            if (project == null)
+            if (projectData == null)
                 return Result<ProjectResponse>.Failure("Project not found");
 
-            var response = project.Adapt<ProjectResponse>();
+            var response = projectData.Project.Adapt<ProjectResponse>();
             response = response with
             {
-                CompanyName = project.Company?.Name ?? string.Empty,
-                IssueCount = project.Issues.Count
+                CompanyName = projectData.CompanyName ?? string.Empty,
+                IssueCount = projectData.IssueCount
             };
 
             return Result<ProjectResponse>.Success(response);
@@ -118,16 +133,32 @@ namespace Core.Services.Projects
 
         public async Task<Result<List<ProjectResponse>>> GetAllProjectsAsync(int? companyId)
         {
-            List<Project> projects;
-
             if (companyId.HasValue)
             {
-                projects = await _unitOfWork.Projects
+                // Optimized: Direct projection to avoid loading all Issues
+                var projectsWithData = await _unitOfWork.Projects
                     .Query()
+                    .AsNoTracking()
                     .Where(p => p.CompanyId == companyId.Value)
-                    .Include(p => p.Company)
-                    .Include(p => p.Issues)
+                    .Select(p => new
+                    {
+                        Project = p,
+                        CompanyName = p.Company.Name,
+                        IssueCount = p.Issues.Count(i => !i.IsDeleted)
+                    })
                     .ToListAsync();
+
+                var projectResponses = projectsWithData.Select(pd =>
+                {
+                    var response = pd.Project.Adapt<ProjectResponse>();
+                    return response with
+                    {
+                        CompanyName = pd.CompanyName ?? string.Empty,
+                        IssueCount = pd.IssueCount
+                    };
+                }).ToList();
+
+                return Result<List<ProjectResponse>>.Success(projectResponses);
             }
             else
             {
@@ -137,9 +168,10 @@ namespace Core.Services.Projects
                     return Result<List<ProjectResponse>>.Failure("User not authenticated");
                 }
 
-                // Obtener compa��as del usuario
+                // Optimized: Get user company IDs with AsNoTracking
                 var userCompanyIds = await _unitOfWork.UserCompanies
                     .Query()
+                    .AsNoTracking()
                     .Where(uc => uc.UserId == currentUserId.Value)
                     .Select(uc => uc.CompanyId)
                     .ToListAsync();
@@ -149,26 +181,31 @@ namespace Core.Services.Projects
                     return Result<List<ProjectResponse>>.Success(new List<ProjectResponse>());
                 }
 
-                // Obtener proyectos de esas compa��as
-                projects = await _unitOfWork.Projects
+                // Optimized: Direct projection to avoid loading all Issues
+                var projectsData = await _unitOfWork.Projects
                     .Query()
+                    .AsNoTracking()
                     .Where(p => userCompanyIds.Contains(p.CompanyId))
-                    .Include(p => p.Company)
-                    .Include(p => p.Issues)
+                    .Select(p => new
+                    {
+                        Project = p,
+                        CompanyName = p.Company.Name,
+                        IssueCount = p.Issues.Count(i => !i.IsDeleted)
+                    })
                     .ToListAsync();
-            }
 
-            var responses = projects.Select(p =>
-            {
-                var response = p.Adapt<ProjectResponse>();
-                return response with
+                var userProjectResponses = projectsData.Select(pd =>
                 {
-                    CompanyName = p.Company?.Name ?? string.Empty,
-                    IssueCount = p.Issues.Count
-                };
-            }).ToList();
+                    var response = pd.Project.Adapt<ProjectResponse>();
+                    return response with
+                    {
+                        CompanyName = pd.CompanyName ?? string.Empty,
+                        IssueCount = pd.IssueCount
+                    };
+                }).ToList();
 
-            return Result<List<ProjectResponse>>.Success(responses);
+                return Result<List<ProjectResponse>>.Success(userProjectResponses);
+            }
         }
 
         public async Task<Result<ProjectResponse>> UpdateProjectAsync(int id, UpdateProjectRequest request)

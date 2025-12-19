@@ -96,9 +96,10 @@ namespace Core.Services.Companies
                 return Result<List<CompanyResponse>>.Failure("User not authenticated");
             }
 
-            // Get companies where user is a member
+            // Optimized: Get companies where user is a member with AsNoTracking
             var userCompanies = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => uc.UserId == currentUserId.Value)
                 .Include(uc => uc.Company)
                 .ToListAsync();
@@ -117,9 +118,10 @@ namespace Core.Services.Companies
             if (company == null)
                 return Result<List<CompanyUserResponse>>.Failure("Company not found");
 
-            // Get all UserCompany relationships for this company with User included
+            // Optimized: Get all UserCompany relationships with AsNoTracking
             var userCompanies = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => uc.CompanyId == companyId)
                 .Include(uc => uc.User)
                 .ToListAsync();
@@ -150,26 +152,29 @@ namespace Core.Services.Companies
             if (currentUserId == null)
                 return Result<List<AvailableUserResponse>>.Failure("User not authenticated");
 
-            // Get all companies of the current user
+            // Optimized: Get all companies of the current user with AsNoTracking
             var currentUserCompanyIds = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => uc.UserId == currentUserId.Value)
                 .Select(uc => uc.CompanyId)
                 .ToListAsync();
 
-            // Get all user IDs that are already in the target company
+            // Optimized: Get all user IDs that are already in the target company
             var existingUserIds = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => uc.CompanyId == companyId)
                 .Select(uc => uc.UserId)
                 .ToListAsync();
 
-            // Get all users that:
+            // Optimized: Get all users that:
             // 1. Are in at least one of the current user's companies
             // 2. Are NOT already in the target company
             // 3. Are NOT the current user themselves
             var availableUserIds = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => currentUserCompanyIds.Contains(uc.CompanyId))
                 .Where(uc => !existingUserIds.Contains(uc.UserId))
                 .Where(uc => uc.UserId != currentUserId.Value)
@@ -177,9 +182,10 @@ namespace Core.Services.Companies
                 .Distinct()
                 .ToListAsync();
 
-            // Get user details for the available users
+            // Optimized: Get user details for the available users with direct projection
             var availableUsers = await _unitOfWork.Users
                 .Query()
+                .AsNoTracking()
                 .Where(u => availableUserIds.Contains(u.Id))
                 .Select(u => new AvailableUserResponse
                 {

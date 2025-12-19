@@ -55,11 +55,13 @@ namespace Core.Services.Issues
                 }
                 else
                 {
-                    var userCompany = await _unitOfWork.UserCompanies.FindAsync(
-                        uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId
-                    );
+                    // Optimized: Use AsNoTracking for validation-only query
+                    var userExists = await _unitOfWork.UserCompanies
+                        .Query()
+                        .AsNoTracking()
+                        .AnyAsync(uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId);
 
-                    if (userCompany == null)
+                    if (!userExists)
                         return Result<IssueResponse>.Failure("User does not belong to this company");
                 }
             }
@@ -75,8 +77,10 @@ namespace Core.Services.Issues
 
         public async Task<Result<IssueResponse>> GetIssueByIdAsync(int id)
         {
+            // Optimized: AsNoTracking for read-only query
             var issue = await _unitOfWork.Issues
                 .Query()
+                .AsNoTracking()
                 .Include(i => i.Project)
                 .Include(i => i.AssignedUser)
                 .FirstOrDefaultAsync(i => i.Id == id);
@@ -101,22 +105,27 @@ namespace Core.Services.Issues
             if (currentUserId == null)
                 return Result<List<IssueResponse>>.Failure("User not authenticated");
 
+            // Optimized: Get user company IDs with AsNoTracking
             var userCompanyIds = await _unitOfWork.UserCompanies
                 .Query()
+                .AsNoTracking()
                 .Where(uc => uc.UserId == currentUserId.Value)
                 .Select(uc => uc.CompanyId)
                 .ToListAsync();
 
-            var project = await _unitOfWork.Projects
+            // Optimized: Validate project access with AsNoTracking
+            var projectExists = await _unitOfWork.Projects
                 .Query()
-                .Where(p => p.Id == projectId && userCompanyIds.Contains(p.CompanyId))
-                .FirstOrDefaultAsync();
+                .AsNoTracking()
+                .AnyAsync(p => p.Id == projectId && userCompanyIds.Contains(p.CompanyId));
 
-            if (project == null)
+            if (!projectExists)
                 return Result<List<IssueResponse>>.Failure("Project not found or you don't have access");
 
+            // Optimized: AsNoTracking for read-only query
             var issues = await _unitOfWork.Issues
                 .Query()
+                .AsNoTracking()
                 .Where(i => i.ProjectId == projectId)
                 .Include(i => i.Project)
                 .Include(i => i.AssignedUser)
@@ -141,8 +150,10 @@ namespace Core.Services.Issues
             if (userId == null)
                 return Result<List<IssueResponse>>.Failure("User not authenticated");
 
+            // Optimized: AsNoTracking for read-only query
             IQueryable<Issue> query = _unitOfWork.Issues
                 .Query()
+                .AsNoTracking()
                 .Where(i => i.AssignedUserId == userId.Value);
 
             if (companyId.HasValue)
@@ -174,8 +185,10 @@ namespace Core.Services.Issues
             if (userId == null)
                 return Result<List<IssueResponse>>.Failure("User not authenticated");
 
+            // Optimized: AsNoTracking for read-only query
             IQueryable<Issue> query = _unitOfWork.Issues
                 .Query()
+                .AsNoTracking()
                 .Where(i => i.AssignedUserId == userId.Value && i.ProjectId == projectId);
 
             var issues = await query
@@ -217,22 +230,21 @@ namespace Core.Services.Issues
                 if (userId == null)
                     return Result<List<IssueResponse>>.Failure("User not authenticated");
 
-                // Obtener compa��as del usuario
-                var userCompanies = await _unitOfWork.UserCompanies
+                // Optimized: Get user company IDs directly with AsNoTracking
+                var companyIds = await _unitOfWork.UserCompanies
                     .Query()
+                    .AsNoTracking()
                     .Where(uc => uc.UserId == userId)
+                    .Select(uc => uc.CompanyId)
                     .ToListAsync();
 
-                if (!userCompanies.Any())
+                if (!companyIds.Any())
                     return Result<List<IssueResponse>>.Success(new List<IssueResponse>());
 
-                var companyIds = userCompanies
-                    .Select(uc => uc.CompanyId)
-                    .ToList();
-
-                // Obtener proyectos de esas compa��as
+                // Optimized: Get project IDs with AsNoTracking
                 projectIds = await _unitOfWork.Projects
                     .Query()
+                    .AsNoTracking()
                     .Where(p => companyIds.Contains(p.CompanyId))
                     .Select(p => p.Id)
                     .ToListAsync();
@@ -241,12 +253,13 @@ namespace Core.Services.Issues
                     return Result<List<IssueResponse>>.Success(new List<IssueResponse>());
             }
 
-            // Construir la query base de Issues
+            // Optimized: Build query with AsNoTracking
             IQueryable<Issue> query = _unitOfWork.Issues
                 .Query()
+                .AsNoTracking()
                 .Where(i => projectIds.Contains(i.ProjectId));
 
-            // Aplicar filtros opcionales
+            // Apply optional filters
             if (status.HasValue)
                 query = query.Where(i => i.Status == status.Value);
 
@@ -256,7 +269,7 @@ namespace Core.Services.Issues
             if (priority.HasValue)
                 query = query.Where(i => i.Priority == priority.Value);
 
-            // Obtener issues con sus relaciones
+            // Optimized: Get issues with relations (AsNoTracking already applied)
             var issues = await query
                 .Include(i => i.Project)
                     .ThenInclude(p => p.Company)
@@ -307,13 +320,14 @@ namespace Core.Services.Issues
                 }
                 else
                 {
-                    // Verify user belongs to same company
+                    // Optimized: Verify user belongs to same company with AsNoTracking
                     var companyId = _tenantService.GetTenantId();
-                    var userCompany = await _unitOfWork.UserCompanies.FindAsync(
-                        uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId
-                    );
+                    var userExists = await _unitOfWork.UserCompanies
+                        .Query()
+                        .AsNoTracking()
+                        .AnyAsync(uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId);
 
-                    if (userCompany == null)
+                    if (!userExists)
                         return Result<IssueResponse>.Failure("User does not belong to this company");
 
                     issue.AssignedUserId = request.AssignedUserId.Value;
@@ -336,13 +350,14 @@ namespace Core.Services.Issues
             if (issue == null)
                 return Result<IssueResponse>.Failure("Issue not found");
 
-            // CRITICAL: Verify user belongs to same company
+            // CRITICAL: Verify user belongs to same company (optimized)
             var companyId = _tenantService.GetTenantId();
-            var userCompany = await _unitOfWork.UserCompanies.FindAsync(
-                uc => uc.UserId == userId && uc.CompanyId == companyId
-            );
+            var userExists = await _unitOfWork.UserCompanies
+                .Query()
+                .AsNoTracking()
+                .AnyAsync(uc => uc.UserId == userId && uc.CompanyId == companyId);
 
-            if (userCompany == null)
+            if (!userExists)
                 return Result<IssueResponse>.Failure("User does not belong to this company");
 
             issue.AssignedUserId = userId;

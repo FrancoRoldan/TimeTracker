@@ -23,10 +23,18 @@ namespace Data.Configurations
                 .HasForeignKey(te => te.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Optimized indexes for frequent queries
             builder.HasIndex(te => new { te.UserId, te.StartTime });
             builder.HasIndex(te => new { te.IssueId, te.StartTime });
             builder.HasIndex(te => new { te.CompanyId, te.StartTime });
             builder.HasIndex(te => te.IsDeleted);
+
+            // CRITICAL: Index for active timer check (UserId + EndTime IS NULL)
+            builder.HasIndex(te => new { te.UserId, te.EndTime })
+                .HasFilter("\"EndTime\" IS NULL"); // PostgreSQL syntax
+
+            // Index for project-based queries
+            builder.HasIndex(te => new { te.ProjectId, te.StartTime });
 
             // Ignore computed property
             builder.Ignore(te => te.DurationMinutes);
