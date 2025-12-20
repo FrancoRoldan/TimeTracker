@@ -11,6 +11,7 @@ services:
       POSTGRES_USER: timetracker_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-TimeTracker2024!}
       PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -64,6 +65,8 @@ services:
         API_URL: ${API_URL:-http://localhost:5083/api}
     container_name: timetracker-frontend
     restart: unless-stopped
+    environment:
+      TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
     ports:
       - "${FRONTEND_PORT:-4200}:80"
     depends_on:
