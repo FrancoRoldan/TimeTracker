@@ -18,6 +18,7 @@ import { EnumLabelPipe } from '../../../shared/pipes/enum-label.pipe';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
 import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
+import { formatMinutesToHoursAndMinutes } from '../../../shared/utils/time-format.util';
 import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
@@ -122,6 +123,21 @@ import { ToastService } from '../../../shared/services/toast.service';
                   </div>
                 }
 
+                @if (issue()!.estimatedHours && totalMinutes() > 0) {
+                  <div class="info-item">
+                    <mat-icon class="info-icon">trending_up</mat-icon>
+                    <div class="info-content">
+                      <span class="info-label">Progreso</span>
+                      <div class="progress-container">
+                        <div class="progress-bar">
+                          <div class="progress-fill" [style.width.%]="getProgressPercentage()"></div>
+                        </div>
+                        <span class="progress-text">{{ getProgressPercentage().toFixed(0) }}%</span>
+                      </div>
+                    </div>
+                  </div>
+                }
+
                 <div class="info-item">
                   <mat-icon class="info-icon">event</mat-icon>
                   <div class="info-content">
@@ -175,7 +191,7 @@ import { ToastService } from '../../../shared/services/toast.service';
                   <div class="summary-item">
                     <mat-icon>schedule</mat-icon>
                     <div>
-                      <span class="summary-value">{{ totalHours() }}h</span>
+                      <span class="summary-value">{{ formatTime(totalMinutes()) }}</span>
                       <span class="summary-label">Total registrado</span>
                     </div>
                   </div>
@@ -183,12 +199,47 @@ import { ToastService } from '../../../shared/services/toast.service';
                     <div class="summary-item">
                       <mat-icon>compare_arrows</mat-icon>
                       <div>
-                        <span class="summary-value">{{ (totalHours() / issue()!.estimatedHours! * 100).toFixed(0) }}%</span>
-                        <span class="summary-label">Progreso</span>
+                        <span class="summary-value">{{ getProgressPercentage().toFixed(0) }}%</span>
+                        <span class="summary-label">Progreso estimado</span>
+                      </div>
+                    </div>
+                    <div class="summary-item">
+                      <mat-icon>hourglass_empty</mat-icon>
+                      <div>
+                        <span class="summary-value">{{ formatTime(getRemainingMinutes()) }}</span>
+                        <span class="summary-label">{{ getRemainingMinutes() >= 0 ? 'Tiempo restante' : 'Tiempo excedido' }}</span>
                       </div>
                     </div>
                   }
                 </div>
+
+                @if (issue()!.estimatedHours) {
+                  <div class="progress-section">
+                    <div class="progress-header">
+                      <span class="progress-title">Progreso del trabajo</span>
+                      <span class="progress-percentage" [class.over-budget]="getProgressPercentage() > 100">
+                        {{ getProgressPercentage().toFixed(1) }}%
+                      </span>
+                    </div>
+                    <div class="progress-bar-large">
+                      <div
+                        class="progress-fill-large"
+                        [style.width.%]="Math.min(getProgressPercentage(), 100)"
+                        [class.on-track]="getProgressPercentage() < 80"
+                        [class.warning]="getProgressPercentage() >= 80 && getProgressPercentage() < 100"
+                        [class.over-budget]="getProgressPercentage() >= 100">
+                      </div>
+                    </div>
+                    <div class="progress-details">
+                      <span>{{ formatTime(totalMinutes()) }} de {{ issue()!.estimatedHours! }}h</span>
+                      @if (getProgressPercentage() > 100) {
+                        <span class="over-budget-text">¡Sobre el presupuesto!</span>
+                      } @else if (getProgressPercentage() >= 80) {
+                        <span class="warning-text">Cerca del límite</span>
+                      }
+                    </div>
+                  </div>
+                }
 
                 <table mat-table [dataSource]="timeEntries()" class="time-entries-table">
                   <ng-container matColumnDef="date">
@@ -207,9 +258,9 @@ import { ToastService } from '../../../shared/services/toast.service';
                   </ng-container>
 
                   <ng-container matColumnDef="hours">
-                    <th mat-header-cell *matHeaderCellDef>Horas</th>
+                    <th mat-header-cell *matHeaderCellDef>Duración</th>
                     <td mat-cell *matCellDef="let entry">
-                      <span class="hours-badge">{{ ((entry.durationMinutes ?? 0)/60).toFixed(2) }}h</span>
+                      <span class="hours-badge">{{ formatTime(entry.durationMinutes ?? 0) }}</span>
                     </td>
                   </ng-container>
 
@@ -380,6 +431,36 @@ import { ToastService } from '../../../shared/services/toast.service';
       opacity: 0.7;
     }
 
+    .progress-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .progress-bar {
+      flex: 1;
+      height: 6px;
+      background-color: var(--mat-sys-outline-variant);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background-color: var(--mat-sys-primary);
+      transition: width 0.3s ease;
+      border-radius: 3px;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mat-sys-on-surface);
+      min-width: 35px;
+      text-align: right;
+    }
+
     .description-text {
       margin: 0;
       font-size: 16px;
@@ -458,6 +539,80 @@ import { ToastService } from '../../../shared/services/toast.service';
       color: var(--mat-sys-primary);
     }
 
+    .progress-section {
+      margin-top: 20px;
+      padding: 16px;
+      background-color: var(--mat-sys-tertiary-container);
+      border-radius: 8px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .progress-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--mat-sys-on-tertiary-container);
+    }
+
+    .progress-percentage {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--mat-sys-on-tertiary-container);
+    }
+
+    .progress-percentage.over-budget {
+      color: #f44336;
+    }
+
+    .progress-bar-large {
+      height: 12px;
+      background-color: var(--mat-sys-outline-variant);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill-large {
+      height: 100%;
+      transition: width 0.3s ease, background-color 0.3s ease;
+      border-radius: 6px;
+    }
+
+    .progress-fill-large.on-track {
+      background-color: #4caf50;
+    }
+
+    .progress-fill-large.warning {
+      background-color: #ff9800;
+    }
+
+    .progress-fill-large.over-budget {
+      background-color: #f44336;
+    }
+
+    .progress-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .over-budget-text {
+      color: #f44336;
+      font-weight: 600;
+    }
+
+    .warning-text {
+      color: #ff9800;
+      font-weight: 600;
+    }
+
     @media (max-width: 768px) {
       .header {
         flex-direction: column;
@@ -496,11 +651,36 @@ export class IssueDetailComponent implements OnInit {
   public timeEntries = signal<TimeEntry[]>([]);
 
   public timeDisplayedColumns: string[] = ['date', 'user', 'description', 'hours'];
+  public Math = Math;
 
   private issueId: number = 0;
 
-  public totalHours(): number {
-    return this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0)/60, 0);
+  public totalMinutes(): number {
+    return this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
+  }
+
+  public formatTime(minutes: number): string {
+    return formatMinutesToHoursAndMinutes(minutes);
+  }
+
+  public getProgressPercentage(): number {
+    const currentIssue = this.issue();
+    if (!currentIssue?.estimatedHours) return 0;
+
+    const estimatedMinutes = currentIssue.estimatedHours * 60;
+    const actualMinutes = this.totalMinutes();
+
+    return (actualMinutes / estimatedMinutes) * 100;
+  }
+
+  public getRemainingMinutes(): number {
+    const currentIssue = this.issue();
+    if (!currentIssue?.estimatedHours) return 0;
+
+    const estimatedMinutes = currentIssue.estimatedHours * 60;
+    const actualMinutes = this.totalMinutes();
+
+    return estimatedMinutes - actualMinutes;
   }
 
   ngOnInit(): void {

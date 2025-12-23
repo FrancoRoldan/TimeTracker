@@ -127,9 +127,31 @@ export class EditUserInCompanyModalComponent {
   public UserRole = UserRole; // Para usar en el template
 
   public userForm: FormGroup = this.fb.group({
-    role: [this.data.currentRole, [Validators.required]],
+    role: [this.normalizeRole(this.data.currentRole), [Validators.required]],
     hourlyRate: [this.data.currentHourlyRate, [Validators.min(0)]]
   });
+
+  // Normaliza el rol para asegurarse que coincida con el enum
+  private normalizeRole(role: any): UserRole {
+    // Si ya es un número válido del enum, retornarlo
+    if (typeof role === 'number' && role >= 1 && role <= 4) {
+      return role as UserRole;
+    }
+
+    // Si es string, convertirlo al valor del enum
+    if (typeof role === 'string') {
+      const roleMap: Record<string, UserRole> = {
+        'Admin': UserRole.Admin,
+        'Manager': UserRole.Manager,
+        'Developer': UserRole.Developer,
+        'Viewer': UserRole.Viewer
+      };
+      return roleMap[role] || UserRole.Developer;
+    }
+
+    // Por defecto retornar Developer
+    return UserRole.Developer;
+  }
 
   onSave(): void {
     if (!this.userForm.valid) {

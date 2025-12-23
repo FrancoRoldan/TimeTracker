@@ -77,6 +77,11 @@ namespace Core.Services.Issues
 
         public async Task<Result<IssueResponse>> GetIssueByIdAsync(int id)
         {
+            // Get current user to validate access
+            var currentUserId = _tenantService.GetCurrentUserId();
+            if (currentUserId == null)
+                return Result<IssueResponse>.Failure("User not authenticated");
+
             // Optimized: AsNoTracking for read-only query
             var issue = await _unitOfWork.Issues
                 .Query()
@@ -87,6 +92,20 @@ namespace Core.Services.Issues
 
             if (issue == null)
                 return Result<IssueResponse>.Failure("Issue not found");
+
+            // Validate user has access to the issue's company
+            if (!issue.CompanyId.HasValue)
+                return Result<IssueResponse>.Failure("Issue has no company assigned");
+
+            var userCompanyIds = await _unitOfWork.UserCompanies
+                .Query()
+                .AsNoTracking()
+                .Where(uc => uc.UserId == currentUserId.Value)
+                .Select(uc => uc.CompanyId)
+                .ToListAsync();
+
+            if (!userCompanyIds.Contains(issue.CompanyId.Value))
+                return Result<IssueResponse>.Failure("You don't have access to this issue");
 
             var response = issue.Adapt<IssueResponse>();
             response = response with
@@ -292,6 +311,11 @@ namespace Core.Services.Issues
 
         public async Task<Result<IssueResponse>> UpdateIssueAsync(int id, UpdateIssueRequest request)
         {
+            // Validate access first
+            var accessValidation = await ValidateUserAccessToIssueAsync(id);
+            if (!accessValidation.IsSuccess)
+                return Result<IssueResponse>.Failure(accessValidation.Error);
+
             var issue = await _unitOfWork.Issues.GetByIdAsync(id);
             if (issue == null)
                 return Result<IssueResponse>.Failure("Issue not found");
@@ -342,6 +366,11 @@ namespace Core.Services.Issues
 
         public async Task<Result<IssueResponse>> AssignIssueAsync(int issueId, int userId)
         {
+            // Validate access first
+            var accessValidation = await ValidateUserAccessToIssueAsync(issueId);
+            if (!accessValidation.IsSuccess)
+                return Result<IssueResponse>.Failure(accessValidation.Error);
+
             var issue = await _unitOfWork.Issues
                 .Query()
                 .Include(i => i.Project)
@@ -369,6 +398,11 @@ namespace Core.Services.Issues
 
         public async Task<Result<IssueResponse>> ChangeIssueStatusAsync(int issueId, IssueStatus newStatus)
         {
+            // Validate access first
+            var accessValidation = await ValidateUserAccessToIssueAsync(issueId);
+            if (!accessValidation.IsSuccess)
+                return Result<IssueResponse>.Failure(accessValidation.Error);
+
             var issue = await _unitOfWork.Issues.GetByIdAsync(issueId);
             if (issue == null)
                 return Result<IssueResponse>.Failure("Issue not found");
@@ -382,12 +416,50 @@ namespace Core.Services.Issues
 
         public async Task<Result> DeleteIssueAsync(int id)
         {
+            // Validate access first
+            var accessValidation = await ValidateUserAccessToIssueAsync(id);
+            if (!accessValidation.IsSuccess)
+                return Result.Failure(accessValidation.Error);
+
             var issue = await _unitOfWork.Issues.GetByIdAsync(id);
             if (issue == null)
                 return Result.Failure("Issue not found");
 
             _unitOfWork.Issues.Delete(issue);
             await _unitOfWork.SaveChangesAsync();
+
+            return Result.Success();
+        }
+
+        /// <summary>
+        /// Validates that the current user has access to the specified issue
+        /// </summary>
+        private async Task<Result> ValidateUserAccessToIssueAsync(int issueId)
+        {
+            var currentUserId = _tenantService.GetCurrentUserId();
+            if (currentUserId == null)
+                return Result.Failure("User not authenticated");
+
+            var issue = await _unitOfWork.Issues
+                .Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == issueId);
+
+            if (issue == null)
+                return Result.Failure("Issue not found");
+
+            if (!issue.CompanyId.HasValue)
+                return Result.Failure("Issue has no company assigned");
+
+            var userCompanyIds = await _unitOfWork.UserCompanies
+                .Query()
+                .AsNoTracking()
+                .Where(uc => uc.UserId == currentUserId.Value)
+                .Select(uc => uc.CompanyId)
+                .ToListAsync();
+
+            if (!userCompanyIds.Contains(issue.CompanyId.Value))
+                return Result.Failure("You don't have access to this issue");
 
             return Result.Success();
         }

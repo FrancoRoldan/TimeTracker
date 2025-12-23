@@ -85,6 +85,7 @@ export class LeftSideBarComponent implements OnInit {
     { tittle: "Mis reportes", url: "/reports/user", icon: "bar_chart" },
     { tittle: "Reportes de proyecto", url: "/reports/project", icon: "pie_chart" },
     { tittle: "Reportes de empresa", url: "/reports/company", icon: "assessment" },
+	  { tittle: "Mi cuenta", url: "/user", icon: "person" }
   ];
 
   ngOnInit(): void {

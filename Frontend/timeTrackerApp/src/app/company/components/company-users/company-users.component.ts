@@ -15,6 +15,7 @@ import { CompanyUser, Company } from '../../interfaces';
 import { UserRole } from '../../../core/enums';
 import { AddUserModalComponent } from '../add-user-modal/add-user-modal.component';
 import { EditUserInCompanyModalComponent } from '../edit-user-modal/edit-user-modal.component';
+import { ResetPasswordModalComponent } from '../reset-password-modal/reset-password-modal.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
 import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
@@ -126,6 +127,10 @@ import { ToastService } from '../../../shared/services/toast.service';
                     <button mat-menu-item (click)="openEditUserModal(user)">
                       <mat-icon>edit</mat-icon>
                       <span>Editar</span>
+                    </button>
+                    <button mat-menu-item (click)="openResetPasswordModal(user)">
+                      <mat-icon>lock_reset</mat-icon>
+                      <span>Restablecer contraseña</span>
                     </button>
                     <button mat-menu-item (click)="removeUser(user)" style="color: #f44336;">
                       <mat-icon>delete</mat-icon>
@@ -373,6 +378,22 @@ export class CompanyUsersComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.loadUsers();
+      }
+    });
+  }
+
+  openResetPasswordModal(user: CompanyUser): void {
+    const dialogRef = this.dialog.open(ResetPasswordModalComponent, {
+      width: '500px',
+      data: {
+        userId: user.userId,
+        userName: user.userName
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Password reset successful, no need to reload users
       }
     });
   }
