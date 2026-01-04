@@ -58,7 +58,7 @@ namespace Core.Services.Reports
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
 
             if (dateTo.HasValue)
-                query = query.Where(te => te.EndTime <= dateTo.Value);
+                query = query.Where(te => te.EndTime < dateTo.Value.Date.AddDays(1));
 
             if (projectId.HasValue)
                 query = query.Where(te => te.Issue.ProjectId == projectId.Value);
@@ -164,7 +164,7 @@ namespace Core.Services.Reports
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
 
             if (dateTo.HasValue)
-                query = query.Where(te => te.EndTime <= dateTo.Value);
+                query = query.Where(te => te.EndTime < dateTo.Value.Date.AddDays(1));
 
             if (issueId.HasValue)
                 query = query.Where(te => te.IssueId == issueId.Value);
@@ -270,7 +270,7 @@ namespace Core.Services.Reports
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
 
             if (dateTo.HasValue)
-                query = query.Where(te => te.EndTime <= dateTo.Value);
+                query = query.Where(te => te.EndTime < dateTo.Value.Date.AddDays(1));
 
             if (projectId.HasValue)
                 query = query.Where(te => te.Issue.ProjectId == projectId.Value);

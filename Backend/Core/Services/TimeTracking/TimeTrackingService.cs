@@ -313,7 +313,7 @@ namespace Core.Services.TimeTracking
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
 
             if (dateTo.HasValue)
-                query = query.Where(te => te.EndTime <= dateTo.Value || te.EndTime == null);
+                query = query.Where(te => te.EndTime < dateTo.Value.Date.AddDays(1) || te.EndTime == null);
 
             if (projectId.HasValue)
                 query = query.Where(te => te.ProjectId == projectId.Value);
@@ -357,7 +357,7 @@ namespace Core.Services.TimeTracking
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
 
             if (dateTo.HasValue)
-                query = query.Where(te => te.StartTime <= dateTo.Value);
+                query = query.Where(te => te.StartTime < dateTo.Value.Date.AddDays(1));
 
             if (projectId.HasValue)
                 query = query.Where(te => te.ProjectId == projectId.Value);
