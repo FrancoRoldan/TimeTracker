@@ -16,12 +16,12 @@ import { ProjectService } from '../../../project/services/project.service';
 import { TimeEntry } from '../../interfaces';
 import { Issue } from '../../../issue/interfaces';
 import { Project } from '../../../project/interfaces';
-import { CompanyService } from '../../../company/services/company.service';
 import { MatDialog } from '@angular/material/dialog';
 import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
 import { ToastService } from '../../../shared/services/toast.service';
 import { forkJoin, of } from 'rxjs';
+import { IssueStatus } from '../../../core/enums';
 
 @Component({
   selector: 'app-time-entry-modal',
@@ -324,6 +324,13 @@ export class TimeEntryModalComponent implements OnInit {
   loadIssuesForProject(projectId: number): void {
     this.issueService.getMyIssuesByProject(projectId).subscribe({
       next: (issues) => {
+        issues = issues.filter(issue => {
+          if (issue.status != IssueStatus.Done){
+            return issue;
+          }
+          return null;
+        });
+
         this.availableIssues.set(issues);
       },
       error: (error) => {
