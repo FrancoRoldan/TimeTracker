@@ -5,61 +5,77 @@ import '../../bloc/project_state.dart';
 import '../widgets/project_card.dart';
 import '../widgets/project_form_dialog.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
+import '../../../../core/storage/local_storage.dart';
+import '../../../company/bloc/company_cubit.dart';
+import '../../../company/bloc/company_state.dart';
 
 class ProjectListScreen extends StatelessWidget {
   const ProjectListScreen({super.key});
 
+  void _reload(BuildContext context) {
+    final companyId = context.read<LocalStorage>().getSelectedCompanyId();
+    context.read<ProjectCubit>().loadProjects(companyId: companyId);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Proyectos'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Actualizar',
-            onPressed: () => context.read<ProjectCubit>().loadProjects(),
-          ),
-        ],
-      ),
-      body: BlocConsumer<ProjectCubit, ProjectState>(
-        listener: (context, state) {
-          if (state is ProjectError) {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(
-                content: Text(state.message),
-                backgroundColor: Theme.of(context).colorScheme.error,
-                behavior: SnackBarBehavior.floating,
-              ));
-          }
-        },
-        builder: (context, state) {
-          if (state is ProjectLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ProjectError && state is! ProjectLoaded) {
-            return _ErrorView(message: state.message);
-          }
-          if (state is ProjectLoaded) {
-            if (state.projects.isEmpty) {
-              return const _EmptyView();
-            }
-            return _ProjectGrid(projects: state.projects);
-          }
-          return const Center(child: CircularProgressIndicator());
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(
-          context: context,
-          builder: (_) => BlocProvider.value(
-            value: context.read<ProjectCubit>(),
-            child: const ProjectFormDialog(),
-          ),
+    return BlocListener<CompanyCubit, CompanyState>(
+      listenWhen: (p, c) =>
+          c is CompanyLoaded &&
+          p is CompanyLoaded &&
+          p.selectedCompany?.companyId != c.selectedCompany?.companyId,
+      listener: (ctx, _) => _reload(ctx),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Proyectos'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Actualizar',
+              onPressed: () => _reload(context),
+            ),
+          ],
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Nuevo proyecto'),
+        body: BlocConsumer<ProjectCubit, ProjectState>(
+          listener: (context, state) {
+            if (state is ProjectError) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  behavior: SnackBarBehavior.floating,
+                ));
+            }
+          },
+          builder: (context, state) {
+            if (state is ProjectLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is ProjectError && state is! ProjectLoaded) {
+              return _ErrorView(message: state.message);
+            }
+            if (state is ProjectLoaded) {
+              if (state.projects.isEmpty) return const _EmptyView();
+              return RefreshIndicator(
+                onRefresh: () async => _reload(context),
+                child: _ProjectGrid(projects: state.projects),
+              );
+            }
+            return const Center(child: CircularProgressIndicator());
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => showDialog(
+            context: context,
+            builder: (_) => BlocProvider.value(
+              value: context.read<ProjectCubit>(),
+              child: const ProjectFormDialog(),
+            ),
+          ),
+          icon: const Icon(Icons.add),
+          label: const Text('Nuevo proyecto'),
+        ),
       ),
     );
   }
@@ -137,10 +153,12 @@ class _EmptyView extends StatelessWidget {
           Text('Sin proyectos',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          Text('Creá tu primer proyecto con el botón +',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  )),
+          Text(
+            'Creá tu primer proyecto con el botón +',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
         ],
       ),
     );

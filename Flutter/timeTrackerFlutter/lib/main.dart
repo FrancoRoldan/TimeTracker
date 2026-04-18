@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/router/app_router.dart';
@@ -13,6 +15,8 @@ import 'features/auth/data/auth_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es');
+  Intl.defaultLocale = 'es';
 
   final prefs = await SharedPreferences.getInstance();
   const secureStorage = FlutterSecureStorage();

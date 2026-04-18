@@ -13,12 +13,32 @@ class CompanyCubit extends Cubit<CompanyState> {
   final CompanyRepository repository;
   final LocalStorage localStorage;
 
+  /// Inicializa el selector desde localStorage (sin llamada a API).
+  /// Se llama al construir el shell.
+  void initFromStorage() {
+    final memberships = localStorage.getCompanies();
+    final selected = localStorage.getSelectedCompany();
+    emit(CompanyLoaded(
+      companies: const [],
+      memberships: memberships,
+      selectedCompany: selected,
+    ));
+  }
+
+  /// Carga empresas desde la API (para CRUD de empresa).
   Future<void> loadCompanies() async {
+    final currentMemberships = state is CompanyLoaded
+        ? (state as CompanyLoaded).memberships
+        : localStorage.getCompanies();
+    final selected = localStorage.getSelectedCompany();
     emit(const CompanyLoading());
     try {
       final companies = await repository.getCompanies();
-      final selected = localStorage.getSelectedCompany();
-      emit(CompanyLoaded(companies: companies, selectedCompany: selected));
+      emit(CompanyLoaded(
+        companies: companies,
+        memberships: currentMemberships,
+        selectedCompany: selected,
+      ));
     } catch (e) {
       emit(CompanyError(message: e.toString()));
     }
@@ -28,7 +48,69 @@ class CompanyCubit extends Cubit<CompanyState> {
     await localStorage.saveSelectedCompany(company);
     final current = state;
     if (current is CompanyLoaded) {
-      emit(CompanyLoaded(companies: current.companies, selectedCompany: company));
+      emit(current.copyWith(selectedCompany: company));
+    }
+  }
+
+  Future<void> loadMembers(int companyId) async {
+    final current = state;
+    if (current is! CompanyLoaded) return;
+    emit(current.copyWith(membersLoading: true));
+    try {
+      final members = await repository.getCompanyUsers(companyId);
+      final available = await repository.getAvailableUsers(companyId);
+      final latest = state;
+      if (latest is CompanyLoaded) {
+        emit(latest.copyWith(
+          members: members,
+          availableUsers: available,
+          membersLoading: false,
+        ));
+      }
+    } catch (e) {
+      final latest = state;
+      if (latest is CompanyLoaded) {
+        emit(latest.copyWith(membersLoading: false));
+      }
+      // Muestra el error sin destruir el estado CompanyLoaded
+      addError(Exception(e.toString()));
+    }
+  }
+
+  Future<void> addMember(
+    int companyId,
+    int userId,
+    String role,
+    double? hourlyRate,
+  ) async {
+    try {
+      await repository.addUserToCompany(companyId, userId, role, hourlyRate);
+      await loadMembers(companyId);
+    } catch (e) {
+      addError(Exception(e.toString()));
+    }
+  }
+
+  Future<void> updateMember(
+    int companyId,
+    int userId,
+    String? role,
+    double? hourlyRate,
+  ) async {
+    try {
+      await repository.updateUserInCompany(companyId, userId, role, hourlyRate);
+      await loadMembers(companyId);
+    } catch (e) {
+      addError(Exception(e.toString()));
+    }
+  }
+
+  Future<void> removeMember(int companyId, int userId) async {
+    try {
+      await repository.removeUserFromCompany(companyId, userId);
+      await loadMembers(companyId);
+    } catch (e) {
+      addError(Exception(e.toString()));
     }
   }
 

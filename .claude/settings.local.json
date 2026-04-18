@@ -12,7 +12,8 @@
       "Bash(flutter analyze *)",
       "Bash(git checkout *)",
       "Bash(dart analyze *)",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }

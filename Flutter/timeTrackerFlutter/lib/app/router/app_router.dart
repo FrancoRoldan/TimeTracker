@@ -11,20 +11,25 @@ import '../../features/auth/bloc/auth_cubit.dart';
 import '../../features/auth/bloc/auth_state.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/company/bloc/company_cubit.dart';
+import '../../features/company/bloc/company_state.dart';
+import '../../features/company/data/company_repository.dart';
+import '../../features/company/presentation/screens/company_detail_screen.dart';
+import '../../features/dashboard/bloc/dashboard_cubit.dart';
+import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../features/issue/bloc/issue_cubit.dart';
+import '../../features/issue/data/issue_repository.dart';
+import '../../features/issue/presentation/screens/issues_screen.dart';
 import '../../features/project/bloc/project_cubit.dart';
 import '../../features/project/data/project_repository.dart';
 import '../../features/project/presentation/screens/project_list_screen.dart';
-import '../../features/issue/bloc/issue_cubit.dart';
-import '../../features/issue/data/issue_repository.dart';
-import '../../features/issue/presentation/screens/my_issues_screen.dart';
-import '../../features/time_entry/bloc/time_entry_cubit.dart';
-import '../../features/time_entry/data/time_entry_repository.dart';
-import '../../features/time_entry/presentation/screens/time_tracker_screen.dart';
 import '../../features/reports/bloc/reports_cubit.dart';
 import '../../features/reports/data/reports_repository.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';
+import '../../features/time_entry/bloc/time_entry_cubit.dart';
+import '../../features/time_entry/data/time_entry_repository.dart';
+import '../../features/time_entry/presentation/screens/time_tracker_screen.dart';
 import '../../features/user/bloc/user_cubit.dart';
-import '../../features/company/data/company_repository.dart';
 import '../../features/user/presentation/screens/user_profile_screen.dart';
 
 // ── Route paths ───────────────────────────────────────────────────────────────
@@ -34,14 +39,11 @@ class AppRoutes {
 
   static const login = '/auth/login';
   static const register = '/auth/register';
-  static const companies = '/companies';
-  static const companyUsers = '/companies/:id/users';
+  static const dashboard = '/dashboard';
+  static const companyDetail = '/company';
   static const projects = '/projects';
   static const projectDetail = '/projects/:id';
   static const issues = '/issues';
-  static const myIssues = '/issues/my';
-  static const issueDetail = '/issues/:id';
-  static const timeEntries = '/time-entries';
   static const timeTracker = '/time-entries/tracker';
   static const reportsUser = '/reports/user';
   static const reportsProject = '/reports/project';
@@ -69,19 +71,18 @@ class _BlocRefreshListenable extends ChangeNotifier {
 
 GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
   return GoRouter(
-    initialLocation: AppRoutes.login,
+    initialLocation: AppRoutes.dashboard,
     refreshListenable: _BlocRefreshListenable(authCubit.stream),
     redirect: (context, state) {
       final authState = authCubit.state;
 
-      // Todavía verificando sesión guardada — no redirigir hasta saber
       if (authState is AuthInitial || authState is AuthLoading) return null;
 
       final isAuthenticated = authState is AuthAuthenticated;
       final isAuthRoute = state.matchedLocation.startsWith('/auth');
 
       if (!isAuthenticated && !isAuthRoute) return AppRoutes.login;
-      if (isAuthenticated && isAuthRoute) return AppRoutes.projects;
+      if (isAuthenticated && isAuthRoute) return AppRoutes.dashboard;
       return null;
     },
     routes: [
@@ -96,6 +97,7 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
       ShellRoute(
         builder: (context, state, child) {
           final api = context.read<ApiClient>();
+          final storage = context.read<LocalStorage>();
           return MultiRepositoryProvider(
             providers: [
               RepositoryProvider(
@@ -105,9 +107,17 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
             child: MultiBlocProvider(
               providers: [
                 BlocProvider(
+                  create: (_) => CompanyCubit(
+                    repository: CompanyRepository(apiClient: api),
+                    localStorage: storage,
+                  )..initFromStorage(),
+                ),
+                BlocProvider(
                   create: (_) => ProjectCubit(
                     repository: ProjectRepository(apiClient: api),
-                  )..loadProjects(),
+                  )..loadProjects(
+                      companyId: storage.getSelectedCompanyId(),
+                    ),
                 ),
                 BlocProvider(
                   create: (_) =>
@@ -127,12 +137,43 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
                   create: (_) =>
                       UserCubit(repository: UserRepository(apiClient: api)),
                 ),
+                BlocProvider(
+                  create: (ctx) => DashboardCubit(
+                    timeEntryRepository: TimeEntryRepository(apiClient: api),
+                    issueRepository: IssueRepository(apiClient: api),
+                    projectRepository: ProjectRepository(apiClient: api),
+                  )..load(),
+                ),
               ],
-              child: _AppShell(child: child),
+              child: BlocListener<CompanyCubit, CompanyState>(
+                listenWhen: (prev, curr) {
+                  if (prev is CompanyLoaded && curr is CompanyLoaded) {
+                    return prev.selectedCompany?.companyId !=
+                        curr.selectedCompany?.companyId;
+                  }
+                  return false;
+                },
+                listener: (ctx, state) {
+                  if (state is CompanyLoaded) {
+                    final id = state.selectedCompany?.companyId;
+                    ctx.read<ProjectCubit>().loadProjects(companyId: id);
+                    ctx.read<DashboardCubit>().load();
+                  }
+                },
+                child: _AppShell(child: child),
+              ),
             ),
           );
         },
         routes: [
+          GoRoute(
+            path: AppRoutes.dashboard,
+            builder: (_, __) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.companyDetail,
+            builder: (_, __) => const CompanyDetailScreen(),
+          ),
           GoRoute(
             path: AppRoutes.projects,
             builder: (_, __) => const ProjectListScreen(),
@@ -149,8 +190,8 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
             ],
           ),
           GoRoute(
-            path: AppRoutes.myIssues,
-            builder: (_, __) => const MyIssuesScreen(),
+            path: AppRoutes.issues,
+            builder: (_, __) => const IssuesScreen(),
           ),
           GoRoute(
             path: AppRoutes.timeTracker,
@@ -179,14 +220,14 @@ class _AppShell extends StatelessWidget {
 
   static const _destinations = [
     NavigationDestination(
-      icon: Icon(Icons.folder_outlined),
-      selectedIcon: Icon(Icons.folder),
-      label: 'Proyectos',
+      icon: Icon(Icons.dashboard_outlined),
+      selectedIcon: Icon(Icons.dashboard),
+      label: 'Inicio',
     ),
     NavigationDestination(
       icon: Icon(Icons.task_alt_outlined),
       selectedIcon: Icon(Icons.task_alt),
-      label: 'Mis Issues',
+      label: 'Issues',
     ),
     NavigationDestination(
       icon: Icon(Icons.timer_outlined),
@@ -206,8 +247,8 @@ class _AppShell extends StatelessWidget {
   ];
 
   static const _routes = [
-    AppRoutes.projects,
-    AppRoutes.myIssues,
+    AppRoutes.dashboard,
+    AppRoutes.issues,
     AppRoutes.timeTracker,
     AppRoutes.reportsUser,
     AppRoutes.userProfile,

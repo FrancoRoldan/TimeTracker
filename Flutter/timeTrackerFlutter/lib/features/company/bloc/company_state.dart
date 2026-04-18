@@ -14,12 +14,37 @@ final class CompanyLoading extends CompanyState { const CompanyLoading(); }
 final class CompanyLoaded extends CompanyState {
   const CompanyLoaded({
     required this.companies,
-    required this.selectedCompany,
+    required this.memberships,
+    this.selectedCompany,
+    this.members = const [],
+    this.availableUsers = const [],
+    this.membersLoading = false,
   });
   final List<Company> companies;
+  final List<CompanyMembership> memberships;
   final CompanyMembership? selectedCompany;
+  final List<CompanyUser> members;
+  final List<AvailableUser> availableUsers;
+  final bool membersLoading;
+
+  CompanyLoaded copyWith({
+    List<Company>? companies,
+    List<CompanyMembership>? memberships,
+    CompanyMembership? selectedCompany,
+    List<CompanyUser>? members,
+    List<AvailableUser>? availableUsers,
+    bool? membersLoading,
+  }) => CompanyLoaded(
+    companies: companies ?? this.companies,
+    memberships: memberships ?? this.memberships,
+    selectedCompany: selectedCompany ?? this.selectedCompany,
+    members: members ?? this.members,
+    availableUsers: availableUsers ?? this.availableUsers,
+    membersLoading: membersLoading ?? this.membersLoading,
+  );
+
   @override
-  List<Object?> get props => [companies, selectedCompany];
+  List<Object?> get props => [companies, memberships, selectedCompany, members, availableUsers, membersLoading];
 }
 
 final class CompanyError extends CompanyState {
