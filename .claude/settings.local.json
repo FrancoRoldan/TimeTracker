@@ -5,7 +5,13 @@
       "Bash(dotnet build:*)",
       "Bash(npm run build:*)",
       "Bash(npm start)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(flutter --version)",
+      "Bash(flutter pub *)",
+      "Bash(dart run *)",
+      "Bash(flutter analyze *)",
+      "Bash(git checkout *)",
+      "Bash(dart analyze *)"
     ]
   }
 }

@@ -36,7 +36,9 @@ namespace Data.Validators
 
         private bool BeUtc(DateTime dateTime)
         {
-            return dateTime.Kind == DateTimeKind.Utc;
+            // Accept both UTC and Unspecified kinds
+            // ISO8601 strings with 'Z' are treated as UTC but may deserialize as Unspecified
+            return dateTime.Kind == DateTimeKind.Utc || dateTime.Kind == DateTimeKind.Unspecified;
         }
     }
 }

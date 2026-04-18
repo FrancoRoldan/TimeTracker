@@ -1,0 +1,56 @@
+name: time_tracker_flutter
+description: App móvil de seguimiento de tiempo — versión Flutter del TimeTracker.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: "^3.8.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Estado — BLoC / Cubit
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+
+  # Navegación declarativa
+  go_router: ^14.2.0
+
+  # HTTP client (equivalente al HttpClient de Angular)
+  dio: ^5.4.3+1
+
+  # Persistencia local (equivalente a localStorage de Angular)
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.2.2   # Para el JWT token
+
+  # Serialización JSON
+  json_annotation: ^4.11.0
+
+  # Fechas y formatos (intl en Angular)
+  intl: ^0.19.0
+
+  # Gráficos (equivalente a Chart.js en Angular)
+  fl_chart: ^0.68.0
+
+  # Íconos extra
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Generación de código para json_serializable
+  build_runner: ^2.4.9
+  json_serializable: ^6.8.0
+
+  # Testing BLoC
+  bloc_test: ^9.1.7
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/

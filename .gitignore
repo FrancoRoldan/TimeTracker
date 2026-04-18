@@ -8,3 +8,13 @@
 /.vs/TimeTracker/v17/DocumentLayout.json
 /.vs/TimeTracker/v17/.wsuo
 .env
+
+# Flutter
+Flutter/timeTrackerFlutter/.dart_tool/
+Flutter/timeTrackerFlutter/.flutter-plugins
+Flutter/timeTrackerFlutter/.flutter-plugins-dependencies
+Flutter/timeTrackerFlutter/.packages
+Flutter/timeTrackerFlutter/build/
+Flutter/timeTrackerFlutter/.pub-cache/
+Flutter/timeTrackerFlutter/.pub/
+Flutter/timeTrackerFlutter/pubspec.lock
