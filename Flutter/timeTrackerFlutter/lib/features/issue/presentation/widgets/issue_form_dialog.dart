@@ -112,7 +112,7 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
               children: [
                 if (widget.projects.isNotEmpty)
                   DropdownButtonFormField<int>(
-                    value: _projectId,
+                    initialValue: _projectId,
                     decoration: const InputDecoration(
                       labelText: 'Proyecto',
                       prefixIcon: Icon(Icons.folder_outlined),
@@ -156,7 +156,7 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
                 const SizedBox(height: 16),
                 if (widget.companyUsers.isNotEmpty)
                   DropdownButtonFormField<int>(
-                    value: _assignedUserId,
+                    initialValue: _assignedUserId,
                     decoration: const InputDecoration(
                       labelText: 'Asignar a (opcional)',
                       prefixIcon: Icon(Icons.person),
@@ -182,7 +182,7 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
                     if (!isEditing)
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          value: _type,
+                          initialValue: _type,
                           decoration: const InputDecoration(
                             labelText: 'Tipo',
                             border: OutlineInputBorder(),
@@ -205,7 +205,7 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
                     if (!isEditing) const SizedBox(width: 12),
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: _status,
+                        initialValue: _status,
                         decoration: const InputDecoration(
                           labelText: 'Estado',
                           border: OutlineInputBorder(),
@@ -232,7 +232,7 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        value: _priority,
+                        initialValue: _priority,
                         decoration: const InputDecoration(
                           labelText: 'Prioridad',
                           border: OutlineInputBorder(),

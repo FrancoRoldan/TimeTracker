@@ -11,7 +11,8 @@
       "Bash(dart run *)",
       "Bash(flutter analyze *)",
       "Bash(git checkout *)",
-      "Bash(dart analyze *)"
+      "Bash(dart analyze *)",
+      "Bash(git fetch *)"
     ]
   }
 }
