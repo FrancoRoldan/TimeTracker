@@ -83,7 +83,7 @@ class _AppViewState extends State<_AppView> {
   );
 
   AppColorTheme _colorTheme = AppColorTheme.blue;
-  bool _darkMode = false;
+  bool _darkMode = true; // dark mode ON por defecto — igual que Angular
 
   @override
   void initState() {

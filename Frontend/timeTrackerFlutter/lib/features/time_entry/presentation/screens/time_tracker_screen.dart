@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../bloc/time_entry_cubit.dart';
 import '../../bloc/time_entry_state.dart';
@@ -269,37 +270,52 @@ class _TimerCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      color: isRunning
-          ? cs.primaryContainer.withValues(alpha: 0.4)
-          : cs.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      decoration: BoxDecoration(
+        color: isRunning ? cs.tertiaryContainer : cs.surface,
+        border: isRunning
+            ? Border(bottom: BorderSide(color: cs.primary, width: 2))
+            : null,
+      ),
       child: Column(
         children: [
+          // Timer display — monospace 64px, igual que Angular
           Text(
             elapsedText,
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-              fontWeight: FontWeight.w300,
-              fontFeatures: const [FontFeature.tabularFigures()],
-              color: isRunning ? cs.primary : cs.onSurfaceVariant,
+            style: GoogleFonts.robotoMono(
+              fontSize: 64,
+              fontWeight: FontWeight.w700,
+              color: isRunning ? cs.onTertiaryContainer : cs.onSurfaceVariant,
+              letterSpacing: 2,
             ),
           ),
           if (activeTimer != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
-              activeTimer!.issueTitle ??
-                  activeTimer!.projectName ??
-                  'Sin descripción',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+              activeTimer!.issueTitle ?? activeTimer!.projectName ?? '',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: cs.onTertiaryContainer,
+                    fontWeight: FontWeight.w500,
+                  ),
+              textAlign: TextAlign.center,
             ),
+            if (activeTimer!.projectName != null &&
+                activeTimer!.issueTitle != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                activeTimer!.projectName!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: cs.onTertiaryContainer.withValues(alpha: 0.7),
+                    ),
+              ),
+            ],
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           isRunning
               ? FilledButton.icon(
                   onPressed: onStop,
                   icon: const Icon(Icons.stop),
-                  label: const Text('Detener'),
+                  label: const Text('Detener temporizador'),
                   style: FilledButton.styleFrom(
                     backgroundColor: cs.error,
                     foregroundColor: cs.onError,
