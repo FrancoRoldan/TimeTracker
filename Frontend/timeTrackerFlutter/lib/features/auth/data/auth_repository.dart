@@ -64,4 +64,16 @@ class AuthRepository {
   }
 
   Future<void> logout() => localStorage.clearAll();
+
+  /// Refresca el JWT obteniendo el listado actualizado de empresas del servidor.
+  /// Necesario después de crear una nueva empresa para incluirla en CompanyIds.
+  Future<void> refreshToken() async {
+    try {
+      final response = await apiClient.post<Map<String, dynamic>>('/auth/refresh');
+      final newToken = response.data!['token'] as String;
+      await localStorage.saveToken(newToken);
+    } catch (_) {
+      // Silently ignore refresh failures — existing token still works
+    }
+  }
 }

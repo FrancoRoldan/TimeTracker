@@ -14,11 +14,14 @@ class IssueFormDialog extends StatefulWidget {
     this.issue,
     this.projects = const [],
     this.companyUsers = const [],
+    this.fixedProjectId,
   });
 
   final Issue? issue;
   final List<Project> projects;
   final List<CompanyUser> companyUsers;
+  /// When set, project selector is hidden and this id is used as the project.
+  final int? fixedProjectId;
 
   @override
   State<IssueFormDialog> createState() => _IssueFormDialogState();
@@ -48,7 +51,9 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
     _hoursCtrl = TextEditingController(
       text: issue?.estimatedHours?.toString() ?? '',
     );
-    _projectId = issue?.projectId ?? widget.projects.firstOrNull?.id;
+    _projectId = widget.fixedProjectId ??
+        issue?.projectId ??
+        widget.projects.firstOrNull?.id;
     _type = issue?.type ?? IssueType.task.value;
     _status = issue?.status ?? IssueStatus.toDo.value;
     _priority = issue?.priority ?? IssuePriority.medium.value;
@@ -110,7 +115,8 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.projects.isNotEmpty)
+                if (widget.fixedProjectId == null &&
+                    widget.projects.isNotEmpty)
                   DropdownButtonFormField<int>(
                     initialValue: _projectId,
                     decoration: const InputDecoration(
@@ -130,7 +136,9 @@ class _IssueFormDialogState extends State<IssueFormDialog> {
                     validator: (v) =>
                         !isEditing && v == null ? 'Requerido' : null,
                   ),
-                if (widget.projects.isNotEmpty) const SizedBox(height: 16),
+                if (widget.fixedProjectId == null &&
+                    widget.projects.isNotEmpty)
+                  const SizedBox(height: 16),
                 TextFormField(
                   controller: _titleCtrl,
                   autofocus: true,

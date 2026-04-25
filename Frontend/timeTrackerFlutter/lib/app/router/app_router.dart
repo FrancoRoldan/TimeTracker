@@ -9,6 +9,7 @@ import '../../core/network/api_client.dart';
 import '../../core/storage/local_storage.dart';
 import '../../features/auth/bloc/auth_cubit.dart';
 import '../../features/auth/bloc/auth_state.dart';
+import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/company/bloc/company_cubit.dart';
@@ -116,6 +117,10 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
                   create: (_) => CompanyCubit(
                     repository: CompanyRepository(apiClient: api),
                     localStorage: storage,
+                    authRepository: AuthRepository(
+                      apiClient: api,
+                      localStorage: storage,
+                    ),
                   )..initFromStorage(),
                 ),
                 BlocProvider(
@@ -164,6 +169,9 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
                     final id = state.selectedCompany?.companyId;
                     ctx.read<ProjectCubit>().loadProjects(companyId: id);
                     ctx.read<DashboardCubit>().load();
+                    ctx.read<TimeEntryCubit>().loadEntries();
+                    ctx.read<IssueCubit>().loadMyIssues(companyId: id);
+                    ctx.read<ReportsCubit>().reset();
                   }
                 },
                 child: _AppShell(child: child),
@@ -197,7 +205,12 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
           ),
           GoRoute(
             path: AppRoutes.issues,
-            builder: (_, __) => const IssuesScreen(),
+            builder: (_, state) {
+              final projectId = int.tryParse(
+                state.uri.queryParameters['projectId'] ?? '',
+              );
+              return IssuesScreen(initialProjectId: projectId);
+            },
           ),
           GoRoute(
             path: AppRoutes.timeTracker,

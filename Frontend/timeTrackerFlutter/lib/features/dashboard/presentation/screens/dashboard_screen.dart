@@ -25,8 +25,20 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   @override
+  void initState() {
+    super.initState();
+    context.read<DashboardCubit>().load();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<CompanyCubit, CompanyState>(
+      listenWhen: (prev, curr) =>
+          prev is CompanyLoaded &&
+          curr is CompanyLoaded &&
+          prev.selectedCompany?.companyId != curr.selectedCompany?.companyId,
+      listener: (_, __) => context.read<DashboardCubit>().load(),
+      child: Scaffold(
       body: BlocConsumer<DashboardCubit, DashboardState>(
         listener: (context, state) {
           if (state.error != null) {
@@ -139,6 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }

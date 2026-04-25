@@ -3,9 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../bloc/issue_cubit.dart';
 import '../../bloc/issue_state.dart';
 import '../../../../core/enums/issue_status.dart';
-import '../../../../core/enums/user_role.dart';
+import '../../../../core/enums/issue_type.dart';
+import '../../../../core/enums/issue_priority.dart';
 import '../../../../core/models/company.dart';
-import '../../../company/presentation/widgets/company_selector.dart';
+import '../../../../core/models/issue.dart';
+import '../../../../core/models/project.dart';
 import '../../../../core/storage/local_storage.dart';
 import '../widgets/issue_tile.dart';
 import '../widgets/issue_form_dialog.dart';
@@ -17,92 +19,138 @@ import '../../../company/bloc/company_state.dart';
 import '../../../company/data/company_repository.dart';
 
 class IssuesScreen extends StatefulWidget {
-  const IssuesScreen({super.key});
+  const IssuesScreen({super.key, this.initialProjectId});
+
+  final int? initialProjectId;
 
   @override
   State<IssuesScreen> createState() => _IssuesScreenState();
 }
 
-class _IssuesScreenState extends State<IssuesScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _IssuesScreenState extends State<IssuesScreen> {
+  final _searchController = TextEditingController();
+  String _search = '';
   int? _filterStatus;
-  int? _filterProjectId;
+  int? _filterType;
+  int? _filterPriority;
   List<CompanyUser> _companyUsers = [];
-  int? _lastCompanyId;
+
+  bool get _isProjectMode => widget.initialProjectId != null;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(_onTabChanged);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
+    _searchController.addListener(
+      () => setState(() => _search = _searchController.text.toLowerCase()),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reload();
+      _loadCompanyUsers();
+    });
   }
 
   @override
   void dispose() {
-    _tabController
-      ..removeListener(_onTabChanged)
-      ..dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  void _onTabChanged() {
-    if (!_tabController.indexIsChanging) _reload();
-  }
-
-  int? get _companyId =>
-      context.read<LocalStorage>().getSelectedCompanyId();
+  int? get _companyId => context.read<LocalStorage>().getSelectedCompanyId();
 
   Future<void> _reload() async {
-    final cid = _companyId;
     final cubit = context.read<IssueCubit>();
-    if (_tabController.index == 0) {
-      if (_filterStatus == null && _filterProjectId == null) {
-        cubit.loadMyIssues(companyId: cid);
-      } else {
-        cubit.loadIssuesWithFilters(
-          status: _filterStatus,
-          projectId: _filterProjectId,
-          companyId: cid,
-        );
-      }
+    if (_isProjectMode) {
+      cubit.loadIssuesByProject(widget.initialProjectId!);
     } else {
-      cubit.loadIssuesWithFilters(
-        status: _filterStatus,
-        projectId: _filterProjectId,
-        companyId: cid,
-      );
-    }
-    if (cid != null && cid != _lastCompanyId) {
-      _lastCompanyId = cid;
-      _loadCompanyUsers(cid);
+      cubit.loadMyIssues(companyId: _companyId);
     }
   }
 
-  Future<void> _loadCompanyUsers(int companyId) async {
+  Future<void> _loadCompanyUsers() async {
+    final cid = _companyId;
+    if (cid == null) return;
     try {
       final users =
-          await context.read<CompanyRepository>().getCompanyUsers(companyId);
+          await context.read<CompanyRepository>().getCompanyUsers(cid);
       if (mounted) setState(() => _companyUsers = users);
     } catch (_) {}
   }
 
-  void _applyStatusFilter(int? status) {
-    setState(() => _filterStatus = status);
-    _reload();
+  List<Issue> _applyFilters(List<Issue> issues) {
+    return issues.where((issue) {
+      if (_search.isNotEmpty &&
+          !issue.title.toLowerCase().contains(_search)) {
+        return false;
+      }
+      if (_filterStatus != null && issue.status != _filterStatus) return false;
+      if (_filterType != null && issue.type != _filterType) return false;
+      if (_filterPriority != null && issue.priority != _filterPriority) {
+        return false;
+      }
+      return true;
+    }).toList();
   }
 
-  void _applyProjectFilter(int? projectId) {
-    setState(() => _filterProjectId = projectId);
-    _reload();
+  bool get _hasActiveFilters =>
+      _search.isNotEmpty ||
+      _filterStatus != null ||
+      _filterType != null ||
+      _filterPriority != null;
+
+  Project? get _currentProject {
+    if (!_isProjectMode) return null;
+    final ps = context.read<ProjectCubit>().state;
+    if (ps is ProjectLoaded) {
+      try {
+        return ps.projects
+            .firstWhere((p) => p.id == widget.initialProjectId);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  List<Project> _allProjects() {
+    final ps = context.read<ProjectCubit>().state;
+    return ps is ProjectLoaded ? ps.projects : [];
+  }
+
+  void _openCreateDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => BlocProvider.value(
+        value: context.read<IssueCubit>(),
+        child: IssueFormDialog(
+          projects: _isProjectMode && _currentProject != null
+              ? [_currentProject!]
+              : _allProjects(),
+          companyUsers: _companyUsers,
+          fixedProjectId: widget.initialProjectId,
+        ),
+      ),
+    );
+  }
+
+  void _openEditDialog(Issue issue) {
+    showDialog(
+      context: context,
+      builder: (_) => BlocProvider.value(
+        value: context.read<IssueCubit>(),
+        child: IssueFormDialog(
+          issue: issue,
+          projects: _isProjectMode && _currentProject != null
+              ? [_currentProject!]
+              : _allProjects(),
+          companyUsers: _companyUsers,
+          fixedProjectId: widget.initialProjectId,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final companyState = context.watch<CompanyCubit>().state;
-    final isManager = companyState is CompanyLoaded &&
-        (companyState.selectedCompany?.userRole.canManage ?? false);
+    final title =
+        _isProjectMode ? (_currentProject?.name ?? 'Issues') : 'Incidencias';
 
     return BlocListener<CompanyCubit, CompanyState>(
       listenWhen: (p, c) =>
@@ -112,228 +160,320 @@ class _IssuesScreenState extends State<IssuesScreen>
       listener: (_, __) {
         setState(() {
           _filterStatus = null;
-          _filterProjectId = null;
+          _filterType = null;
+          _filterPriority = null;
+          _searchController.clear();
           _companyUsers = [];
-          _lastCompanyId = null;
         });
         _reload();
+        _loadCompanyUsers();
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Issues'),
+          title: Text(title),
           actions: [
-            const CompanySelectorWidget(),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _reload,
             ),
           ],
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(isManager ? 144 : 112),
-            child: Column(
-              children: [
-                if (isManager)
-                  TabBar(
-                    controller: _tabController,
-                    tabs: const [
-                      Tab(text: 'Mis issues'),
-                      Tab(text: 'Todos'),
-                    ],
-                  ),
-                _ProjectFilterBar(
-                  selected: _filterProjectId,
-                  onSelected: _applyProjectFilter,
-                ),
-                _StatusFilterBar(
-                  selected: _filterStatus,
-                  onSelected: _applyStatusFilter,
-                ),
-              ],
-            ),
-          ),
         ),
-        body: BlocConsumer<IssueCubit, IssueState>(
-          listener: (context, state) {
-            if (state is IssueError) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  behavior: SnackBarBehavior.floating,
-                ));
-            }
-          },
-          builder: (context, state) {
-            if (state is IssueLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is IssueLoaded) {
-              if (state.issues.isEmpty) return const _EmptyView();
-              return RefreshIndicator(
-                onRefresh: _reload,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: state.issues.length,
-                  itemBuilder: (context, i) {
-                    final issue = state.issues[i];
-                    final projects =
-                        context.read<ProjectCubit>().state is ProjectLoaded
-                            ? (context.read<ProjectCubit>().state
-                                    as ProjectLoaded)
-                                .projects
-                            : [];
-                    return IssueTile(
-                      issue: issue,
-                      onTap: () {},
-                      onEdit: () => showDialog(
-                        context: context,
-                        builder: (_) => BlocProvider.value(
-                          value: context.read<IssueCubit>(),
-                          child: IssueFormDialog(
-                            issue: issue,
-                            projects: List.from(projects),
-                            companyUsers: _companyUsers,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _FiltersBar(
+              searchController: _searchController,
+              filterStatus: _filterStatus,
+              filterType: _filterType,
+              filterPriority: _filterPriority,
+              onStatusChanged: (v) => setState(() => _filterStatus = v),
+              onTypeChanged: (v) => setState(() => _filterType = v),
+              onPriorityChanged: (v) => setState(() => _filterPriority = v),
+            ),
+            Expanded(
+              child: BlocConsumer<IssueCubit, IssueState>(
+                listener: (context, state) {
+                  if (state is IssueError) {
+                    ScaffoldMessenger.of(context)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(SnackBar(
+                        content: Text(state.message),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        behavior: SnackBarBehavior.floating,
+                      ));
+                  }
+                },
+                builder: (context, state) {
+                  if (state is IssueLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (state is IssueLoaded) {
+                    final filtered = _applyFilters(state.issues);
+                    if (filtered.isEmpty) {
+                      return _EmptyView(hasFilters: _hasActiveFilters);
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                          child: Text(
+                            '${filtered.length} ${filtered.length == 1 ? 'incidencia' : 'incidencias'}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
                           ),
                         ),
-                      ),
-                      onDelete: () async {
-                        final confirmed = await showConfirmDialog(
-                          context,
-                          title: 'Eliminar issue',
-                          message:
-                              '¿Eliminás "${issue.title}"? Esta acción no se puede deshacer.',
-                        );
-                        if (confirmed && context.mounted) {
-                          context.read<IssueCubit>().deleteIssue(issue.id);
-                        }
-                      },
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _reload,
+                            child: ListView.builder(
+                              padding:
+                                  const EdgeInsets.only(bottom: 80, top: 4),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, i) {
+                                final issue = filtered[i];
+                                return IssueTile(
+                                  issue: issue,
+                                  onTap: () {},
+                                  onEdit: () => _openEditDialog(issue),
+                                  onDelete: () async {
+                                    final confirmed = await showConfirmDialog(
+                                      context,
+                                      title: 'Eliminar issue',
+                                      message:
+                                          '¿Eliminás "${issue.title}"? Esta acción no se puede deshacer.',
+                                    );
+                                    if (confirmed && context.mounted) {
+                                      context
+                                          .read<IssueCubit>()
+                                          .deleteIssue(issue.id);
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     );
-                  },
-                ),
-              );
-            }
-            return const Center(child: CircularProgressIndicator());
-          },
+                  }
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+          ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () {
-            final projects = context.read<ProjectCubit>().state is ProjectLoaded
-                ? (context.read<ProjectCubit>().state as ProjectLoaded).projects
-                : [];
-            showDialog(
-              context: context,
-              builder: (_) => BlocProvider.value(
-                value: context.read<IssueCubit>(),
-                child: IssueFormDialog(
-                  projects: List.from(projects),
-                  companyUsers: _companyUsers,
-                ),
-              ),
-            );
-          },
+          onPressed: _openCreateDialog,
           icon: const Icon(Icons.add),
-          label: const Text('Nuevo issue'),
+          label: const Text('Nueva issue'),
         ),
       ),
     );
   }
 }
 
-class _ProjectFilterBar extends StatelessWidget {
-  const _ProjectFilterBar({required this.selected, required this.onSelected});
-  final int? selected;
-  final ValueChanged<int?> onSelected;
+// ── Filters bar ───────────────────────────────────────────────────────────────
+
+class _FiltersBar extends StatelessWidget {
+  const _FiltersBar({
+    required this.searchController,
+    required this.filterStatus,
+    required this.filterType,
+    required this.filterPriority,
+    required this.onStatusChanged,
+    required this.onTypeChanged,
+    required this.onPriorityChanged,
+  });
+
+  final TextEditingController searchController;
+  final int? filterStatus;
+  final int? filterType;
+  final int? filterPriority;
+  final ValueChanged<int?> onStatusChanged;
+  final ValueChanged<int?> onTypeChanged;
+  final ValueChanged<int?> onPriorityChanged;
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProjectCubit, ProjectState>(
-      builder: (context, state) {
-        final projects = state is ProjectLoaded ? state.projects : [];
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Column(
+        children: [
+          TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Buscar incidencias...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: searchController.clear,
+                    )
+                  : null,
+              isDense: true,
+              border: const OutlineInputBorder(),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
             children: [
-              FilterChip(
-                label: const Text('Todos los proyectos'),
-                selected: selected == null,
-                onSelected: (_) => onSelected(null),
+              Expanded(
+                child: _FilterDropdown<int?>(
+                  hint: 'Estado',
+                  value: filterStatus,
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Todos')),
+                    ...IssueStatus.values.map((s) => DropdownMenuItem(
+                          value: s.value,
+                          child: Text(s.label),
+                        )),
+                  ],
+                  onChanged: onStatusChanged,
+                ),
               ),
-              ...projects.map((p) => Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: FilterChip(
-                      label: Text(p.name),
-                      selected: selected == p.id,
-                      onSelected: (_) =>
-                          onSelected(selected == p.id ? null : p.id),
-                    ),
-                  )),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FilterDropdown<int?>(
+                  hint: 'Tipo',
+                  value: filterType,
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Todos')),
+                    ...IssueType.values.map((t) => DropdownMenuItem(
+                          value: t.value,
+                          child: Text(t.label),
+                        )),
+                  ],
+                  onChanged: onTypeChanged,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FilterDropdown<int?>(
+                  hint: 'Prioridad',
+                  value: filterPriority,
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Todas')),
+                    ...IssuePriority.values.map((p) => DropdownMenuItem(
+                          value: p.value,
+                          child: Text(p.label),
+                        )),
+                  ],
+                  onChanged: onPriorityChanged,
+                ),
+              ),
             ],
           ),
-        );
-      },
-    );
-  }
-}
-
-class _StatusFilterBar extends StatelessWidget {
-  const _StatusFilterBar({required this.selected, required this.onSelected});
-  final int? selected;
-  final ValueChanged<int?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
-          FilterChip(
-            label: const Text('Todos'),
-            selected: selected == null,
-            onSelected: (_) => onSelected(null),
-          ),
-          ...IssueStatus.values.map((s) => Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: FilterChip(
-                  label: Text(s.label),
-                  selected: selected == s.value,
-                  onSelected: (_) =>
-                      onSelected(selected == s.value ? null : s.value),
-                  selectedColor: s.color.withValues(alpha: 0.2),
-                  checkmarkColor: s.color,
-                  side: selected == s.value ? BorderSide(color: s.color) : null,
-                ),
-              )),
         ],
       ),
     );
   }
 }
 
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String hint;
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.task_alt,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(height: 16),
-          Text('Sin issues', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(
-            'No hay issues para mostrar',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+    final cs = Theme.of(context).colorScheme;
+    return DropdownButtonHideUnderline(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: value != null ? cs.primary : cs.outline,
+            width: value != null ? 1.5 : 1,
           ),
-        ],
+          borderRadius: BorderRadius.circular(8),
+          color: value != null
+              ? cs.primaryContainer.withValues(alpha: 0.3)
+              : null,
+        ),
+        child: DropdownButton<T>(
+          value: value,
+          hint: Text(hint,
+              style: Theme.of(context).textTheme.bodySmall,
+              overflow: TextOverflow.ellipsis),
+          isExpanded: true,
+          isDense: true,
+          items: items,
+          onChanged: onChanged,
+          style: Theme.of(context).textTheme.bodySmall,
+          icon: const Icon(Icons.arrow_drop_down, size: 18),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Empty view ────────────────────────────────────────────────────────────────
+
+class _EmptyView extends StatelessWidget {
+  const _EmptyView({required this.hasFilters});
+
+  final bool hasFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: cs.tertiaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.assignment_outlined,
+                      size: 64, color: cs.onTertiaryContainer),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No se encontraron incidencias',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: cs.onTertiaryContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    hasFilters
+                        ? 'Probá ajustando los filtros'
+                        : 'Creá tu primera incidencia con el botón +',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: cs.onTertiaryContainer.withValues(alpha: 0.8),
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

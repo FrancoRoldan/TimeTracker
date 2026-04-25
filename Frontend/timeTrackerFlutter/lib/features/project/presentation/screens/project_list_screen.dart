@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../bloc/project_cubit.dart';
 import '../../bloc/project_state.dart';
 import '../widgets/project_card.dart';
@@ -41,11 +42,13 @@ class ProjectListScreen extends StatelessWidget {
             if (state is ProjectError) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  behavior: SnackBarBehavior.floating,
-                ));
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
             }
           },
           builder: (context, state) {
@@ -93,10 +96,10 @@ class _ProjectGrid extends StatelessWidget {
         final crossCount = constraints.maxWidth > 900
             ? 4
             : constraints.maxWidth > 600
-                ? 3
-                : constraints.maxWidth > 400
-                    ? 2
-                    : 1;
+            ? 3
+            : constraints.maxWidth > 400
+            ? 2
+            : 1;
         return GridView.builder(
           padding: const EdgeInsets.all(16),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -110,7 +113,7 @@ class _ProjectGrid extends StatelessWidget {
             final project = projects[i];
             return ProjectCard(
               project: project,
-              onTap: () {},
+              onTap: () => context.go('/issues?projectId=${project.id}'),
               onEdit: () => showDialog(
                 context: context,
                 builder: (_) => BlocProvider.value(
@@ -146,18 +149,19 @@ class _EmptyView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.folder_open,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            Icons.folder_open,
+            size: 64,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(height: 16),
-          Text('Sin proyectos',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text('Sin proyectos', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Text(
             'Creá tu primer proyecto con el botón +',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

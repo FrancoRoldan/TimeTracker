@@ -1,17 +1,21 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'company_state.dart';
 import '../data/company_repository.dart';
+import '../../../core/models/company.dart';
 import '../../../core/models/user.dart';
 import '../../../core/storage/local_storage.dart';
+import '../../auth/data/auth_repository.dart';
 
 class CompanyCubit extends Cubit<CompanyState> {
   CompanyCubit({
     required this.repository,
     required this.localStorage,
+    this.authRepository,
   }) : super(const CompanyInitial());
 
   final CompanyRepository repository;
   final LocalStorage localStorage;
+  final AuthRepository? authRepository;
 
   /// Inicializa el selector desde localStorage (sin llamada a API).
   /// Se llama al construir el shell.
@@ -115,9 +119,32 @@ class CompanyCubit extends Cubit<CompanyState> {
   }
 
   Future<void> createCompany(String name, String code) async {
+    final prevLoaded = state is CompanyLoaded ? state as CompanyLoaded : null;
     try {
-      await repository.createCompany(name, code);
-      await loadCompanies();
+      final Company company = await repository.createCompany(name, code);
+      final newMembership = CompanyMembership(
+        companyId: company.id,
+        companyName: company.name,
+        companyCode: company.code,
+        role: 'Admin',
+      );
+      final updatedMemberships = <CompanyMembership>[
+        ...(prevLoaded?.memberships ?? const <CompanyMembership>[]),
+        newMembership,
+      ];
+      final updatedCompanies = <Company>[
+        ...(prevLoaded?.companies ?? const <Company>[]),
+        company,
+      ];
+      await localStorage.saveCompanies(updatedMemberships);
+      await localStorage.saveSelectedCompany(newMembership);
+      // Refresh JWT so the new company is included in CompanyIds claim
+      await authRepository?.refreshToken();
+      emit(CompanyLoaded(
+        companies: updatedCompanies,
+        memberships: updatedMemberships,
+        selectedCompany: newMembership,
+      ));
     } catch (e) {
       emit(CompanyError(message: e.toString()));
     }

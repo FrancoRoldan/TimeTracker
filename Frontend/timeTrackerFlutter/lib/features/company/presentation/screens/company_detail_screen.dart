@@ -7,6 +7,7 @@ import '../../../../shared/widgets/confirm_dialog.dart';
 import '../../bloc/company_cubit.dart';
 import '../../bloc/company_state.dart';
 import '../widgets/collaborator_dialog.dart';
+import '../widgets/company_form_dialog.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   const CompanyDetailScreen({super.key});
@@ -24,48 +25,94 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       final state = cubit.state;
       if (state is CompanyLoaded) {
         final companyId = state.selectedCompany?.companyId;
-        if (companyId != null) {
-          cubit.loadMembers(companyId);
-        }
+        if (companyId != null) cubit.loadMembers(companyId);
       }
     });
   }
 
+  void _showCreateDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => BlocProvider.value(
+        value: context.read<CompanyCubit>(),
+        child: const CompanyFormDialog(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: BlocConsumer<CompanyCubit, CompanyState>(
+        listenWhen: (prev, curr) {
+          if (curr is CompanyError) return true;
+          if (prev is CompanyLoaded && curr is CompanyLoaded) {
+            return prev.selectedCompany?.companyId !=
+                curr.selectedCompany?.companyId;
+          }
+          return false;
+        },
         listener: (context, state) {
           if (state is CompanyError) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
               ..showSnackBar(SnackBar(
                 content: Text(state.message),
-                backgroundColor: Theme.of(context).colorScheme.error,
+                backgroundColor: cs.error,
                 behavior: SnackBarBehavior.floating,
               ));
+          } else if (state is CompanyLoaded) {
+            final id = state.selectedCompany?.companyId;
+            if (id != null) context.read<CompanyCubit>().loadMembers(id);
           }
         },
         builder: (context, state) {
-          if (state is! CompanyLoaded) {
+          if (state is CompanyLoading || state is CompanyInitial) {
             return const Center(child: CircularProgressIndicator());
           }
-          final selected = state.selectedCompany;
-          if (selected == null) {
-            return const Center(
-              child: Text('No hay empresa seleccionada'),
+
+          if (state is CompanyError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline, size: 48, color: cs.error),
+                  const SizedBox(height: 12),
+                  Text(state.message, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () =>
+                        context.read<CompanyCubit>().initFromStorage(),
+                    child: const Text('Reintentar'),
+                  ),
+                ],
+              ),
             );
           }
-          final isAdmin = selected.userRole.isAdmin;
-          final companyId = selected.companyId;
+
+          final loaded = state as CompanyLoaded;
+          final memberships = loaded.memberships;
+          final selected = loaded.selectedCompany;
+
+          if (memberships.isEmpty) {
+            return _EmptyCompanies(
+              onCreateTap: () => _showCreateDialog(context),
+            );
+          }
 
           return RefreshIndicator(
-            onRefresh: () =>
-                context.read<CompanyCubit>().loadMembers(companyId),
+            onRefresh: () async {
+              final id = selected?.companyId;
+              if (id != null) {
+                await context.read<CompanyCubit>().loadMembers(id);
+              }
+            },
             child: CustomScrollView(
               slivers: [
-                SliverAppBar(
-                  title: Text(selected.companyName),
+                const SliverAppBar(
+                  title: Text('Empresas'),
                   floating: true,
                   snap: true,
                 ),
@@ -73,13 +120,37 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      _CompanyInfoCard(selected: selected, isAdmin: isAdmin),
-                      const SizedBox(height: 24),
-                      _MembersSection(
-                        state: state,
-                        companyId: companyId,
-                        isAdmin: isAdmin,
+                      Text(
+                        'Mis empresas',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                       ),
+                      const SizedBox(height: 12),
+                      ...memberships.map(
+                        (m) => _MembershipCard(
+                          membership: m,
+                          isSelected: m.companyId == selected?.companyId,
+                          onTap: () =>
+                              context.read<CompanyCubit>().selectCompany(m),
+                        ),
+                      ),
+                      if (selected != null) ...[
+                        const SizedBox(height: 24),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        _CompanyInfoCard(
+                          selected: selected,
+                          isAdmin: selected.userRole.isAdmin,
+                        ),
+                        const SizedBox(height: 24),
+                        _MembersSection(
+                          state: loaded,
+                          companyId: selected.companyId,
+                          isAdmin: selected.userRole.isAdmin,
+                        ),
+                      ],
                     ]),
                   ),
                 ),
@@ -88,9 +159,122 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           );
         },
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCreateDialog(context),
+        icon: const Icon(Icons.add),
+        label: const Text('Nueva empresa'),
+      ),
     );
   }
 }
+
+// ── Membership card ───────────────────────────────────────────────────────────
+
+class _MembershipCard extends StatelessWidget {
+  const _MembershipCard({
+    required this.membership,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final CompanyMembership membership;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: isSelected
+            ? BorderSide(color: cs.primary, width: 2)
+            : BorderSide.none,
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isSelected
+              ? cs.primaryContainer
+              : cs.surfaceContainerHighest,
+          child: Icon(
+            Icons.business,
+            color: isSelected ? cs.onPrimaryContainer : cs.onSurfaceVariant,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          membership.companyName,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? cs.primary : null,
+          ),
+        ),
+        subtitle: Text(membership.companyCode),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: membership.userRole.color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            membership.userRole.label,
+            style: TextStyle(
+              fontSize: 11,
+              color: membership.userRole.color,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+class _EmptyCompanies extends StatelessWidget {
+  const _EmptyCompanies({required this.onCreateTap});
+
+  final VoidCallback onCreateTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.business_outlined,
+            size: 72,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No tenés empresas',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Creá tu primera empresa para empezar',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: onCreateTap,
+            icon: const Icon(Icons.add),
+            label: const Text('Crear empresa'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Company info card ─────────────────────────────────────────────────────────
 
 class _CompanyInfoCard extends StatelessWidget {
   const _CompanyInfoCard({required this.selected, required this.isAdmin});
@@ -104,66 +288,63 @@ class _CompanyInfoCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: cs.primaryContainer,
-                  child: Icon(Icons.business, color: cs.onPrimaryContainer, size: 28),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: cs.primaryContainer,
+              child:
+                  Icon(Icons.business, color: cs.onPrimaryContainer, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    selected.companyName,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
                     children: [
-                      Text(
-                        selected.companyName,
-                        style: Theme.of(context).textTheme.headlineSmall,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          selected.companyCode,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelMedium
+                              ?.copyWith(fontFamily: 'monospace'),
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              selected.companyCode,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
-                                  ?.copyWith(fontFamily: 'monospace'),
-                            ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: selected.userRole.color
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          selected.userRole.label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: selected.userRole.color,
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: selected.userRole.color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              selected.userRole.label,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: selected.userRole.color,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -171,6 +352,8 @@ class _CompanyInfoCard extends StatelessWidget {
     );
   }
 }
+
+// ── Members section ───────────────────────────────────────────────────────────
 
 class _MembersSection extends StatelessWidget {
   const _MembersSection({
@@ -308,7 +491,8 @@ class _MemberTile extends StatelessWidget {
                   const PopupMenuItem(value: 'edit', child: Text('Editar')),
                   const PopupMenuItem(
                     value: 'remove',
-                    child: Text('Eliminar', style: TextStyle(color: Colors.red)),
+                    child:
+                        Text('Eliminar', style: TextStyle(color: Colors.red)),
                   ),
                 ],
                 onSelected: (action) async {

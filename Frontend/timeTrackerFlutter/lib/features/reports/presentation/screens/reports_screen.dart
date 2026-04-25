@@ -8,6 +8,8 @@ import '../../../../core/models/reports/user_report.dart';
 import '../../../../core/models/reports/project_report.dart';
 import '../../../../core/models/reports/company_report.dart';
 import '../../../../core/storage/local_storage.dart';
+import '../../../company/bloc/company_cubit.dart';
+import '../../../company/bloc/company_state.dart';
 import '../../../company/presentation/widgets/company_selector.dart';
 import '../../../project/bloc/project_cubit.dart';
 import '../../../project/bloc/project_state.dart';
@@ -83,7 +85,16 @@ class _ReportsScreenState extends State<ReportsScreen>
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('dd/MM/yy');
-    return Scaffold(
+    return BlocListener<CompanyCubit, CompanyState>(
+      listenWhen: (p, c) =>
+          p is CompanyLoaded &&
+          c is CompanyLoaded &&
+          p.selectedCompany?.companyId != c.selectedCompany?.companyId,
+      listener: (_, __) {
+        setState(() => _selectedProjectId = null);
+        _loadCurrent();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Reportes'),
         actions: [
@@ -153,6 +164,7 @@ class _ReportsScreenState extends State<ReportsScreen>
             ],
           );
         },
+      ),
       ),
     );
   }

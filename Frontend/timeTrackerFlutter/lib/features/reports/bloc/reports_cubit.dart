@@ -29,6 +29,8 @@ class ReportsCubit extends Cubit<ReportsState> {
     }
   }
 
+  void reset() => emit(const ReportsInitial());
+
   Future<void> loadCompanyReport(int companyId, {DateTime? dateFrom, DateTime? dateTo}) async {
     emit(const ReportsLoading());
     try {
