@@ -33,11 +33,12 @@ class ProjectCubit extends Cubit<ProjectState> {
     required String name,
     DateTime? startDate,
     DateTime? endDate,
+    int status = 1,
     int? companyId,
   }) async {
     try {
       await repository.createProject(
-          name: name, startDate: startDate, endDate: endDate);
+          name: name, startDate: startDate, endDate: endDate, status: status);
       await loadProjects(companyId: companyId);
     } catch (e) {
       emit(ProjectError(message: e.toString()));

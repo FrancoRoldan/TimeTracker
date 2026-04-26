@@ -25,11 +25,13 @@ class ProjectRepository {
     required String name,
     DateTime? startDate,
     DateTime? endDate,
+    int status = 1,
   }) async {
     final response = await apiClient.post<Map<String, dynamic>>(
       '/project',
       data: {
         'name': name,
+        'status': status,
         'startDate': startDate?.toUtc().toIso8601String(),
         'endDate': endDate?.toUtc().toIso8601String(),
       },
