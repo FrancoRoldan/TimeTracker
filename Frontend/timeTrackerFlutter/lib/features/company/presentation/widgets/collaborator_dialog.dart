@@ -48,7 +48,30 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Agregar colaborador'),
-      content: SizedBox(
+      content: widget.availableUsers.isEmpty
+          ? const SizedBox(
+              width: 400,
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.group_off_outlined, size: 48),
+                    SizedBox(height: 12),
+                    Text(
+                      'No hay usuarios disponibles',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Todos los usuarios del sistema ya son miembros de esta empresa.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : SizedBox(
         width: 400,
         child: Form(
           key: _formKey,
@@ -130,22 +153,29 @@ class _AddCollaboratorDialogState extends State<AddCollaboratorDialog> {
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _saving ? null : _submit,
-          child: _saving
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Agregar'),
-        ),
-      ],
+      actions: widget.availableUsers.isEmpty
+          ? [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ]
+          : [
+              TextButton(
+                onPressed: _saving ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: _saving ? null : _submit,
+                child: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Agregar'),
+              ),
+            ],
     );
   }
 }

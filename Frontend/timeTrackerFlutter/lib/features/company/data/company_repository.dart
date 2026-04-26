@@ -78,4 +78,10 @@ class CompanyRepository {
         'role': role,
         'hourlyRate': hourlyRate,
       });
+
+  Future<void> resetMemberPassword(int userId, String newPassword) =>
+      apiClient.put('/users/reset-password', data: {
+        'userId': userId,
+        'newPassword': newPassword,
+      });
 }

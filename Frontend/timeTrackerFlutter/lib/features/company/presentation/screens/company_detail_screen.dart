@@ -8,6 +8,7 @@ import '../../bloc/company_cubit.dart';
 import '../../bloc/company_state.dart';
 import '../widgets/collaborator_dialog.dart';
 import '../widgets/company_form_dialog.dart';
+import '../widgets/reset_password_dialog.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   const CompanyDetailScreen({super.key});
@@ -378,7 +379,7 @@ class _MembersSection extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const Spacer(),
-            if (isAdmin && state.availableUsers.isNotEmpty)
+            if (isAdmin)
               FilledButton.icon(
                 onPressed: () => showDialog(
                   context: context,
@@ -488,11 +489,30 @@ class _MemberTile extends StatelessWidget {
               const SizedBox(width: 4),
               PopupMenuButton<String>(
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text('Editar')),
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'reset',
+                    child: ListTile(
+                      leading: Icon(Icons.lock_reset),
+                      title: Text('Restablecer contraseña'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'remove',
-                    child:
-                        Text('Eliminar', style: TextStyle(color: Colors.red)),
+                    child: ListTile(
+                      leading: Icon(Icons.delete_outline, color: Colors.red),
+                      title: Text('Eliminar',
+                          style: TextStyle(color: Colors.red)),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ],
                 onSelected: (action) async {
@@ -507,6 +527,25 @@ class _MemberTile extends StatelessWidget {
                         ),
                       ),
                     );
+                  } else if (action == 'reset') {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<CompanyCubit>(),
+                        child: ResetPasswordDialog(
+                          userId: member.userId,
+                          userName: member.userName,
+                        ),
+                      ),
+                    );
+                    if (result == true && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Contraseña restablecida'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
                   } else if (action == 'remove') {
                     final confirmed = await showConfirmDialog(
                       context,

@@ -118,6 +118,14 @@ class CompanyCubit extends Cubit<CompanyState> {
     }
   }
 
+  Future<void> resetMemberPassword(int userId, String newPassword) async {
+    try {
+      await repository.resetMemberPassword(userId, newPassword);
+    } catch (e) {
+      addError(Exception(e.toString()));
+    }
+  }
+
   Future<void> createCompany(String name, String code) async {
     final prevLoaded = state is CompanyLoaded ? state as CompanyLoaded : null;
     try {
