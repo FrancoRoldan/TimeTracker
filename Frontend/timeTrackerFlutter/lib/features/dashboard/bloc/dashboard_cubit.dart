@@ -3,6 +3,7 @@ import 'dashboard_state.dart';
 import '../../../core/models/time_entry.dart';
 import '../../../core/models/issue.dart';
 import '../../../core/models/project.dart';
+import '../../../core/storage/local_storage.dart';
 import '../../../features/time_entry/data/time_entry_repository.dart';
 import '../../../features/issue/data/issue_repository.dart';
 import '../../../features/project/data/project_repository.dart';
@@ -12,14 +13,17 @@ class DashboardCubit extends Cubit<DashboardState> {
     required this.timeEntryRepository,
     required this.issueRepository,
     required this.projectRepository,
+    required this.localStorage,
   }) : super(const DashboardState());
 
   final TimeEntryRepository timeEntryRepository;
   final IssueRepository issueRepository;
   final ProjectRepository projectRepository;
+  final LocalStorage localStorage;
 
   Future<void> load() async {
     emit(state.copyWith(isLoading: true));
+    final companyId = localStorage.getSelectedCompanyId();
     try {
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day);
@@ -29,8 +33,8 @@ class DashboardCubit extends Cubit<DashboardState> {
         timeEntryRepository
             .getEntries(dateFrom: todayStart, dateTo: now)
             .catchError((_) => <TimeEntry>[]),
-        issueRepository.getMyIssues().catchError((_) => <Issue>[]),
-        projectRepository.getProjects().catchError((_) => <Project>[]),
+        issueRepository.getMyIssues(companyId: companyId).catchError((_) => <Issue>[]),
+        projectRepository.getProjects(companyId: companyId).catchError((_) => <Project>[]),
       ]);
 
       final activeTimer = results[0] as dynamic;
@@ -49,7 +53,7 @@ class DashboardCubit extends Cubit<DashboardState> {
           .toList();
 
       final activeProjects = allProjects
-          .where((p) => p.status == 0) // Active
+          .where((p) => p.status == 1) // Active
           .take(6)
           .toList();
 

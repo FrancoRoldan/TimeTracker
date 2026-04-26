@@ -153,6 +153,7 @@ GoRouter createRouter(LocalStorage localStorage, AuthCubit authCubit) {
                     timeEntryRepository: TimeEntryRepository(apiClient: api),
                     issueRepository: IssueRepository(apiClient: api),
                     projectRepository: ProjectRepository(apiClient: api),
+                    localStorage: storage,
                   )..load(),
                 ),
               ],
