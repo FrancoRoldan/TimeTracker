@@ -10,12 +10,23 @@ import '../../../../core/storage/local_storage.dart';
 import '../../../company/bloc/company_cubit.dart';
 import '../../../company/bloc/company_state.dart';
 
-class ProjectListScreen extends StatelessWidget {
+class ProjectListScreen extends StatefulWidget {
   const ProjectListScreen({super.key});
 
+  @override
+  State<ProjectListScreen> createState() => _ProjectListScreenState();
+}
+
+class _ProjectListScreenState extends State<ProjectListScreen> {
   void _reload(BuildContext context) {
     final companyId = context.read<LocalStorage>().getSelectedCompanyId();
     context.read<ProjectCubit>().loadProjects(companyId: companyId);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _reload(context);
   }
 
   @override

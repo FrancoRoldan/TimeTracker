@@ -48,11 +48,13 @@ namespace Core.Services.Reports
                 }
             }
 
+            var companyId = _tenantService.GetTenantId();
+
             // Build query with filters - NO ENTITY LOADING, AsNoTracking
             var query = _unitOfWork.TimeEntries
                 .Query()
                 .AsNoTracking()
-                .Where(te => te.UserId == currentUserId && te.EndTime != null);
+                .Where(te => te.UserId == currentUserId && te.EndTime != null && te.CompanyId == companyId);
 
             if (dateFrom.HasValue)
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
@@ -145,11 +147,13 @@ namespace Core.Services.Reports
             DateTime? dateTo = null,
             int? issueId = null)
         {
-            // Verify project exists and user has access
+            var companyId = _tenantService.GetTenantId();
+
+            // Verify project exists and belongs to current company
             var project = await _unitOfWork.Projects
                 .Query()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == projectId);
+                .FirstOrDefaultAsync(p => p.Id == projectId && p.CompanyId == companyId);
 
             if (project == null)
                 return Result<ProjectReportResponse>.Failure("Project not found");
@@ -158,7 +162,7 @@ namespace Core.Services.Reports
             var query = _unitOfWork.TimeEntries
                 .Query()
                 .AsNoTracking()
-                .Where(te => te.Issue.ProjectId == projectId && te.EndTime != null);
+                .Where(te => te.Issue.ProjectId == projectId && te.EndTime != null && te.CompanyId == companyId);
 
             if (dateFrom.HasValue)
                 query = query.Where(te => te.StartTime >= dateFrom.Value);

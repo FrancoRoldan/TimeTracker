@@ -167,6 +167,8 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<TimeEntryResponse>.Failure("User not authenticated");
 
+            var companyId = _tenantService.GetTenantId();
+
             // Optimized: AsNoTracking for read-only query
             var activeTimer = await _unitOfWork.TimeEntries
                 .Query()
@@ -174,7 +176,7 @@ namespace Core.Services.TimeTracking
                 .Include(te => te.Issue)
                     .ThenInclude(i => i.Project)
                 .Include(te => te.User)
-                .FirstOrDefaultAsync(te => te.UserId == userId && te.EndTime == null);
+                .FirstOrDefaultAsync(te => te.UserId == userId && te.EndTime == null && te.CompanyId == companyId);
 
             if (activeTimer == null)
                 return Result<TimeEntryResponse>.Failure("No active timer found");
@@ -303,11 +305,13 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<List<TimeEntryResponse>>.Failure("User not authenticated");
 
+            var companyId = _tenantService.GetTenantId();
+
             // Optimized: AsNoTracking for read-only query
             var query = _unitOfWork.TimeEntries
                 .Query()
                 .AsNoTracking()
-                .Where(te => te.UserId == userId);
+                .Where(te => te.UserId == userId && te.CompanyId == companyId);
 
             if (dateFrom.HasValue)
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
@@ -345,13 +349,15 @@ namespace Core.Services.TimeTracking
             if (userId == null)
                 return Result<PaginatedResult<TimeEntryResponse>>.Failure("User not authenticated");
 
+            var companyId = _tenantService.GetTenantId();
+
             var query = _unitOfWork.TimeEntries
                 .Query()
                 .Include(te => te.Issue)
                     .ThenInclude(i => i.Project)
                 .Include(te => te.User)
                 .Include(te => te.Project)
-                .Where(te => te.UserId == userId);
+                .Where(te => te.UserId == userId && te.CompanyId == companyId);
 
             if (dateFrom.HasValue)
                 query = query.Where(te => te.StartTime >= dateFrom.Value);

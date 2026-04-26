@@ -14,6 +14,8 @@ import '../../../project/bloc/project_cubit.dart';
 import '../../../project/bloc/project_state.dart';
 import '../../../issue/bloc/issue_cubit.dart';
 import '../../../issue/bloc/issue_state.dart';
+import '../../../company/bloc/company_cubit.dart';
+import '../../../company/bloc/company_state.dart';
 
 class TimeTrackerScreen extends StatefulWidget {
   const TimeTrackerScreen({super.key});
@@ -62,7 +64,17 @@ class _TimeTrackerScreenState extends State<TimeTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<CompanyCubit, CompanyState>(
+      listenWhen: (prev, curr) =>
+          prev is CompanyLoaded &&
+          curr is CompanyLoaded &&
+          prev.selectedCompany?.companyId != curr.selectedCompany?.companyId,
+      listener: (ctx, _) {
+        _stopTicker();
+        ctx.read<TimeEntryCubit>().loadEntries();
+        ctx.read<IssueCubit>().loadMyIssues();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Tiempo'),
         actions: [
@@ -135,6 +147,7 @@ class _TimeTrackerScreenState extends State<TimeTrackerScreen> {
             label: const Text('Registro manual'),
           );
         },
+      ),
       ),
     );
   }
