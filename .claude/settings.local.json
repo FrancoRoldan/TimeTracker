@@ -14,7 +14,9 @@
       "Bash(dart analyze *)",
       "Bash(git fetch *)",
       "mcp__ide__getDiagnostics",
-      "Bash(grep -E \"\\\\.\\(ts|html\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|html\\)$\")",
+      "Bash(npm install *)",
+      "Bash(xargs cat *)"
     ]
   }
 }
