@@ -50,6 +50,10 @@ describe('TimeTracker – Full E2E Flow', () => {
 
   beforeEach(() => {
     cy.login();
+    // Re-issue JWT so companyIds[] in claims includes companies created during
+    // this run. cy.session() restores the original login token which doesn't
+    // know about companies created after that snapshot.
+    cy.refreshAuthToken();
   });
 
   // ── 1. Login ─────────────────────────────────────────────────────────────
