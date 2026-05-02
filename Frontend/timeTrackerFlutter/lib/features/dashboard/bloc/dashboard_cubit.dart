@@ -22,6 +22,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   final LocalStorage localStorage;
 
   Future<void> load() async {
+    if (isClosed) return;
     emit(state.copyWith(isLoading: true));
     final companyId = localStorage.getSelectedCompanyId();
     try {
@@ -33,9 +34,15 @@ class DashboardCubit extends Cubit<DashboardState> {
         timeEntryRepository
             .getEntries(dateFrom: todayStart, dateTo: now)
             .catchError((_) => <TimeEntry>[]),
-        issueRepository.getMyIssues(companyId: companyId).catchError((_) => <Issue>[]),
-        projectRepository.getProjects(companyId: companyId).catchError((_) => <Project>[]),
+        issueRepository
+            .getMyIssues(companyId: companyId)
+            .catchError((_) => <Issue>[]),
+        projectRepository
+            .getProjects(companyId: companyId)
+            .catchError((_) => <Project>[]),
       ]);
+
+      if (isClosed) return;
 
       final activeTimer = results[0] as dynamic;
       final todayEntries = results[1] as List<dynamic>;
@@ -59,15 +66,18 @@ class DashboardCubit extends Cubit<DashboardState> {
 
       final recentEntries = todayEntries.take(5).toList();
 
-      emit(DashboardState(
-        isLoading: false,
-        activeTimer: activeTimer,
-        todayMinutes: todayMinutes,
-        activeIssues: List.from(activeIssues),
-        activeProjects: List.from(activeProjects),
-        recentEntries: List.from(recentEntries),
-      ));
+      emit(
+        DashboardState(
+          isLoading: false,
+          activeTimer: activeTimer,
+          todayMinutes: todayMinutes,
+          activeIssues: List.from(activeIssues),
+          activeProjects: List.from(activeProjects),
+          recentEntries: List.from(recentEntries),
+        ),
+      );
     } catch (e) {
+      if (isClosed) return;
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
@@ -75,9 +85,11 @@ class DashboardCubit extends Cubit<DashboardState> {
   Future<void> stopTimer() async {
     try {
       await timeEntryRepository.stopTimer();
+      if (isClosed) return;
       emit(state.copyWith(clearTimer: true));
       await load();
     } catch (e) {
+      if (isClosed) return;
       emit(state.copyWith(error: e.toString()));
     }
   }
