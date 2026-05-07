@@ -21,6 +21,11 @@
 
 const ts = Date.now().toString().slice(-6);
 
+// Derive a unique 2-hour window from ts so concurrent/repeated runs don't
+// hit the backend's per-user overlap guard (which is not company-scoped).
+const _startHour = parseInt(ts) % 22; // 0–21, keeps endHour ≤ 23
+const _pad = (n: number) => String(n).padStart(2, '0');
+
 const TEST_DATA = {
   companyA:  { name: `Omega Corp ${ts}`,  code: `OMEGA${ts}` },
   companyB:  { name: `Delta Inc ${ts}`,   code: `DELTA${ts}` },
@@ -28,8 +33,8 @@ const TEST_DATA = {
   issue:     { title: `Critical Login Bug ${ts}` },
   timeEntry: {
     description: `E2E implementation work ${ts}`,
-    startTime:   '09:00',
-    endTime:     '11:00',
+    startTime:   `${_pad(_startHour)}:00`,
+    endTime:     `${_pad(_startHour + 2)}:00`,
   },
 };
 
@@ -158,9 +163,6 @@ describe('TimeTracker – Full E2E Flow', () => {
 
     cy.contains('button', 'Nueva incidencias').click();
 
-    openDialogSelect('projectId');
-    cy.selectMatOption(TEST_DATA.project.name);
-
     cy.get('mat-dialog-container').within(() => {
       cy.get('input[formcontrolname="title"]').type(TEST_DATA.issue.title);
     });
@@ -185,7 +187,7 @@ describe('TimeTracker – Full E2E Flow', () => {
   // ── 7. Add Manual Time Entry ─────────────────────────────────────────────
 
   it('adds a manual time entry', () => {
-    cy.intercept('POST', '**/time').as('createTimeEntry');
+    cy.intercept('POST', '**/time/manual').as('createTimeEntry');
 
     cy.visit('/time-entries');
     cy.selectCompany(TEST_DATA.companyA.name);

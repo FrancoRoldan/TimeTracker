@@ -181,7 +181,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="onCancel()" [disabled]="isLoading()">
-        Cancel
+        Cancelar
       </button>
 
       @if (isLoading()) {
@@ -192,7 +192,7 @@ import { ToastService } from '../../../shared/services/toast.service';
           color="primary"
           (click)="onSave()"
           [disabled]="!issueForm.valid">
-          {{ isEditMode ? 'Update' : 'Create' }}
+          {{ isEditMode ? 'Actualizar' : 'Crear' }}
         </button>
       }
     </mat-dialog-actions>
@@ -327,7 +327,7 @@ export class IssueModalComponent implements OnInit {
     request$.subscribe({
       next: (issue) => {
         this.isLoading.set(false);
-        this.toastService.showSuccess(`Issue "${issue.title}" ${this.isEditMode ? 'updated' : 'created'} successfully`);
+        this.toastService.showSuccess(`Issue "${issue.title}" ${this.isEditMode ? 'actualizada' : 'creada'} correctamente`);
         this.dialogRef.close(issue);
       },
       error: (error) => {
@@ -336,8 +336,8 @@ export class IssueModalComponent implements OnInit {
 
         this.dialog.open(ErrorDialogComponent, {
           data: {
-            title: 'Error!',
-            message: extractErrorMessage(error, `Failed to ${this.isEditMode ? 'update' : 'create'} issue. Please try again.`)
+            title: 'Error',
+            message: extractErrorMessage(error, `Error al ${this.isEditMode ? 'actualizar' : 'crear'} la incidencia. Intenta de nuevo.`)
           } as ErrorDialogData
         });
       }

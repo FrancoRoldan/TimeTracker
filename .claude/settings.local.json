@@ -16,7 +16,10 @@
       "mcp__ide__getDiagnostics",
       "Bash(grep -E \"\\\\.\\(ts|html\\)$\")",
       "Bash(npm install *)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(find /Users/francoroldan/Documents/Desarrollo -name \"*dashboard*\" -type f 2>/dev/null | grep -i flutter | head -30)",
+      "Read(//Users/francoroldan/Documents/Desarrollo/**)",
+      "Bash(xargs ls)"
     ]
   }
 }
