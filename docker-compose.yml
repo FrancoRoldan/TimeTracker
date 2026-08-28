@@ -52,6 +52,12 @@ services:
       SeedDatabase__Value: ${SEED_DATABASE:-true}
       # Orígenes permitidos por CORS. En Production la API no arranca si está vacío.
       Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      # Identidad del despliegue. Los mismos valores se hornean en la imagen como
+      # ARG; repetirlos acá permite corregirlos sin reconstruir, que es lo que uno
+      # espera al cambiar el .env y hacer `docker compose up -d`.
+      Build__Version: ${BUILD_VERSION:-unknown}
+      Build__CommitSha: ${BUILD_COMMIT_SHA:-unknown}
+      Build__Number: ${BUILD_NUMBER:-unknown}
       # Destino de trazas y métricas. Si queda vacío la instrumentación se genera
       # pero no se exporta, y la aplicación funciona igual (§C.4 del plan).
       Otlp__Endpoint: ${OTLP_ENDPOINT:-}
@@ -108,7 +114,7 @@ services:
       retries: 3
 
   # ---------------------------------------------------------------------------
-  # Plataforma de observabilidad (§30 Fase 4 del plan)
+  # Plataforma de observabilidad 
   #
   # Va bajo el perfil "observability" para no encarecer el arranque normal:
   #   docker compose up -d                            solo la aplicación
