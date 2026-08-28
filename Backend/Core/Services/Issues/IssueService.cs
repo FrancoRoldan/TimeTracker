@@ -1,4 +1,5 @@
-using Core.Common;
+﻿using Core.Common;
+using Core.Observability;
 using Core.Services.Tenant;
 using Data.Dtos.Issue;
 using Data.Enums;
@@ -42,10 +43,10 @@ namespace Core.Services.Issues
             var project = await _unitOfWork.Projects.GetByIdAsync(request.ProjectId);
 
             if (project == null)
-                return Result<IssueResponse>.Failure("Project not found");
+                return Result<IssueResponse>.NotFound("Project not found");
 
             if (project.CompanyId != companyId)
-                return Result<IssueResponse>.Failure("You don't have access to this project");
+                return Result<IssueResponse>.Forbidden("You don't have access to this project");
 
             if (request.AssignedUserId.HasValue)
             {
@@ -62,7 +63,7 @@ namespace Core.Services.Issues
                         .AnyAsync(uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId);
 
                     if (!userExists)
-                        return Result<IssueResponse>.Failure("User does not belong to this company");
+                        return Result<IssueResponse>.Forbidden("User does not belong to this company");
                 }
             }
 
@@ -72,6 +73,8 @@ namespace Core.Services.Issues
             await _unitOfWork.Issues.AddAsync(issue);
             await _unitOfWork.SaveChangesAsync();
 
+            TimeTrackerTelemetry.IssuesCreated.Add(1, TimeTrackerTelemetry.TenantTag(companyId));
+
             return await GetIssueByIdAsync(issue.Id);
         }
 
@@ -80,7 +83,7 @@ namespace Core.Services.Issues
             // Get current user to validate access
             var currentUserId = _tenantService.GetCurrentUserId();
             if (currentUserId == null)
-                return Result<IssueResponse>.Failure("User not authenticated");
+                return Result<IssueResponse>.Unauthorized("User not authenticated");
 
             // Optimized: AsNoTracking for read-only query
             var issue = await _unitOfWork.Issues
@@ -91,7 +94,7 @@ namespace Core.Services.Issues
                 .FirstOrDefaultAsync(i => i.Id == id);
 
             if (issue == null)
-                return Result<IssueResponse>.Failure("Issue not found");
+                return Result<IssueResponse>.NotFound("Issue not found");
 
             // Validate user has access to the issue's company
             if (!issue.CompanyId.HasValue)
@@ -105,7 +108,7 @@ namespace Core.Services.Issues
                 .ToListAsync();
 
             if (!userCompanyIds.Contains(issue.CompanyId.Value))
-                return Result<IssueResponse>.Failure("You don't have access to this issue");
+                return Result<IssueResponse>.Forbidden("You don't have access to this issue");
 
             var response = issue.Adapt<IssueResponse>();
             response = response with
@@ -122,7 +125,7 @@ namespace Core.Services.Issues
             // Validate user has access to the project
             var currentUserId = _tenantService.GetCurrentUserId();
             if (currentUserId == null)
-                return Result<List<IssueResponse>>.Failure("User not authenticated");
+                return Result<List<IssueResponse>>.Unauthorized("User not authenticated");
 
             // Optimized: Get user company IDs with AsNoTracking
             var userCompanyIds = await _unitOfWork.UserCompanies
@@ -139,7 +142,7 @@ namespace Core.Services.Issues
                 .AnyAsync(p => p.Id == projectId && userCompanyIds.Contains(p.CompanyId));
 
             if (!projectExists)
-                return Result<List<IssueResponse>>.Failure("Project not found or you don't have access");
+                return Result<List<IssueResponse>>.NotFound("Project not found or you don't have access");
 
             // Optimized: AsNoTracking for read-only query
             var issues = await _unitOfWork.Issues
@@ -167,7 +170,7 @@ namespace Core.Services.Issues
         {
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<List<IssueResponse>>.Failure("User not authenticated");
+                return Result<List<IssueResponse>>.Unauthorized("User not authenticated");
 
             // Optimized: AsNoTracking for read-only query
             IQueryable<Issue> query = _unitOfWork.Issues
@@ -202,7 +205,7 @@ namespace Core.Services.Issues
         {
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<List<IssueResponse>>.Failure("User not authenticated");
+                return Result<List<IssueResponse>>.Unauthorized("User not authenticated");
 
             // Optimized: AsNoTracking for read-only query
             IQueryable<Issue> query = _unitOfWork.Issues
@@ -247,7 +250,7 @@ namespace Core.Services.Issues
             {
                 var userId = _tenantService.GetCurrentUserId();
                 if (userId == null)
-                    return Result<List<IssueResponse>>.Failure("User not authenticated");
+                    return Result<List<IssueResponse>>.Unauthorized("User not authenticated");
 
                 // Optimized: Get user company IDs directly with AsNoTracking
                 var companyIds = await _unitOfWork.UserCompanies
@@ -314,11 +317,11 @@ namespace Core.Services.Issues
             // Validate access first
             var accessValidation = await ValidateUserAccessToIssueAsync(id);
             if (!accessValidation.IsSuccess)
-                return Result<IssueResponse>.Failure(accessValidation.Error);
+                return Result<IssueResponse>.Failure(accessValidation.Code, accessValidation.Error!);
 
             var issue = await _unitOfWork.Issues.GetByIdAsync(id);
             if (issue == null)
-                return Result<IssueResponse>.Failure("Issue not found");
+                return Result<IssueResponse>.NotFound("Issue not found");
 
             if (!string.IsNullOrEmpty(request.Title))
                 issue.Title = request.Title;
@@ -352,7 +355,7 @@ namespace Core.Services.Issues
                         .AnyAsync(uc => uc.UserId == request.AssignedUserId.Value && uc.CompanyId == companyId);
 
                     if (!userExists)
-                        return Result<IssueResponse>.Failure("User does not belong to this company");
+                        return Result<IssueResponse>.Forbidden("User does not belong to this company");
 
                     issue.AssignedUserId = request.AssignedUserId.Value;
                 }
@@ -369,7 +372,7 @@ namespace Core.Services.Issues
             // Validate access first
             var accessValidation = await ValidateUserAccessToIssueAsync(issueId);
             if (!accessValidation.IsSuccess)
-                return Result<IssueResponse>.Failure(accessValidation.Error);
+                return Result<IssueResponse>.Failure(accessValidation.Code, accessValidation.Error!);
 
             var issue = await _unitOfWork.Issues
                 .Query()
@@ -377,7 +380,7 @@ namespace Core.Services.Issues
                 .FirstOrDefaultAsync(i => i.Id == issueId);
 
             if (issue == null)
-                return Result<IssueResponse>.Failure("Issue not found");
+                return Result<IssueResponse>.NotFound("Issue not found");
 
             // CRITICAL: Verify user belongs to same company (optimized)
             var companyId = _tenantService.GetTenantId();
@@ -387,7 +390,7 @@ namespace Core.Services.Issues
                 .AnyAsync(uc => uc.UserId == userId && uc.CompanyId == companyId);
 
             if (!userExists)
-                return Result<IssueResponse>.Failure("User does not belong to this company");
+                return Result<IssueResponse>.Forbidden("User does not belong to this company");
 
             issue.AssignedUserId = userId;
             _unitOfWork.Issues.Update(issue);
@@ -401,15 +404,21 @@ namespace Core.Services.Issues
             // Validate access first
             var accessValidation = await ValidateUserAccessToIssueAsync(issueId);
             if (!accessValidation.IsSuccess)
-                return Result<IssueResponse>.Failure(accessValidation.Error);
+                return Result<IssueResponse>.Failure(accessValidation.Code, accessValidation.Error!);
 
             var issue = await _unitOfWork.Issues.GetByIdAsync(issueId);
             if (issue == null)
-                return Result<IssueResponse>.Failure("Issue not found");
+                return Result<IssueResponse>.NotFound("Issue not found");
 
             issue.Status = newStatus;
             _unitOfWork.Issues.Update(issue);
             await _unitOfWork.SaveChangesAsync();
+
+            if (newStatus == IssueStatus.Done)
+            {
+                TimeTrackerTelemetry.IssuesCompleted.Add(
+                    1, TimeTrackerTelemetry.TenantTag(issue.CompanyId));
+            }
 
             return await GetIssueByIdAsync(issueId);
         }
@@ -419,11 +428,11 @@ namespace Core.Services.Issues
             // Validate access first
             var accessValidation = await ValidateUserAccessToIssueAsync(id);
             if (!accessValidation.IsSuccess)
-                return Result.Failure(accessValidation.Error);
+                return Result.Failure(accessValidation.Code, accessValidation.Error!);
 
             var issue = await _unitOfWork.Issues.GetByIdAsync(id);
             if (issue == null)
-                return Result.Failure("Issue not found");
+                return Result.NotFound("Issue not found");
 
             _unitOfWork.Issues.Delete(issue);
             await _unitOfWork.SaveChangesAsync();
@@ -438,7 +447,7 @@ namespace Core.Services.Issues
         {
             var currentUserId = _tenantService.GetCurrentUserId();
             if (currentUserId == null)
-                return Result.Failure("User not authenticated");
+                return Result.Unauthorized("User not authenticated");
 
             var issue = await _unitOfWork.Issues
                 .Query()
@@ -446,7 +455,7 @@ namespace Core.Services.Issues
                 .FirstOrDefaultAsync(i => i.Id == issueId);
 
             if (issue == null)
-                return Result.Failure("Issue not found");
+                return Result.NotFound("Issue not found");
 
             if (!issue.CompanyId.HasValue)
                 return Result.Failure("Issue has no company assigned");
@@ -459,7 +468,7 @@ namespace Core.Services.Issues
                 .ToListAsync();
 
             if (!userCompanyIds.Contains(issue.CompanyId.Value))
-                return Result.Failure("You don't have access to this issue");
+                return Result.Forbidden("You don't have access to this issue");
 
             return Result.Success();
         }

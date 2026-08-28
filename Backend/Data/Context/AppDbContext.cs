@@ -1,4 +1,5 @@
-﻿using Data.Models;
+﻿using Data.Interfaces;
+using Data.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
@@ -6,18 +7,27 @@ namespace Data.Context
 {
     public class AppDbContext : DbContext
     {
-        private readonly int? _currentTenantId;
-        private readonly int? _currentUserId;
+        /// <summary>
+        /// Contexto de la request actual. Es null en escenarios sin HTTP
+        /// (migraciones, seeder, tests), y en ese caso los cambios se estampan como "SYSTEM".
+        /// </summary>
+        private readonly ICurrentUserAccessor? _currentUser;
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-        {
-        }
+        /// <summary>
+        /// Tenant usado por los filtros globales de consulta.
+        ///
+        /// IMPORTANTE: se resuelve en tiempo de construcción del modelo, que EF cachea,
+        /// por lo que NO puede depender de la request. El aislamiento multi-tenant real
+        /// lo aplica cada servicio a través de ITenantService; este campo queda en null
+        /// y el filtro de tenant no se activa. Cambiar esto exige un IModelCacheKeyFactory
+        /// propio y está fuera del alcance de esta fase.
+        /// </summary>
+        private readonly int? _currentTenantId = null;
 
-        public AppDbContext(DbContextOptions<AppDbContext> options, int? tenantId, int? userId)
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserAccessor? currentUser = null)
             : base(options)
         {
-            _currentTenantId = tenantId;
-            _currentUserId = userId;
+            _currentUser = currentUser;
         }
 
         // DbSets
@@ -83,10 +93,20 @@ namespace Data.Context
             }
         }
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Estampa CreatedAt/CreatedBy/UpdatedAt/UpdatedBy y, cuando corresponde,
+        /// el CompanyId de las entidades nuevas.
+        ///
+        /// Se invoca desde los tres caminos de guardado (síncrono y las dos sobrecargas
+        /// asíncronas). Antes solo estaba cubierta SaveChangesAsync(CancellationToken),
+        /// por lo que los caminos que EF usa internamente no estampaban nada.
+        /// </summary>
+        private void ApplyAuditInformation()
         {
             var entries = ChangeTracker.Entries<BaseEntity>();
-            var currentUser = _currentUserId?.ToString() ?? "SYSTEM";
+            var userId = _currentUser?.GetUserId();
+            var currentUser = userId?.ToString() ?? "SYSTEM";
+            var tenantId = _currentUser?.GetTenantId();
             var currentTime = DateTime.UtcNow;
 
             foreach (var entry in entries)
@@ -102,9 +122,9 @@ namespace Data.Context
                     if (entry.Entity.GetType() != typeof(User) &&
                         entry.Entity.GetType() != typeof(Company) &&
                         entry.Entity.CompanyId == null &&
-                        _currentTenantId.HasValue)
+                        tenantId.HasValue)
                     {
-                        entry.Entity.CompanyId = _currentTenantId;
+                        entry.Entity.CompanyId = tenantId;
                     }
                 }
                 else if (entry.State == EntityState.Modified)
@@ -113,8 +133,24 @@ namespace Data.Context
                     entry.Entity.UpdatedBy = currentUser;
                 }
             }
+        }
 
-            return base.SaveChangesAsync(cancellationToken);
+        // Se sobrescriben solo las sobrecargas con acceptAllChangesOnSuccess: son las que
+        // EF invoca virtualmente desde SaveChanges() y SaveChangesAsync(ct), de modo que
+        // todos los caminos quedan cubiertos sin estampar dos veces.
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            ApplyAuditInformation();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(
+            bool acceptAllChangesOnSuccess,
+            CancellationToken cancellationToken = default)
+        {
+            ApplyAuditInformation();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
         }
     }
 }

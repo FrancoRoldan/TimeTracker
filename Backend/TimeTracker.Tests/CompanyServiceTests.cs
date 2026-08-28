@@ -9,6 +9,7 @@ using Data.Models;
 using FluentAssertions;
 using FluentValidation;
 using FluentValidation.Results;
+using Microsoft.Extensions.Logging.Abstractions;
 using MockQueryable.Moq;
 using Moq;
 using System.Linq.Expressions;
@@ -64,7 +65,8 @@ public class CompanyServiceTests
             _updateValidator.Object,
             _updateUserValidator.Object,
             _tenantService.Object,
-            _passwordHasher.Object);
+            _passwordHasher.Object,
+            NullLogger<CompanyService>.Instance);
     }
 
     private void SetupValidValidator<T>(Mock<IValidator<T>> validator)

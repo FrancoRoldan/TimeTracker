@@ -1,4 +1,5 @@
-using Core.Common;
+﻿using Core.Common;
+using Core.Observability;
 using Core.Services.Tenant;
 using Data.Dtos.Reports;
 using Data.Enums;
@@ -27,7 +28,7 @@ namespace Core.Services.Reports
         {
             var currentUserId = userId ?? _tenantService.GetCurrentUserId();
             if (currentUserId == null)
-                return Result<UserReportResponse>.Failure("User not authenticated");
+                return Result<UserReportResponse>.Unauthorized("User not authenticated");
 
             // If querying another user, verify permission
             if (userId.HasValue && userId != _tenantService.GetCurrentUserId())
@@ -42,7 +43,7 @@ namespace Core.Services.Reports
                 if (currentUserCompany?.Role != UserRole.Admin &&
                     currentUserCompany?.Role != UserRole.Manager)
                 {
-                    return Result<UserReportResponse>.Failure(
+                    return Result<UserReportResponse>.Forbidden(
                         "You don't have permission to view other users' reports"
                     );
                 }
@@ -138,6 +139,9 @@ namespace Core.Services.Reports
                 IssueTypeBreakdown = issueTypeData
             };
 
+            TimeTrackerTelemetry.ReportsGenerated.Add(
+                1, new KeyValuePair<string, object?>("report.type", "user"));
+
             return Result<UserReportResponse>.Success(report);
         }
 
@@ -156,7 +160,7 @@ namespace Core.Services.Reports
                 .FirstOrDefaultAsync(p => p.Id == projectId && p.CompanyId == companyId);
 
             if (project == null)
-                return Result<ProjectReportResponse>.Failure("Project not found");
+                return Result<ProjectReportResponse>.NotFound("Project not found");
 
             // Build query with filters - AsNoTracking
             var query = _unitOfWork.TimeEntries
@@ -226,6 +230,9 @@ namespace Core.Services.Reports
                 DailyBreakdown = dailyBreakdown
             };
 
+            TimeTrackerTelemetry.ReportsGenerated.Add(
+                1, new KeyValuePair<string, object?>("report.type", "project"));
+
             return Result<ProjectReportResponse>.Success(report);
         }
 
@@ -236,6 +243,10 @@ namespace Core.Services.Reports
             int? projectId = null,
             int? issueId = null)
         {
+            // El reporte de empresa es el endpoint más pesado (§9): agrega TimeEntries
+            // sin paginación, así que se le da su propio span.
+            using var activity = TimeTrackerTelemetry.StartActivity("GenerateCompanyReport");
+
             var targetCompanyId = companyId ?? _tenantService.GetTenantId();
             if (targetCompanyId == null)
                 return Result<CompanyReportResponse>.Failure("Company not specified");
@@ -251,7 +262,7 @@ namespace Core.Services.Reports
             if (currentUserCompany == null ||
                 (currentUserCompany.Role != UserRole.Admin && currentUserCompany.Role != UserRole.Manager))
             {
-                return Result<CompanyReportResponse>.Failure(
+                return Result<CompanyReportResponse>.Forbidden(
                     "You don't have permission to view company reports"
                 );
             }
@@ -262,7 +273,7 @@ namespace Core.Services.Reports
                 .FirstOrDefaultAsync(c => c.Id == targetCompanyId);
 
             if (company == null)
-                return Result<CompanyReportResponse>.Failure("Company not found");
+                return Result<CompanyReportResponse>.NotFound("Company not found");
 
             // Build query with filters - AsNoTracking
             var query = _unitOfWork.TimeEntries
@@ -333,6 +344,9 @@ namespace Core.Services.Reports
                 ProjectBreakdown = projectBreakdown,
                 DailyBreakdown = dailyBreakdown
             };
+
+            TimeTrackerTelemetry.ReportsGenerated.Add(
+                1, new KeyValuePair<string, object?>("report.type", "company"));
 
             return Result<CompanyReportResponse>.Success(report);
         }

@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, tap, catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { TelemetryService } from '../../shared/services/telemetry.service';
 import { TimeEntry, CreateTimeEntryRequest, UpdateTimeEntryRequest, StartTimerRequest, PaginatedResult } from '../interfaces';
 
 @Injectable({
@@ -9,6 +10,7 @@ import { TimeEntry, CreateTimeEntryRequest, UpdateTimeEntryRequest, StartTimerRe
 })
 export class TimeEntryService {
   private http = inject(HttpClient);
+  private telemetry = inject(TelemetryService);
   private baseUrl = `${environment.baseUrl}/time`;
 
   // State management
@@ -141,13 +143,22 @@ export class TimeEntryService {
     return this.http.get<TimeEntry | null>(`${this.baseUrl}/active`).pipe(
       tap(activeEntry => this.activeTimerSubject.next(activeEntry)),
       catchError((error) => {
-        // If 404, it means no active timer - this is a valid state
+        // 404 es un estado válido del dominio: el usuario no tiene timer activo.
         if (error.status === 404) {
           this.activeTimerSubject.next(null);
           return of(null);
         }
-        // For other errors, log and return null
-        console.error('Error getting active timer:', error);
+
+        // Cualquier otro error es una degradación real, no "no hay timer".
+        //
+        // Se sigue devolviendo null en lugar de propagar el error porque el
+        // dashboard consume esta llamada dentro de un forkJoin y propagarla
+        // tumbaría la carga completa del tablero. Pero antes se dejaba constancia
+        // solo en la consola del usuario (hallazgo A12): ahora queda registrada,
+        // con lo que un pico de fallos acá es visible en los dashboards.
+        this.telemetry.trackEvent('active_timer_degraded', {
+          statusCode: String(error?.status ?? 0)
+        });
         this.activeTimerSubject.next(null);
         return of(null);
       })

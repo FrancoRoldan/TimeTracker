@@ -1,6 +1,7 @@
 using Core.Services.Reports;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TimeTracker.Extensions;
 
 namespace TimeTracker.Controllers
 {
@@ -25,20 +26,12 @@ namespace TimeTracker.Controllers
             [FromQuery] int? projectId,
             [FromQuery] int? issueId)
         {
-            try
-            {
-                var result = await _reportingService.GetUserReportAsync(null, dateFrom, dateTo, projectId, issueId);
+            var result = await _reportingService.GetUserReportAsync(null, dateFrom, dateTo, projectId, issueId);
 
-                if (!result.IsSuccess)
-                    return BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting user report");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpGet("user/{userId}")]
@@ -50,20 +43,12 @@ namespace TimeTracker.Controllers
             [FromQuery] int? projectId,
             [FromQuery] int? issueId)
         {
-            try
-            {
-                var result = await _reportingService.GetUserReportAsync(userId, dateFrom, dateTo, projectId, issueId);
+            var result = await _reportingService.GetUserReportAsync(userId, dateFrom, dateTo, projectId, issueId);
 
-                if (!result.IsSuccess)
-                    return result.Error!.Contains("permission") ? Forbid() : BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting user report");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpGet("project/{projectId}")]
@@ -73,20 +58,12 @@ namespace TimeTracker.Controllers
             [FromQuery] DateTime? dateTo,
             [FromQuery] int? issueId)
         {
-            try
-            {
-                var result = await _reportingService.GetProjectReportAsync(projectId, dateFrom, dateTo, issueId);
+            var result = await _reportingService.GetProjectReportAsync(projectId, dateFrom, dateTo, issueId);
 
-                if (!result.IsSuccess)
-                    return NotFound(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting project report");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpGet("company/{companyId}")]
@@ -98,20 +75,12 @@ namespace TimeTracker.Controllers
             [FromQuery] int? projectId,
             [FromQuery] int? issueId)
         {
-            try
-            {
-                var result = await _reportingService.GetCompanyReportAsync(companyId, dateFrom, dateTo, projectId, issueId);
+            var result = await _reportingService.GetCompanyReportAsync(companyId, dateFrom, dateTo, projectId, issueId);
 
-                if (!result.IsSuccess)
-                    return result.Error!.Contains("permission") ? Forbid() : BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting company report");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
     }
 }

@@ -1,4 +1,5 @@
-using Core.Common;
+﻿using Core.Common;
+using Core.Observability;
 using Core.Services.Tenant;
 using Data.Dtos.Project;
 using Data.Enums;
@@ -33,7 +34,7 @@ namespace Core.Services.Projects
         {
             var currentUserId = _tenantService.GetCurrentUserId();
             if (currentUserId == null)
-                return Result<int>.Failure("User not authenticated");
+                return Result<int>.Unauthorized("User not authenticated");
 
             // Optimized: Get companies the user belongs to with AsNoTracking
             var userCompanyIds = await _unitOfWork.UserCompanies
@@ -54,7 +55,7 @@ namespace Core.Services.Projects
                 .FirstOrDefaultAsync();
 
             if (project == null)
-                return Result<int>.Failure("Project not found or you don't have access");
+                return Result<int>.NotFound("Project not found or you don't have access");
 
             return Result<int>.Success(project.CompanyId);
         }
@@ -80,6 +81,8 @@ namespace Core.Services.Projects
             await _unitOfWork.Projects.AddAsync(project);
             await _unitOfWork.SaveChangesAsync();
 
+            TimeTrackerTelemetry.ProjectsCreated.Add(1, TimeTrackerTelemetry.TenantTag(companyId));
+
             // Optimized: Load only company name for response
             var companyName = await _unitOfWork.Companies
                 .Query()
@@ -103,7 +106,7 @@ namespace Core.Services.Projects
             // Validate ownership
             var validationResult = await ValidateProjectOwnershipAsync(id);
             if (!validationResult.IsSuccess)
-                return Result<ProjectResponse>.Failure(validationResult.Error);
+                return Result<ProjectResponse>.Failure(validationResult.Code, validationResult.Error!);
 
             // Optimized: Load project with only needed data
             var projectData = await _unitOfWork.Projects
@@ -119,7 +122,7 @@ namespace Core.Services.Projects
                 .FirstOrDefaultAsync();
 
             if (projectData == null)
-                return Result<ProjectResponse>.Failure("Project not found");
+                return Result<ProjectResponse>.NotFound("Project not found");
 
             var response = projectData.Project.Adapt<ProjectResponse>();
             response = response with
@@ -165,7 +168,7 @@ namespace Core.Services.Projects
                 var currentUserId = _tenantService.GetCurrentUserId();
                 if (currentUserId == null)
                 {
-                    return Result<List<ProjectResponse>>.Failure("User not authenticated");
+                    return Result<List<ProjectResponse>>.Unauthorized("User not authenticated");
                 }
 
                 // Optimized: Get user company IDs with AsNoTracking
@@ -213,11 +216,11 @@ namespace Core.Services.Projects
             // Validate ownership
             var validationResult = await ValidateProjectOwnershipAsync(id);
             if (!validationResult.IsSuccess)
-                return Result<ProjectResponse>.Failure(validationResult.Error);
+                return Result<ProjectResponse>.Failure(validationResult.Code, validationResult.Error!);
 
             var project = await _unitOfWork.Projects.GetByIdAsync(id);
             if (project == null)
-                return Result<ProjectResponse>.Failure("Project not found");
+                return Result<ProjectResponse>.NotFound("Project not found");
 
             if (!string.IsNullOrEmpty(request.Name))
                 project.Name = request.Name;
@@ -242,11 +245,11 @@ namespace Core.Services.Projects
             // Validate ownership
             var validationResult = await ValidateProjectOwnershipAsync(id);
             if (!validationResult.IsSuccess)
-                return Result.Failure(validationResult.Error);
+                return Result.Failure(validationResult.Code, validationResult.Error!);
 
             var project = await _unitOfWork.Projects.GetByIdAsync(id);
             if (project == null)
-                return Result.Failure("Project not found");
+                return Result.NotFound("Project not found");
 
             _unitOfWork.Projects.Delete(project);
             await _unitOfWork.SaveChangesAsync();
@@ -259,11 +262,11 @@ namespace Core.Services.Projects
             // Validate ownership
             var validationResult = await ValidateProjectOwnershipAsync(id);
             if (!validationResult.IsSuccess)
-                return Result.Failure(validationResult.Error);
+                return Result.Failure(validationResult.Code, validationResult.Error!);
 
             var project = await _unitOfWork.Projects.GetByIdAsync(id);
             if (project == null)
-                return Result.Failure("Project not found");
+                return Result.NotFound("Project not found");
 
             project.Status = newStatus;
             _unitOfWork.Projects.Update(project);

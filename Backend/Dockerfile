@@ -28,6 +28,20 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT false
 
 ENV ASPNETCORE_URLS http://+:80
 
+# Identidad del despliegue (§29 del plan de observabilidad).
+# Se inyecta en el build y la API la expone en GET /info y como atributos de
+# recurso de OpenTelemetry, para poder correlacionar una degradación con el deploy
+# que la provocó. Ejemplo:
+#   docker compose build --build-arg BUILD_VERSION=1.4.0 \
+#                        --build-arg BUILD_COMMIT_SHA=$(git rev-parse --short HEAD)
+ARG BUILD_VERSION=unknown
+ARG BUILD_COMMIT_SHA=unknown
+ARG BUILD_NUMBER=unknown
+
+ENV Build__Version=$BUILD_VERSION
+ENV Build__CommitSha=$BUILD_COMMIT_SHA
+ENV Build__Number=$BUILD_NUMBER
+
 EXPOSE 80
 
 ENTRYPOINT ["dotnet", "TimeTracker.Api.dll"]

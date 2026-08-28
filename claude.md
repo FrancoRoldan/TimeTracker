@@ -290,12 +290,14 @@ this.form = this.fb.group({
 - `DOCUMENTACION_COMPLETA.md`: Visión general completa
 - `RESUMEN_TECNICO_EJECUTIVO.md`: Decisiones arquitectónicas
 - `INSTRUCCIONES_DESPLIEGUE.md`: Deploy y Docker
+- `PLAN_OBSERVABILIDAD.md`: Plan de observabilidad, telemetría, métricas y auditoría (v0.1, propuesta — nada implementado aún)
 
 ## Limitaciones Actuales
 - ❌ Sin paginación en listados
 - ❌ Sin caché (todo desde BD)
-- ❌ Sin tests unitarios
-- ❌ CORS permite "*" (cambiar en producción)
+- ✅ Tests unitarios: 90 en `Backend/TimeTracker.Tests` (`dotnet test`)
+- ✅ CORS restringido vía `Cors:AllowedOrigins`; en `Production` la API no arranca si está vacío
+- ❌ Sin observabilidad: ni logging estructurado, ni métricas, ni trazas (ver `PLAN_OBSERVABILIDAD.md`)
 - ❌ Sin SignalR (tiempo real)
 - ❌ Sin PWA
 - ❌ Sin export Excel/PDF

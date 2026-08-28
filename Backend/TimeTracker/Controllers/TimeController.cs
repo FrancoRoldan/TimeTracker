@@ -2,6 +2,7 @@ using Core.Services.TimeTracking;
 using Data.Dtos.TimeEntry;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TimeTracker.Extensions;
 
 namespace TimeTracker.Controllers
 {
@@ -23,81 +24,47 @@ namespace TimeTracker.Controllers
         [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> StartTimer([FromBody] StartTimerRequest request)
         {
-            try
-            {
-                var result = await _timeTrackingService.StartTimerAsync(request);
+            var result = await _timeTrackingService.StartTimerAsync(request);
 
-                if (!result.IsSuccess)
-                    return BadRequest(new { error = result.Error, errors = result.Errors });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return StatusCode(201, result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error starting timer");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return StatusCode(201, result.Value);
         }
 
         [HttpPost("stop")]
         [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> StopTimer()
         {
-            try
-            {
-                var result = await _timeTrackingService.StopTimerAsync();
+            var result = await _timeTrackingService.StopTimerAsync();
 
-                if (!result.IsSuccess)
-                    return result.Error == "No active timer found"
-                        ? NotFound(new { error = result.Error })
-                        : BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error stopping timer");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveTimer()
         {
-            try
-            {
-                var result = await _timeTrackingService.GetActiveTimerAsync();
+            var result = await _timeTrackingService.GetActiveTimerAsync();
 
-                if (!result.IsSuccess)
-                    return NotFound(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting active timer");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpPost("manual")]
         [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> AddManualEntry([FromBody] AddManualEntryRequest request)
         {
-            try
-            {
-                var result = await _timeTrackingService.AddManualEntryAsync(request);
+            var result = await _timeTrackingService.AddManualEntryAsync(request);
 
-                if (!result.IsSuccess)
-                    return BadRequest(new { error = result.Error, errors = result.Errors });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return StatusCode(201, result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error adding manual entry");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return StatusCode(201, result.Value);
         }
 
         [HttpGet("entries")]
@@ -107,20 +74,12 @@ namespace TimeTracker.Controllers
             [FromQuery] int? projectId,
             [FromQuery] int? issueId)
         {
-            try
-            {
-                var result = await _timeTrackingService.GetUserEntriesAsync(dateFrom, dateTo, projectId, issueId);
+            var result = await _timeTrackingService.GetUserEntriesAsync(dateFrom, dateTo, projectId, issueId);
 
-                if (!result.IsSuccess)
-                    return BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting entries");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpGet("entries/paginated")]
@@ -133,80 +92,48 @@ namespace TimeTracker.Controllers
             [FromQuery] int? issueId = null,
             [FromQuery] string? searchTerm = null)
         {
-            try
-            {
-                var result = await _timeTrackingService.GetUserEntriesPaginatedAsync(
-                    pageNumber, pageSize, dateFrom, dateTo, projectId, issueId, searchTerm);
+            var result = await _timeTrackingService.GetUserEntriesPaginatedAsync(
+                pageNumber, pageSize, dateFrom, dateTo, projectId, issueId, searchTerm);
 
-                if (!result.IsSuccess)
-                    return BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting paginated entries");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpGet("entries/{id}")]
         public async Task<IActionResult> GetEntryById(int id)
         {
-            try
-            {
-                var result = await _timeTrackingService.GetEntryByIdAsync(id);
+            var result = await _timeTrackingService.GetEntryByIdAsync(id);
 
-                if (!result.IsSuccess)
-                    return result.Error!.Contains("access") ? Forbid() : NotFound(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting entry");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpPut("entries/{id}")]
         [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> UpdateEntry(int id, [FromBody] UpdateTimeEntryRequest request)
         {
-            try
-            {
-                var result = await _timeTrackingService.UpdateEntryAsync(id, request);
+            var result = await _timeTrackingService.UpdateEntryAsync(id, request);
 
-                if (!result.IsSuccess)
-                    return result.Error!.Contains("access") ? Forbid() : BadRequest(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(result.Value);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating entry");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(result.Value);
         }
 
         [HttpDelete("entries/{id}")]
         [Authorize(Roles = "Admin,Manager,Developer")]
         public async Task<IActionResult> DeleteEntry(int id)
         {
-            try
-            {
-                var result = await _timeTrackingService.DeleteEntryAsync(id);
+            var result = await _timeTrackingService.DeleteEntryAsync(id);
 
-                if (!result.IsSuccess)
-                    return result.Error!.Contains("access") ? Forbid() : NotFound(new { error = result.Error });
+            if (!result.IsSuccess)
+                return this.ToErrorResponse(result);
 
-                return Ok(new { message = "Time entry deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error deleting entry");
-                return StatusCode(500, new { error = "Internal server error" });
-            }
+            return Ok(new { message = "Time entry deleted successfully" });
         }
     }
 }

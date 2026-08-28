@@ -29,6 +29,11 @@ services:
     build:
       context: ./Backend
       dockerfile: Dockerfile
+      args:
+        # Identidad del despliegue, expuesta en GET /info y en la telemetría (§29).
+        BUILD_VERSION: ${BUILD_VERSION:-unknown}
+        BUILD_COMMIT_SHA: ${BUILD_COMMIT_SHA:-unknown}
+        BUILD_NUMBER: ${BUILD_NUMBER:-unknown}
     container_name: timetracker-backend
     restart: unless-stopped
     environment:
@@ -39,6 +44,13 @@ services:
       Jwt__Issuer: ${JWT_ISSUER:-TimeTrackerApi}
       Jwt__Audience: ${JWT_AUDIENCE:-TimeTrackerApp}
       SeedDatabase__Value: ${SEED_DATABASE:-true}
+      # Orígenes permitidos por CORS. En Production la API no arranca si está vacío.
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200}
+      # Destino de trazas y métricas. Si queda vacío la instrumentación se genera
+      # pero no se exporta, y la aplicación funciona igual (§C.4 del plan).
+      Otlp__Endpoint: ${OTLP_ENDPOINT:-}
+      # gRPC (4317) por defecto; poner http/protobuf si el collector escucha en 4318.
+      OTEL_EXPORTER_OTLP_PROTOCOL: ${OTLP_PROTOCOL:-grpc}
       TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
     ports:
       - "${BACKEND_PORT:-5083}:80"
@@ -48,9 +60,13 @@ services:
     networks:
       - timetracker-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1"]
+      # readiness: verifica la conexión real a PostgreSQL. Antes apuntaba a /health,
+      # que devolvía "healthy" aunque la base estuviera caída (hallazgo A7).
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:80/health/ready || exit 1"]
       interval: 30s
-      timeout: 10s
+      # Un fallo de conexión a PostgreSQL tarda ~15 s en dar timeout: con 10 s el
+      # healthcheck se cortaba antes de obtener el diagnóstico real.
+      timeout: 25s
       retries: 3
       start_period: 40s
 
@@ -63,6 +79,9 @@ services:
         # URL del API para el frontend (debe ser accesible desde el navegador)
         # Configúrala en el archivo .env
         API_URL: ${API_URL:-http://localhost:5083/api}
+        # Acompañan a cada error y Web Vital que reporta el navegador (§29).
+        APP_VERSION: ${BUILD_VERSION:-unknown}
+        ENV_NAME: ${ASPNETCORE_ENVIRONMENT:-Production}
     container_name: timetracker-frontend
     restart: unless-stopped
     environment:

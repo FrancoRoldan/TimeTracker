@@ -154,7 +154,8 @@ TimeTracker/
     ├── DOCUMENTACION_COMPLETA.md
     ├── DOCUMENTACION_BACKEND.md
     ├── DOCUMENTACION_FRONTEND.md
-    └── INSTRUCCIONES_DESPLIEGUE.md
+    ├── INSTRUCCIONES_DESPLIEGUE.md
+    └── PLAN_OBSERVABILIDAD.md
 ```
 
 ---
@@ -619,6 +620,7 @@ Este proyecto incluye documentación exhaustiva:
 | [DOCUMENTACION_FRONTEND.md](./DOCUMENTACION_FRONTEND.md)       | Frontend detallado (70 págs)        | 📖   |
 | [RESUMEN_TECNICO_EJECUTIVO.md](./RESUMEN_TECNICO_EJECUTIVO.md) | Resumen ejecutivo                   | 📖   |
 | [INSTRUCCIONES_DESPLIEGUE.md](./INSTRUCCIONES_DESPLIEGUE.md)   | Guía de despliegue completa         | 📖   |
+| [PLAN_OBSERVABILIDAD.md](./PLAN_OBSERVABILIDAD.md)             | Plan de observabilidad y telemetría | 📖   |
 
 **Total:** 400+ páginas, 50,000+ palabras de documentación
 

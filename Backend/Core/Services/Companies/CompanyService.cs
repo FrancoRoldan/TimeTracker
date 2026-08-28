@@ -1,4 +1,5 @@
-using Core.Common;
+﻿using Core.Common;
+using Core.Observability;
 using Core.Security;
 using Core.Services.Tenant;
 using Data.Dtos.Auth;
@@ -9,6 +10,7 @@ using Data.Models;
 using FluentValidation;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Services.Companies
 {
@@ -22,6 +24,7 @@ namespace Core.Services.Companies
         private readonly IValidator<UpdateUserInCompanyRequest> _updateUserInCompanyValidator;
         private readonly ITenantService _tenantService;
         private readonly IPasswordHasher _passwordHasher;
+        private readonly ILogger<CompanyService> _logger;
 
         public CompanyService(
             IUnitOfWork unitOfWork,
@@ -31,7 +34,8 @@ namespace Core.Services.Companies
             IValidator<UpdateCompanyRequest> updateCompanyValidator,
             IValidator<UpdateUserInCompanyRequest> updateUserInCompanyValidator,
             ITenantService tenantService,
-            IPasswordHasher passwordHasher)
+            IPasswordHasher passwordHasher,
+            ILogger<CompanyService> logger)
         {
             _unitOfWork = unitOfWork;
             _createValidator = createValidator;
@@ -41,6 +45,7 @@ namespace Core.Services.Companies
             _updateUserInCompanyValidator = updateUserInCompanyValidator;
             _tenantService = tenantService;
             _passwordHasher = passwordHasher;
+            _logger = logger;
         }
 
         public async Task<Result<CompanyResponse>> CreateCompanyAsync(CreateCompanyRequest request)
@@ -75,6 +80,10 @@ namespace Core.Services.Companies
             await _unitOfWork.UserCompanies.AddAsync(userCompany);
             await _unitOfWork.SaveChangesAsync();
 
+            TimeTrackerTelemetry.CompaniesCreated.Add(1);
+            TimeTrackerTelemetry.CompanyMembersAdded.Add(
+                1, TimeTrackerTelemetry.TenantTag(company.Id));
+
             return Result<CompanyResponse>.Success(company.Adapt<CompanyResponse>());
         }
 
@@ -82,7 +91,7 @@ namespace Core.Services.Companies
         {
             var company = await _unitOfWork.Companies.GetByIdAsync(id);
             if (company == null)
-                return Result<CompanyResponse>.Failure("Company not found");
+                return Result<CompanyResponse>.NotFound("Company not found");
 
             return Result<CompanyResponse>.Success(company.Adapt<CompanyResponse>());
         }
@@ -93,7 +102,7 @@ namespace Core.Services.Companies
             var currentUserId = _tenantService.GetCurrentUserId();
             if (currentUserId == null)
             {
-                return Result<List<CompanyResponse>>.Failure("User not authenticated");
+                return Result<List<CompanyResponse>>.Unauthorized("User not authenticated");
             }
 
             // Optimized: Get companies where user is a member with AsNoTracking
@@ -116,7 +125,7 @@ namespace Core.Services.Companies
             // Verify company exists
             var company = await _unitOfWork.Companies.GetByIdAsync(companyId);
             if (company == null)
-                return Result<List<CompanyUserResponse>>.Failure("Company not found");
+                return Result<List<CompanyUserResponse>>.NotFound("Company not found");
 
             // Optimized: Get all UserCompany relationships with AsNoTracking
             var userCompanies = await _unitOfWork.UserCompanies
@@ -145,12 +154,12 @@ namespace Core.Services.Companies
             // Verify company exists
             var company = await _unitOfWork.Companies.GetByIdAsync(companyId);
             if (company == null)
-                return Result<List<AvailableUserResponse>>.Failure("Company not found");
+                return Result<List<AvailableUserResponse>>.NotFound("Company not found");
 
             // Get current user ID
             var currentUserId = _tenantService.GetCurrentUserId();
             if (currentUserId == null)
-                return Result<List<AvailableUserResponse>>.Failure("User not authenticated");
+                return Result<List<AvailableUserResponse>>.Unauthorized("User not authenticated");
 
             // Optimized: Get all companies of the current user with AsNoTracking
             var currentUserCompanyIds = await _unitOfWork.UserCompanies
@@ -207,19 +216,19 @@ namespace Core.Services.Companies
                 // Verify company exists
                 var company = await _unitOfWork.Companies.GetByIdAsync(companyId);
                 if (company == null)
-                    return Result.Failure("Company not found");
+                    return await RollbackAndFail(Result.NotFound("Company not found"));
 
                 // Verify user exists
                 var user = await _unitOfWork.Users.GetByIdAsync(request.UserId);
                 if (user == null)
-                    return Result.Failure("User not found");
+                    return await RollbackAndFail(Result.NotFound("User not found"));
 
                 // Check if already member
                 var existing = await _unitOfWork.UserCompanies.FindAsync(
                     uc => uc.UserId == request.UserId && uc.CompanyId == companyId
                 );
                 if (existing != null)
-                    return Result.Failure("User already belongs to this company");
+                    return await RollbackAndFail(Result.Failure("User already belongs to this company"));
 
                 var userCompany = new UserCompany
                 {
@@ -233,11 +242,15 @@ namespace Core.Services.Companies
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
+                TimeTrackerTelemetry.CompanyMembersAdded.Add(
+                    1, TimeTrackerTelemetry.TenantTag(companyId));
+
                 return Result.Success();
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error adding user to company");
                 return Result.Failure($"Error adding user to company: {ex.Message}");
             }
         }
@@ -251,12 +264,12 @@ namespace Core.Services.Companies
                 // Verify company exists
                 var company = await _unitOfWork.Companies.GetByIdAsync(companyId);
                 if (company == null)
-                    return Result.Failure("Company not found");
+                    return await RollbackAndFail(Result.NotFound("Company not found"));
 
                 // Check if email already exists
                 var existingUser = await _unitOfWork.Users.FindAsync(u => u.Email == request.Email);
                 if (existingUser != null)
-                    return Result.Failure("A user with this email already exists");
+                    return await RollbackAndFail(Result.Failure("A user with this email already exists"));
 
                 // Create new user
                 var newUser = new User
@@ -287,6 +300,7 @@ namespace Core.Services.Companies
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error creating and adding user to company");
                 return Result.Failure($"Error creating and adding user to company: {ex.Message}");
             }
         }
@@ -302,6 +316,9 @@ namespace Core.Services.Companies
 
             _unitOfWork.UserCompanies.Delete(userCompany);
             await _unitOfWork.SaveChangesAsync();
+
+            TimeTrackerTelemetry.CompanyMembersRemoved.Add(
+                1, TimeTrackerTelemetry.TenantTag(companyId));
 
             return Result.Success();
         }
@@ -362,7 +379,7 @@ namespace Core.Services.Companies
                     if (company == null)
                     {
                         await _unitOfWork.RollbackTransactionAsync();
-                        return Result<RegisterUserResponse>.Failure("Company not found");
+                        return Result<RegisterUserResponse>.NotFound("Company not found");
                     }
                 }
 
@@ -426,6 +443,7 @@ namespace Core.Services.Companies
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error registering user");
                 return Result<RegisterUserResponse>.Failure($"Error registering user: {ex.Message}");
             }
         }
@@ -447,7 +465,7 @@ namespace Core.Services.Companies
                 var currentUserId = _tenantService.GetCurrentUserId();
                 if (currentUserId == null)
                 {
-                    return Result<JoinCompanyResponse>.Failure("User not authenticated");
+                    return Result<JoinCompanyResponse>.Unauthorized("User not authenticated");
                 }
 
                 await _unitOfWork.BeginTransactionAsync();
@@ -457,7 +475,7 @@ namespace Core.Services.Companies
                 if (company == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result<JoinCompanyResponse>.Failure("Company not found");
+                    return Result<JoinCompanyResponse>.NotFound("Company not found");
                 }
 
                 if (!company.IsActive)
@@ -471,7 +489,7 @@ namespace Core.Services.Companies
                 if (user == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result<JoinCompanyResponse>.Failure("User not found");
+                    return Result<JoinCompanyResponse>.NotFound("User not found");
                 }
 
                 // Check if already member
@@ -527,6 +545,7 @@ namespace Core.Services.Companies
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error joining company");
                 return Result<JoinCompanyResponse>.Failure($"Error joining company: {ex.Message}");
             }
         }
@@ -551,7 +570,7 @@ namespace Core.Services.Companies
                 if (company == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result<CompanyResponse>.Failure("Company not found");
+                    return Result<CompanyResponse>.NotFound("Company not found");
                 }
 
                 // Verify current user is Admin in this company
@@ -559,7 +578,7 @@ namespace Core.Services.Companies
                 if (currentUserId == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result<CompanyResponse>.Failure("User not authenticated");
+                    return Result<CompanyResponse>.Unauthorized("User not authenticated");
                 }
 
                 var userCompany = await _unitOfWork.UserCompanies.FindAsync(
@@ -598,6 +617,7 @@ namespace Core.Services.Companies
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error updating company");
                 return Result<CompanyResponse>.Failure($"Error updating company: {ex.Message}");
             }
         }
@@ -613,7 +633,7 @@ namespace Core.Services.Companies
                 if (company == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result.Failure("Company not found");
+                    return Result.NotFound("Company not found");
                 }
 
                 // Verify current user is Admin
@@ -621,7 +641,7 @@ namespace Core.Services.Companies
                 if (currentUserId == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result.Failure("User not authenticated");
+                    return Result.Unauthorized("User not authenticated");
                 }
 
                 var userCompany = await _unitOfWork.UserCompanies.FindAsync(
@@ -672,6 +692,7 @@ namespace Core.Services.Companies
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error deleting company");
                 return Result.Failure($"Error deleting company: {ex.Message}");
             }
         }
@@ -696,7 +717,7 @@ namespace Core.Services.Companies
                 if (currentUserId == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return Result.Failure("User not authenticated");
+                    return Result.Unauthorized("User not authenticated");
                 }
 
                 var currentUserCompany = await _unitOfWork.UserCompanies.FindAsync(
@@ -734,8 +755,23 @@ namespace Core.Services.Companies
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error updating user in company");
                 return Result.Failure($"Error updating user in company: {ex.Message}");
             }
+        }
+
+
+        /// <summary>
+        /// Deshace la transacción abierta y devuelve el fallo.
+        ///
+        /// Los retornos tempranos dentro de una transacción no hacían rollback, con lo
+        /// que la conexión quedaba en "idle in transaction" hasta el Dispose del scope
+        /// (hallazgo A6 del plan de observabilidad).
+        /// </summary>
+        private async Task<Result> RollbackAndFail(Result result)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            return result;
         }
 
     }

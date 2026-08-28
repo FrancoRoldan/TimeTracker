@@ -1,9 +1,17 @@
+using Core.Common.Exceptions;
+using Data.Interfaces;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
 namespace Core.Services.Tenant
 {
-    public class TenantService : ITenantService
+    /// <summary>
+    /// Resuelve el tenant y el usuario de la request actual.
+    ///
+    /// Implementa además <see cref="ICurrentUserAccessor"/> para que la capa de datos
+    /// pueda estampar CreatedBy/UpdatedBy sin depender de Core.
+    /// </summary>
+    public class TenantService : ITenantService, ICurrentUserAccessor
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -51,11 +59,10 @@ namespace Core.Services.Tenant
                 {
                     return requestedCompanyId;
                 }
-                else
-                {
-                    // User is trying to access a company they don't belong to
-                    throw new UnauthorizedAccessException($"User does not have access to company {requestedCompanyId}");
-                }
+
+                // User is trying to access a company they don't belong to.
+                // Excepción tipada: el middleware la traduce a HTTP 403, no a 500.
+                throw new TenantAccessDeniedException(requestedCompanyId);
             }
 
             // If header is invalid, return null
@@ -76,6 +83,40 @@ namespace Core.Services.Tenant
         {
             return _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Email)?.Value
                 ?? string.Empty;
+        }
+
+        // ---- ICurrentUserAccessor ----------------------------------------------------
+        // Nunca deben lanzar: se invocan durante SaveChanges, donde una excepción
+        // enmascararía el error real de la operación de negocio.
+
+        int? ICurrentUserAccessor.GetUserId()
+        {
+            try
+            {
+                return GetCurrentUserId();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        int? ICurrentUserAccessor.GetTenantId()
+        {
+            try
+            {
+                return GetTenantId();
+            }
+            catch (TenantAccessDeniedException)
+            {
+                // La request ya será rechazada con 403 por el middleware;
+                // aquí solo significa que no hay tenant válido para estampar.
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

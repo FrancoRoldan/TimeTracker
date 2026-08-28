@@ -1,4 +1,5 @@
-using Core.Common;
+﻿using Core.Common;
+using Core.Observability;
 using Core.Services.Tenant;
 using Data.Dtos;
 using Data.Dtos.TimeEntry;
@@ -30,6 +31,8 @@ namespace Core.Services.TimeTracking
 
         public async Task<Result<TimeEntryResponse>> StartTimerAsync(StartTimerRequest request)
         {
+            using var activity = TimeTrackerTelemetry.StartActivity("StartTimer");
+
             var validationResult = await _startValidator.ValidateAsync(request);
             if (!validationResult.IsValid)
                 return Result<TimeEntryResponse>.Failure(
@@ -38,7 +41,7 @@ namespace Core.Services.TimeTracking
 
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<TimeEntryResponse>.Failure("User not authenticated");
+                return Result<TimeEntryResponse>.Unauthorized("User not authenticated");
 
             // CRITICAL: Check for active timer (optimized with AsNoTracking)
             var activeTimer = await _unitOfWork.TimeEntries
@@ -68,7 +71,7 @@ namespace Core.Services.TimeTracking
                     .FirstOrDefaultAsync();
 
                 if (issueValidation == null)
-                    return Result<TimeEntryResponse>.Failure("Issue not found");
+                    return Result<TimeEntryResponse>.NotFound("Issue not found");
 
                 // CRITICAL: Security - Verify issue belongs to user's company
                 if (issueValidation.ProjectCompanyId != companyId)
@@ -101,7 +104,7 @@ namespace Core.Services.TimeTracking
                     .FirstOrDefaultAsync();
 
                 if (projectCompanyId == 0)
-                    return Result<TimeEntryResponse>.Failure("Project not found");
+                    return Result<TimeEntryResponse>.NotFound("Project not found");
 
                 // CRITICAL: Security - Verify project belongs to user's company
                 if (projectCompanyId != companyId)
@@ -127,15 +130,19 @@ namespace Core.Services.TimeTracking
             await _unitOfWork.TimeEntries.AddAsync(timeEntry);
             await _unitOfWork.SaveChangesAsync();
 
+            TimeTrackerTelemetry.TimersStarted.Add(1, TimeTrackerTelemetry.TenantTag(companyId));
+
             // Build response with related data
             return Result<TimeEntryResponse>.Success(BuildTimeEntryResponse(timeEntry, issue));
         }
 
         public async Task<Result<TimeEntryResponse>> StopTimerAsync()
         {
+            using var activity = TimeTrackerTelemetry.StartActivity("StopTimer");
+
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<TimeEntryResponse>.Failure("User not authenticated");
+                return Result<TimeEntryResponse>.Unauthorized("User not authenticated");
 
             // Optimized: Load with tracking only what needs to be updated
             var activeTimer = await _unitOfWork.TimeEntries
@@ -143,11 +150,16 @@ namespace Core.Services.TimeTracking
                 .FirstOrDefaultAsync(te => te.UserId == userId && te.EndTime == null);
 
             if (activeTimer == null)
-                return Result<TimeEntryResponse>.Failure("No active timer found");
+                return Result<TimeEntryResponse>.NotFound("No active timer found");
 
             activeTimer.EndTime = DateTime.UtcNow;
             _unitOfWork.TimeEntries.Update(activeTimer);
             await _unitOfWork.SaveChangesAsync();
+
+            var tenantTag = TimeTrackerTelemetry.TenantTag(activeTimer.CompanyId);
+            TimeTrackerTelemetry.TimersStopped.Add(1, tenantTag);
+            TimeTrackerTelemetry.MinutesTracked.Add(
+                (long)(activeTimer.EndTime.Value - activeTimer.StartTime).TotalMinutes, tenantTag);
 
             // Load related data separately for response (AsNoTracking)
             var issue = activeTimer.IssueId.HasValue
@@ -165,7 +177,7 @@ namespace Core.Services.TimeTracking
         {
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<TimeEntryResponse>.Failure("User not authenticated");
+                return Result<TimeEntryResponse>.Unauthorized("User not authenticated");
 
             var companyId = _tenantService.GetTenantId();
 
@@ -179,7 +191,7 @@ namespace Core.Services.TimeTracking
                 .FirstOrDefaultAsync(te => te.UserId == userId && te.EndTime == null && te.CompanyId == companyId);
 
             if (activeTimer == null)
-                return Result<TimeEntryResponse>.Failure("No active timer found");
+                return Result<TimeEntryResponse>.NotFound("No active timer found");
 
             return Result<TimeEntryResponse>.Success(BuildTimeEntryResponse(activeTimer, activeTimer.Issue));
         }
@@ -194,7 +206,7 @@ namespace Core.Services.TimeTracking
 
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<TimeEntryResponse>.Failure("User not authenticated");
+                return Result<TimeEntryResponse>.Unauthorized("User not authenticated");
 
             var companyId = _tenantService.GetTenantId();
             Issue? issue = null;
@@ -213,7 +225,7 @@ namespace Core.Services.TimeTracking
                     .FirstOrDefaultAsync();
 
                 if (issueValidation == null)
-                    return Result<TimeEntryResponse>.Failure("Issue not found");
+                    return Result<TimeEntryResponse>.NotFound("Issue not found");
 
                 // CRITICAL: Security - Verify issue belongs to user's company
                 if (issueValidation.ProjectCompanyId != companyId)
@@ -246,7 +258,7 @@ namespace Core.Services.TimeTracking
                     .FirstOrDefaultAsync();
 
                 if (projectCompanyId == 0)
-                    return Result<TimeEntryResponse>.Failure("Project not found");
+                    return Result<TimeEntryResponse>.NotFound("Project not found");
 
                 // CRITICAL: Security - Verify project belongs to user's company
                 if (projectCompanyId != companyId)
@@ -292,6 +304,14 @@ namespace Core.Services.TimeTracking
             await _unitOfWork.TimeEntries.AddAsync(timeEntry);
             await _unitOfWork.SaveChangesAsync();
 
+            var manualTag = TimeTrackerTelemetry.TenantTag(companyId);
+            TimeTrackerTelemetry.ManualEntriesCreated.Add(1, manualTag);
+            if (timeEntry.EndTime.HasValue)
+            {
+                TimeTrackerTelemetry.MinutesTracked.Add(
+                    (long)(timeEntry.EndTime.Value - timeEntry.StartTime).TotalMinutes, manualTag);
+            }
+
             return Result<TimeEntryResponse>.Success(BuildTimeEntryResponse(timeEntry, issue));
         }
 
@@ -303,7 +323,7 @@ namespace Core.Services.TimeTracking
         {
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<List<TimeEntryResponse>>.Failure("User not authenticated");
+                return Result<List<TimeEntryResponse>>.Unauthorized("User not authenticated");
 
             var companyId = _tenantService.GetTenantId();
 
@@ -347,7 +367,7 @@ namespace Core.Services.TimeTracking
         {
             var userId = _tenantService.GetCurrentUserId();
             if (userId == null)
-                return Result<PaginatedResult<TimeEntryResponse>>.Failure("User not authenticated");
+                return Result<PaginatedResult<TimeEntryResponse>>.Unauthorized("User not authenticated");
 
             var companyId = _tenantService.GetTenantId();
 
@@ -421,11 +441,11 @@ namespace Core.Services.TimeTracking
                 .FirstOrDefaultAsync(te => te.Id == entryId);
 
             if (entry == null)
-                return Result<TimeEntryResponse>.Failure("Time entry not found");
+                return Result<TimeEntryResponse>.NotFound("Time entry not found");
 
             // Verify ownership
             if (entry.UserId != userId)
-                return Result<TimeEntryResponse>.Failure("You don't have access to this entry");
+                return Result<TimeEntryResponse>.Forbidden("You don't have access to this entry");
 
             return Result<TimeEntryResponse>.Success(BuildTimeEntryResponse(entry, entry.Issue));
         }
@@ -440,11 +460,11 @@ namespace Core.Services.TimeTracking
                 .FirstOrDefaultAsync(te => te.Id == entryId);
 
             if (entry == null)
-                return Result<TimeEntryResponse>.Failure("Time entry not found");
+                return Result<TimeEntryResponse>.NotFound("Time entry not found");
 
             // Verify ownership
             if (entry.UserId != userId)
-                return Result<TimeEntryResponse>.Failure("You don't have access to this entry");
+                return Result<TimeEntryResponse>.Forbidden("You don't have access to this entry");
 
             // Cannot update running timer with this endpoint
             if (entry.EndTime == null && (request.StartTime.HasValue || request.EndTime.HasValue))
@@ -469,7 +489,7 @@ namespace Core.Services.TimeTracking
                         .FirstOrDefaultAsync();
 
                     if (issueValidation == null || issueValidation.ProjectCompanyId != companyId)
-                        return Result<TimeEntryResponse>.Failure("Issue not found");
+                        return Result<TimeEntryResponse>.NotFound("Issue not found");
 
                     // Validate issue is assigned to the user
                     if (issueValidation.AssignedUserId != userId)
@@ -489,7 +509,7 @@ namespace Core.Services.TimeTracking
                         .FirstOrDefaultAsync();
 
                     if (projectCompanyId == 0 || projectCompanyId != companyId)
-                        return Result<TimeEntryResponse>.Failure("Project not found");
+                        return Result<TimeEntryResponse>.NotFound("Project not found");
 
                     entry.ProjectId = request.ProjectId.Value;
                     entry.IssueId = null; // Clear issue when only project is set
@@ -512,6 +532,9 @@ namespace Core.Services.TimeTracking
             _unitOfWork.TimeEntries.Update(entry);
             await _unitOfWork.SaveChangesAsync();
 
+            TimeTrackerTelemetry.TimeEntriesEdited.Add(
+                1, TimeTrackerTelemetry.TenantTag(entry.CompanyId));
+
             return await GetEntryByIdAsync(entryId);
         }
 
@@ -521,14 +544,17 @@ namespace Core.Services.TimeTracking
             var entry = await _unitOfWork.TimeEntries.GetByIdAsync(entryId);
 
             if (entry == null)
-                return Result.Failure("Time entry not found");
+                return Result.NotFound("Time entry not found");
 
             // Verify ownership
             if (entry.UserId != userId)
-                return Result.Failure("You don't have access to this entry");
+                return Result.Forbidden("You don't have access to this entry");
 
             _unitOfWork.TimeEntries.Delete(entry);
             await _unitOfWork.SaveChangesAsync();
+
+            TimeTrackerTelemetry.TimeEntriesDeleted.Add(
+                1, TimeTrackerTelemetry.TenantTag(entry.CompanyId));
 
             return Result.Success();
         }

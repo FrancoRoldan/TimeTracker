@@ -4,6 +4,11 @@ FROM node:20-alpine AS build
 # Build argument for API URL
 ARG API_URL=http://localhost:5083/api
 
+# Identidad del despliegue (§29 del plan de observabilidad): viaja dentro del
+# bundle y acompaña a cada error y Web Vital que reporta el navegador.
+ARG APP_VERSION=unknown
+ARG ENV_NAME=Production
+
 WORKDIR /app
 
 # Copy package files
@@ -23,6 +28,8 @@ RUN echo "==== INICIO CONFIGURACIÓN API URL ====" && \
     echo "" && \
     echo "🔄 Ejecutando reemplazo..." && \
     sed -i.bak "s|API_URL_PLACEHOLDER|${API_URL}|g" src/environments/environment.ts && \
+    sed -i "s|APP_VERSION_PLACEHOLDER|${APP_VERSION}|g" src/environments/environment.ts && \
+    sed -i "s|ENV_NAME_PLACEHOLDER|${ENV_NAME}|g" src/environments/environment.ts && \
     echo "✅ Contenido DESPUÉS del reemplazo:" && \
     cat src/environments/environment.ts && \
     echo "==== FIN CONFIGURACIÓN API URL ===="

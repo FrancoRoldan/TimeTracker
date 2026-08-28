@@ -55,7 +55,6 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${this.urlApi}/auth/register`, req)
       .pipe(
         tap(res => {
-          debugger;
           this.saveTokenLocalStorage(res.token);
           this.userSubject.next(res.user);
           localStorage.setItem("user", JSON.stringify(res.user));
