@@ -1,0 +1,28 @@
+# Tempo — almacenamiento de trazas (§30 Fase 4).
+# Configuración monolítica y local: suficiente para el volumen de TimeTracker.
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    # Retención de trazas: 7 días, según §25 del plan.
+    block_retention: 168h
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal

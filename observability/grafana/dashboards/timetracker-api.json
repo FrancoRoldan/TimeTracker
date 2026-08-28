@@ -1,0 +1,276 @@
+{
+  "uid": "timetracker-api",
+  "title": "TimeTracker — API Overview",
+  "description": "Métricas RED por endpoint, dependencias y runtime. Dashboards 1 y 2 de §26 del plan de observabilidad.",
+  "tags": ["timetracker", "api"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Entorno",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(http_server_request_duration_seconds_count, deployment_environment)",
+        "current": {},
+        "includeAll": true,
+        "multi": false
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Salud general",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "stat",
+      "title": "Requests / s",
+      "description": "Rate de las métricas RED (§9).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "blue" } }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[5m]))",
+          "legendFormat": "req/s"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Tasa de error 5xx",
+      "description": "Errors de RED. Alerta de §27 cuando supera 2%.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.01 },
+              { "color": "red", "value": 0.02 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$env\", http_response_status_code=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_request_duration_seconds_count{deployment_environment=~\"$env\"}[5m])), 0.0001)",
+          "legendFormat": "5xx"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "P95 global",
+      "description": "Duration de RED. SLO de §28: < 500 ms.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.5 },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[5m])))",
+          "legendFormat": "P95"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Accesos denegados por tenant",
+      "description": "Intentos de usar un X-Company-Id ajeno. Alerta de seguridad de §27.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "targets": [
+        { "expr": "sum(increase(timetracker_tenant_access_denied_requests_total[1h]))", "legendFormat": "última hora" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Logins fallidos",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "orange" } } },
+      "targets": [
+        { "expr": "sum(increase(timetracker_login_failed_logins_total[1h]))", "legendFormat": "última hora" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Versión desplegada",
+      "description": "Correlaciona degradaciones con el deploy que las provocó (§29).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "text" } } },
+      "options": { "textMode": "name", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "sum by (service_version) (http_server_active_requests{deployment_environment=~\"$env\"})",
+          "legendFormat": "{{service_version}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Por endpoint",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+    },
+    {
+      "type": "timeseries",
+      "title": "P95 de latencia por endpoint",
+      "description": "El route template evita explotar la cardinalidad (§8.2). /api/reports/* es el candidato natural a paginación.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": { "unit": "s", "custom": { "fillOpacity": 5, "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[5m])))",
+          "legendFormat": "{{http_route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests por segundo y endpoint",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 10, "lineWidth": 1, "stacking": { "mode": "normal" } } }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[5m]))",
+          "legendFormat": "{{http_route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Respuestas por código de estado",
+      "description": "Los 401 y 403 se separan a propósito: son relevantes por multi-tenancy (§9).",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "lineWidth": 1, "stacking": { "mode": "normal" } } }
+      },
+      "targets": [
+        {
+          "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[5m]))",
+          "legendFormat": "{{http_response_status_code}}"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Endpoints más lentos (P95)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } },
+      "options": { "sortBy": [{ "displayName": "Value", "desc": true }] },
+      "targets": [
+        {
+          "expr": "topk(10, histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[15m]))))",
+          "format": "table",
+          "instant": true
+        }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true } } }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "PostgreSQL y runtime",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pool de conexiones Npgsql",
+      "description": "Fuente de la alerta 'pool saturado' de §27. El uso sostenido cerca del máximo es la señal, no el pico aislado.",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 10 } } },
+      "targets": [
+        { "expr": "sum(db_client_connections_usage{deployment_environment=~\"$env\"}) by (state)", "legendFormat": "en uso ({{state}})" },
+        { "expr": "sum(db_client_connections_max{deployment_environment=~\"$env\"})", "legendFormat": "máximo del pool" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Duración de comandos SQL (P95)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5 } } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(db_client_commands_duration_seconds_bucket{deployment_environment=~\"$env\"}[5m])))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(db_client_commands_duration_seconds_bucket{deployment_environment=~\"$env\"}[5m])))",
+          "legendFormat": "P99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Runtime .NET: memoria y GC",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 5 } } },
+      "targets": [
+        {
+          "expr": "sum(process_runtime_dotnet_gc_heap_size_bytes{deployment_environment=~\"$env\"})",
+          "legendFormat": "heap"
+        },
+        {
+          "expr": "sum(rate(process_runtime_dotnet_gc_collections_count_total{deployment_environment=~\"$env\"}[5m]))",
+          "legendFormat": "colecciones GC/s"
+        },
+        {
+          "expr": "sum(rate(process_runtime_dotnet_exceptions_count_total{deployment_environment=~\"$env\"}[5m]))",
+          "legendFormat": "excepciones/s"
+        }
+      ]
+    }
+  ]
+}

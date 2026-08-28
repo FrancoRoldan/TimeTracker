@@ -1,0 +1,65 @@
+# Datasources de Grafana, aprovisionados automáticamente.
+#
+# La parte importante es la correlación (§21 del plan): desde un log se salta a
+# su traza y desde una traza se vuelve a sus logs, siempre por `traceId`.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      # Desde un span, ver los logs de esa misma traza.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        filterByTraceID: true
+        filterBySpanID: false
+        # Sin este mapeo Grafana no puede construir el selector de stream y el
+        # panel de logs sale vacío. Traduce el atributo service.name del span al
+        # label service_name de Loki, que Promtail toma de la etiqueta de Docker.
+        tags:
+          - key: 'service.name'
+            value: 'service_name'
+      # Desde un span, ver las métricas RED del servicio.
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+      nodeGraph:
+        enabled: true
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      # Extrae el traceId del log JSON de Serilog y lo convierte en un enlace
+      # directo a la traza en Tempo. Es el salto síntoma -> causa de §32.
+      derivedFields:
+        - name: TraceID
+          matcherRegex: '"traceId":"([a-f0-9]{32})"'
+          url: '${__value.raw}'
+          datasourceUid: tempo
+          urlDisplayLabel: 'Ver traza'
+        # Los eventos de telemetría del frontend traen el traceId del navegador
+        # en un campo propio: también debe enlazar.
+        - name: BrowserTraceID
+          matcherRegex: '"BrowserTraceId":"([a-f0-9]{32})"'
+          url: '${__value.raw}'
+          datasourceUid: tempo
+          urlDisplayLabel: 'Ver traza del navegador'

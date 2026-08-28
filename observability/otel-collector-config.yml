@@ -1,0 +1,56 @@
+# OpenTelemetry Collector — punto único de entrada de la telemetría (§5 y §30 Fase 4).
+#
+# La API empuja trazas y métricas por OTLP; el Collector las reparte:
+#   trazas   → Tempo
+#   métricas → se exponen en :8889 para que Prometheus las scrapee
+#
+# Los logs NO pasan por acá: la aplicación los escribe como JSON por stdout y
+# Promtail los recoge del daemon de Docker (§D.3 del plan).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+
+  # Cota de memoria para que un pico de telemetría no tumbe al Collector.
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 15
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    # Conserva service.name / service.version / deployment.environment como labels.
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  debug:
+    verbosity: basic
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]

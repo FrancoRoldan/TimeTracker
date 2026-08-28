@@ -1,0 +1,14 @@
+# Carga automática de los dashboards versionados en observability/grafana/dashboards.
+apiVersion: 1
+
+providers:
+  - name: TimeTracker
+    orgId: 1
+    folder: TimeTracker
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

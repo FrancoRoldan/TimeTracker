@@ -1,0 +1,47 @@
+# Promtail — recolección de logs hacia Loki (§D.3 del plan).
+#
+# Lee los logs directamente del daemon de Docker vía su API, así que no hace
+# falta montar /var/lib/docker/containers ni cambiar el logging driver.
+#
+# No se parsea el JSON acá: los logs de la API ya son JSON compacto de Serilog y
+# Grafana extrae el traceId con un derived field, que además genera el enlace a
+# Tempo. Menos configuración frágil y el mismo resultado.
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    relabel_configs:
+      # Nombre del contenedor, sin la barra inicial que agrega Docker.
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+
+      # Servicio de compose: label cómoda para navegar los logs a mano.
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+
+      # Identidad OTel declarada en docker-compose (observability.service.name).
+      # DEBE coincidir con el atributo service.name de los spans: es lo que usa
+      # Grafana para saltar de una traza a sus logs (tracesToLogsV2). Si no se
+      # declara, Loki deriva service_name por su cuenta a partir de `service`.
+      - source_labels: ['__meta_docker_container_label_observability_service_name']
+        regex: '(.+)'
+        target_label: 'service_name'
+
+      # Solo los contenedores de este proyecto: evita indexar los del usuario.
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        regex: '.+'
+        action: 'keep'
