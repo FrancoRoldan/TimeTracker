@@ -17,6 +17,17 @@
   "templating": {
     "list": [
       {
+        "name": "ruta",
+        "label": "Ruta (pantalla)",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": []
+      },
+      {
         "name": "tenant",
         "label": "Empresa",
         "type": "query",
@@ -605,8 +616,8 @@
     },
     {
       "type": "logs",
-      "title": "Errores recientes — clic en TraceID para abrir la traza",
-      "description": "El derived field del datasource de Loki convierte el traceId en un enlace a Tempo: es el recorrido síntoma → causa de §32.",
+      "title": "Errores que vio el usuario — punto de partida de soporte",
+      "description": "Todo lo que el navegador reportó como fallido: errores de JavaScript y errores de llamadas a la API. Antes filtraba por nivel Error y dejaba fuera los api_error, que se registran como Warning y son justamente los que aparecen cuando un usuario dice 'no puedo guardar'. Copiar el SessionId de la línea y pegarlo en la variable Sesión.",
       "datasource": {
         "type": "loki",
         "uid": "loki"
@@ -626,7 +637,7 @@
       },
       "targets": [
         {
-          "expr": "{service_name=~\"timetracker-.+\"} |= \"\\\"@l\\\":\\\"Error\\\"\"",
+          "expr": "{service_name=\"timetracker-api\"} |~ \"Error de frontend|Error de API visto\" |= \"$ruta\"",
           "queryType": "range"
         }
       ]

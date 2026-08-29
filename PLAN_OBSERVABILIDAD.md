@@ -1624,7 +1624,7 @@ El objetivo final no es acumular la mayor cantidad posible de logs, métricas o 
 | 11 | SLOs por servicio | Propuesto en §28, **recalibrar con datos reales** |
 | 12 | Dashboards | Propuestos en §26 |
 | 13 | Alertas y umbrales | Propuestos en §27 |
-| 14 | Runbooks | **Pendiente** |
+| 14 | Runbooks | **Parcial** — [`observability/RUNBOOK_SOPORTE.md`](observability/RUNBOOK_SOPORTE.md) cubre el recorrido de un reporte de usuario; faltan los de cada alerta (Fase 7) |
 | 15 | Arquitectura del OTel Collector (pipelines, sampling, límites) | **Pendiente** |
 | 16 | Resolución de la deuda técnica del Anexo A | **Parcial** — cerrados A1–A8 y A10–A16 en las Fases 0, 2 y 3; quedan A9, A17 y A18 |
 
