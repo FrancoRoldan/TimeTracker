@@ -96,7 +96,12 @@ export class TelemetryService {
       if (event instanceof NavigationEnd) {
         // Se guarda el template de ruta, no la URL con ids: si se enviara la URL
         // concreta la cardinalidad de las métricas sería ilimitada (§16).
+        const anterior = this.currentRoute;
         this.currentRoute = this.routeTemplate();
+
+        // La navegación es la miga de pan más barata y más útil: sin ella no se
+        // puede reconstruir por dónde venía el usuario antes de un error (§23).
+        this.trackEvent('page_view', { from: anterior });
       }
     });
 

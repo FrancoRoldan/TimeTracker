@@ -14,7 +14,8 @@
 > - **Fase 3** (frontend/RUM) — completada. El navegador reporta errores, Web Vitals y eventos a `POST /api/telemetry`, y propaga `traceparent`, con lo que la traza empieza en el clic del usuario. Cerró A11–A16. Ver [Anexo E](#anexo-e--registro-de-la-fase-3-ejecutada).
 > - **Fase 4** (plataforma) — completada. Collector, Tempo, Loki, Promtail, Prometheus y Grafana viven en el perfil `observability` del `docker-compose.yml`, con datasources y dashboards versionados. Ver [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
 > - **Fase 5** (auditoría) — completada. Tabla `AuditLogs` escrita por un interceptor de EF Core, correlacionada con trazas y logs por `TraceId`, y su propio dashboard. Ver [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
-> - **Fases 6 y 7** (analytics y alertas) — pendientes.
+> - **Fase 6** (analytics) — completada. El catálogo de eventos de §23 está instrumentado y permite reconstruir qué venía haciendo el usuario antes de un error. Ver [Anexo G](#anexo-g--registro-de-la-fase-6-ejecutada).
+> - **Fase 7** (SLOs, alertas y runbooks) — pendiente.
 >
 > El resto del documento sigue siendo *propuesta*, salvo lo marcado como **Estado actual**. El [Anexo A](#anexo-a--deuda-técnica-que-bloquea-la-observabilidad) lista la deuda pendiente.
 
@@ -1485,14 +1486,16 @@ Sin migración de EF Core: la aplicación crea el esquema con `EnsureCreated()`
 y la única migración del repositorio ya estaba desfasada del modelo. Registro en
 el [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
 
-### Fase 6 — Analytics
+### Fase 6 — Analytics ✅ COMPLETADA (2026-08-29)
 
 ```text
-Servicio de eventos en Angular
-POST /api/telemetry con rate limiting y validación
-Almacenamiento de eventos
-Dashboard de negocio
+✓ Servicio de eventos en Angular, instrumentado en los servicios de dominio
+✓ POST /api/telemetry con rate limiting y validación   (Fase 3)
+✓ Almacenamiento: logs estructurados en Loki + contador en Prometheus
+✓ Dashboard: eventos más frecuentes y recorrido de sesión
 ```
+
+Registro en el [Anexo G](#anexo-g--registro-de-la-fase-6-ejecutada).
 
 ### Fase 7 — Alerting
 
@@ -2245,3 +2248,81 @@ A18     Unificar los dos Dockerfiles del backend
         postgres_exporter y cadvisor para las métricas de §10 y §11
         Retención de la auditoría: hoy no se purga (§25)
 ```
+
+---
+
+## Anexo G — Registro de la Fase 6 ejecutada
+
+**Fecha:** 2026-08-29
+**Objetivo:** poder responder *qué venía haciendo el usuario antes del error*, que era el único de los tres recorridos de §32 que todavía no se podía contestar.
+
+### G.1 El hueco que cerró
+
+Antes de esta fase existían solo dos llamadas a `trackEvent` en todo el frontend
+—`slow_api_call` y `active_timer_degraded`—, y ninguna era una acción del usuario.
+El catálogo de §23 estaba definido en este documento pero sin instrumentar. Se sabía
+*en qué ruta* falló, no *cómo llegó ahí*.
+
+Había además un problema de fondo: el backend **contaba** los eventos como métrica
+pero no los registraba, así que ni siquiera eran consultables. Una métrica dice
+cuántos; para reconstruir una sesión hace falta saber quién y en qué orden.
+
+### G.2 Dónde se instrumentó
+
+En los **servicios de Angular**, no en los componentes: es el mismo chokepoint que
+se usó para los errores en la Fase 3, y evita tocar los ~25 componentes.
+
+| Evento | Origen |
+| --- | --- |
+| `page_view` | `TelemetryService`, automático en cada `NavigationEnd`. Incluye la ruta anterior |
+| `timer_started`, `timer_stopped`, `manual_entry_created` | `time-entry.service.ts` |
+| `company_switched`, `company_created` | `company.service.ts` |
+| `project_created` | `project.service.ts` |
+| `issue_created`, `issue_assigned`, `issue_status_changed` | `issue.service.ts` |
+| `report_viewed` | `reports.service.ts`, con `reportType` y `conRango` como propiedades |
+| `theme_changed`, `dark_mode_toggled` | `theme-service.service.ts` |
+
+`report_viewed` lleva el tipo y la presencia de rango como propiedades, de modo que
+un solo evento cubre `report_viewed`, `report_type_changed` y `report_range_changed`
+del catálogo. `page_view` no está en §23 pero es la miga de pan más barata y la que
+más aporta: sin ella no se reconstruye el recorrido.
+
+### G.3 Verificación
+
+Se simuló la sesión de un usuario que termina con un error y se reconstruyó
+consultando Loki por `sessionId`:
+
+```text
+-  page_view          /dashboard    {"from":"/auth/login"}
+-  company_switched   /dashboard    {"companyId":"2"}
+-  page_view          /time-entry   {"from":"/dashboard"}
+-  timer_started      /time-entry   {"origen":"proyecto"}
+-  timer_stopped      /time-entry   {"duracionMin":"94"}
+-  page_view          /reports      {"from":"/time-entry"}
+-  report_viewed      /reports      {"reportType":"company","conRango":"true"}
+X  API 500            /reports      8123 ms
+X  TypeError          /reports      Cannot read properties of undefined
+```
+
+Nueve eventos en orden: se ve que el usuario cambió de empresa, cargó tiempo y al
+abrir el reporte de empresa con rango de fechas la API respondió 500, y que el
+frontend además reventó al intentar leer el resultado.
+
+### G.4 Dashboard
+
+Dos paneles nuevos en *Negocio y Frontend*:
+
+```text
+Eventos de uso más frecuentes    métrica por event_name
+Recorrido de una sesión          variable de texto donde se pega un sessionId
+```
+
+El `sessionId` aparece en cualquier error del navegador, así que el camino natural
+es: error → copiar sessionId → ver el recorrido completo.
+
+### G.5 Nota sobre privacidad
+
+Los eventos no llevan identificadores personales. `company_switched` registra el id
+de la empresa, no su nombre; `issue_created` el tipo y la prioridad, no el título.
+El saneado del servidor (§17) se aplica igual sobre las propiedades, y el
+`sessionId` es un identificador de navegación que no sirve para autorización (§19).

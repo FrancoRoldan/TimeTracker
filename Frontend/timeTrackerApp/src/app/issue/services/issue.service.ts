@@ -1,4 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
+import { TelemetryService } from '../../shared/services/telemetry.service';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -9,6 +10,7 @@ import { Issue, CreateIssueRequest, UpdateIssueRequest, AssignIssueRequest } fro
 })
 export class IssueService {
   private http = inject(HttpClient);
+  private telemetry = inject(TelemetryService);
   private baseUrl = `${environment.baseUrl}/issue`;
 
   // State management
@@ -52,6 +54,10 @@ export class IssueService {
   createIssue(request: CreateIssueRequest): Observable<Issue> {
     return this.http.post<Issue>(this.baseUrl, request).pipe(
       tap(newIssue => {
+        this.telemetry.trackEvent('issue_created', {
+          tipo: String(newIssue.type ?? ''),
+          prioridad: String(newIssue.priority ?? '')
+        });
         const currentIssues = this.issuesSubject.value;
         this.issuesSubject.next([...currentIssues, newIssue]);
       })
@@ -90,6 +96,7 @@ export class IssueService {
   assignIssue(issueId: number, request: AssignIssueRequest): Observable<Issue> {
     return this.http.put<Issue>(`${this.baseUrl}/${issueId}/assign`, request).pipe(
       tap(updatedIssue => {
+        this.telemetry.trackEvent('issue_assigned');
         const currentIssues = this.issuesSubject.value;
         const updatedIssues = currentIssues.map(issue =>
           issue.id === issueId ? updatedIssue : issue
@@ -126,6 +133,7 @@ export class IssueService {
 
   // Update issue status (for Kanban board)
   updateIssueStatus(id: number, status: number): Observable<Issue> {
+    this.telemetry.trackEvent('issue_status_changed', { estado: String(status) });
     return this.updateIssue(id, { status: status });
   }
 

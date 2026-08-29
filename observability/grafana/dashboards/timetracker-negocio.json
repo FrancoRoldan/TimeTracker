@@ -37,6 +37,17 @@
             "$__all"
           ]
         }
+      },
+      {
+        "name": "sesion",
+        "label": "Sesión (pegar sessionId)",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": []
       }
     ]
   },
@@ -616,6 +627,89 @@
       "targets": [
         {
           "expr": "{service_name=~\"timetracker-.+\"} |= \"\\\"@l\\\":\\\"Error\\\"\"",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Uso de la aplicación",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Eventos de uso más frecuentes",
+      "description": "Catálogo de §23. La métrica dice cuántos; para saber quién y en qué orden está el panel de recorrido de sesión.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 42
+      },
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "round(sum by (event_name) (increase(timetracker_frontend_events_total[$__interval])))",
+          "legendFormat": "{{event_name}}"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Recorrido de una sesión — pegar el sessionId en la variable de arriba",
+      "description": "Responde 'qué venía haciendo el usuario antes del error' (§23). Sin un sessionId muestra los últimos eventos de uso de todas las sesiones. El sessionId aparece en cualquier error del navegador.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 42
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Ascending",
+        "enableLogDetails": true
+      },
+      "targets": [
+        {
+          "expr": "{service_name=\"timetracker-api\"} |= \"$sesion\" |~ \"Evento de uso|Error de API visto|Error de frontend\"",
           "queryType": "range"
         }
       ]

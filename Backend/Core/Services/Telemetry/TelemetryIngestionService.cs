@@ -4,6 +4,7 @@ using Data.Dtos.Telemetry;
 using Data.Validators;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Core.Services.Telemetry
 {
@@ -115,6 +116,18 @@ namespace Core.Services.Telemetry
                     {
                         TimeTrackerTelemetry.FrontendEvents.Add(1, tags.Append(
                             new KeyValuePair<string, object?>("event.name", evt.Name)).ToArray());
+
+                        // Además de contarlo, se deja el rastro consultable: la métrica
+                        // dice CUÁNTOS, el log dice QUIÉN y EN QUÉ ORDEN. Es lo que
+                        // permite reconstruir qué venía haciendo el usuario antes de
+                        // un error, filtrando por sessionId en Loki (§23).
+                        _logger.LogInformation(
+                            "Evento de uso {EventName} en {Route} " +
+                            "[app=timetracker-web version={AppVersion} session={SessionId} " +
+                            "anon={AnonymousId} browserTraceId={BrowserTraceId}] {EventProperties}",
+                            evt.Name, route,
+                            version, sessionId, anonymousId, evt.TraceId,
+                            properties.Count > 0 ? JsonSerializer.Serialize(properties) : "{}");
                     }
                     break;
             }

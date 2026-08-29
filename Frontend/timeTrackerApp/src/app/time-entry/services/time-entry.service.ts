@@ -83,6 +83,9 @@ export class TimeEntryService {
   createTimeEntry(request: CreateTimeEntryRequest): Observable<TimeEntry> {
     return this.http.post<TimeEntry>(`${this.baseUrl}/manual`, request).pipe(
       tap(newEntry => {
+        this.telemetry.trackEvent('manual_entry_created', {
+          duracionMin: String(newEntry.durationMinutes ?? 0)
+        });
         const currentEntries = this.timeEntriesSubject.value;
         this.timeEntriesSubject.next([newEntry, ...currentEntries]);
       })
@@ -118,6 +121,9 @@ export class TimeEntryService {
     return this.http.post<TimeEntry>(`${this.baseUrl}/start`, request).pipe(
       tap(activeEntry => {
         this.activeTimerSubject.next(activeEntry);
+        this.telemetry.trackEvent('timer_started', {
+          origen: activeEntry.issueId ? 'issue' : 'proyecto'
+        });
         const currentEntries = this.timeEntriesSubject.value;
         this.timeEntriesSubject.next([activeEntry, ...currentEntries]);
       })
@@ -128,6 +134,9 @@ export class TimeEntryService {
   stopTimer(): Observable<TimeEntry> {
     return this.http.post<TimeEntry>(`${this.baseUrl}/stop`, {}).pipe(
       tap(stoppedEntry => {
+        this.telemetry.trackEvent('timer_stopped', {
+          duracionMin: String(stoppedEntry.durationMinutes ?? 0)
+        });
         this.activeTimerSubject.next(null);
         const currentEntries = this.timeEntriesSubject.value;
         const updatedEntries = currentEntries.map(entry =>

@@ -1,9 +1,12 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { TelemetryService } from './telemetry.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ThemeService {
+  private telemetry = inject(TelemetryService);
+
   public darkMode = signal<boolean>(false);
 
   constructor() {
@@ -25,6 +28,7 @@ export class ThemeService {
   }
 
   changeTheme(theme:string): void {
+    this.telemetry.trackEvent('theme_changed', { tema: theme });
     let themeLink = document.body as HTMLElement;
 
     const actualTheme = themeLink.classList.value;
@@ -58,6 +62,7 @@ export class ThemeService {
 
   toogleDarkMode(){
     const darkModeValue = this.getDarkMode();
+    this.telemetry.trackEvent('dark_mode_toggled', { activado: String(!darkModeValue) });
     this.darkMode.set(!darkModeValue);
     this.setDarkMode(!darkModeValue);
     this.updateDomdarkMode(!darkModeValue);

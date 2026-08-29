@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { TelemetryService } from '../../shared/services/telemetry.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -9,6 +10,7 @@ import { Project, CreateProjectRequest, UpdateProjectRequest } from '../interfac
 })
 export class ProjectService {
   private http = inject(HttpClient);
+  private telemetry = inject(TelemetryService);
   private urlApi = environment.baseUrl;
 
   // State management
@@ -51,6 +53,7 @@ export class ProjectService {
     return this.http.post<Project>(`${this.urlApi}/project`, data)
       .pipe(
         tap(newProject => {
+          this.telemetry.trackEvent('project_created');
           // Add to projects list
           const currentProjects = this.projectsSubject.value;
           this.projectsSubject.next([...currentProjects, newProject]);

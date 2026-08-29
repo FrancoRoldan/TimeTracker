@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { TelemetryService } from '../../shared/services/telemetry.service';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -18,6 +19,7 @@ import { AuthService } from '../../auth/services/auth.service';
 })
 export class CompanyService {
   private http = inject(HttpClient);
+  private telemetry = inject(TelemetryService);
   private authService = inject(AuthService);
   private urlApi = environment.baseUrl;
 
@@ -60,6 +62,7 @@ export class CompanyService {
     return this.http.post<Company>(`${this.urlApi}/company`, data)
       .pipe(
         tap(newCompany => {
+          this.telemetry.trackEvent('company_created');
           // Add to companies list
           const currentCompanies = this.companiesSubject.value;
           this.companiesSubject.next([...currentCompanies, newCompany]);
@@ -106,6 +109,9 @@ export class CompanyService {
    * This updates the user's role context
    */
   selectCompany(company: Company): void {
+    // Cambiar de empresa reencuadra todo lo que el usuario ve después: es una de
+    // las migas de pan más útiles para entender un error de multi-tenancy (§23).
+    this.telemetry.trackEvent('company_switched', { companyId: String(company.id) });
     this.selectedCompanySubject.next(company);
     localStorage.setItem('selectedCompany', JSON.stringify(company));
 
