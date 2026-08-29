@@ -54,8 +54,16 @@ namespace Data.Interceptors
 
         private readonly ICurrentUserAccessor? _currentUser;
 
-        /// <summary>Altas pendientes de conocer su Id definitivo.</summary>
-        private readonly List<(AuditLog Registro, EntityEntry Entrada)> _altasPendientes = new();
+        /// <summary>
+        /// Registros pendientes de escribir. Se guardan DESPUÉS de la operación de
+        /// negocio, nunca en su mismo SaveChanges: si se agregaran ahí, un fallo al
+        /// escribir la auditoría —por ejemplo, que la tabla no exista— haría fracasar
+        /// la operación del usuario. La auditoría se pierde; el trabajo del usuario no.
+        ///
+        /// Las altas además necesitan esperar: su clave primaria no existe hasta
+        /// que EF guarda.
+        /// </summary>
+        private readonly List<(AuditLog Registro, EntityEntry Entrada, bool EsAlta)> _pendientes = new();
 
         /// <summary>Evita que el guardado de la auditoría se audite o se reentre.</summary>
         private bool _guardandoAuditoria;
@@ -91,10 +99,10 @@ namespace Data.Interceptors
             int result,
             CancellationToken cancellationToken = default)
         {
-            if (eventData.Context is not null && !_guardandoAuditoria && _altasPendientes.Count > 0)
+            if (eventData.Context is not null && !_guardandoAuditoria && _pendientes.Count > 0)
             {
                 var context = eventData.Context;
-                CompletarAltasPendientes(context);
+                CompletarPendientes(context);
 
                 _guardandoAuditoria = true;
                 try
@@ -109,7 +117,7 @@ namespace Data.Interceptors
                 finally
                 {
                     _guardandoAuditoria = false;
-                    _altasPendientes.Clear();
+                    _pendientes.Clear();
                 }
             }
 
@@ -118,10 +126,10 @@ namespace Data.Interceptors
 
         public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
         {
-            if (eventData.Context is not null && !_guardandoAuditoria && _altasPendientes.Count > 0)
+            if (eventData.Context is not null && !_guardandoAuditoria && _pendientes.Count > 0)
             {
                 var context = eventData.Context;
-                CompletarAltasPendientes(context);
+                CompletarPendientes(context);
 
                 _guardandoAuditoria = true;
                 try
@@ -135,7 +143,7 @@ namespace Data.Interceptors
                 finally
                 {
                     _guardandoAuditoria = false;
-                    _altasPendientes.Clear();
+                    _pendientes.Clear();
                 }
             }
 
@@ -143,18 +151,22 @@ namespace Data.Interceptors
         }
 
         /// <summary>
-        /// Ya se conocen las claves: se completan y se encolan para guardar.
+        /// Encola los registros ya con sus valores definitivos.
         ///
-        /// Los valores se vuelven a serializar acá y no en la primera fase porque
-        /// hasta que EF no guarda, la clave de una entidad nueva es un temporal
-        /// negativo (-2147482644 y similares) y quedaba así en el JSON.
+        /// En las altas, la clave y los valores se resuelven acá y no en la primera
+        /// fase porque hasta que EF no guarda, la clave de una entidad nueva es un
+        /// temporal negativo (-2147482644 y similares) y quedaba así en el JSON.
         /// </summary>
-        private void CompletarAltasPendientes(DbContext context)
+        private void CompletarPendientes(DbContext context)
         {
-            foreach (var (registro, entrada) in _altasPendientes)
+            foreach (var (registro, entrada, esAlta) in _pendientes)
             {
-                registro.EntityId = ObtenerClave(entrada);
-                registro.NewValues = SerializarValoresActuales(entrada);
+                if (esAlta)
+                {
+                    registro.EntityId = ObtenerClave(entrada);
+                    registro.NewValues = SerializarValoresActuales(entrada);
+                }
+
                 context.Set<AuditLog>().Add(registro);
             }
         }
@@ -193,7 +205,7 @@ namespace Data.Interceptors
                              && e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
                     .ToList();
 
-                _altasPendientes.Clear();
+                _pendientes.Clear();
 
                 foreach (var entry in candidatos)
                 {
@@ -201,15 +213,7 @@ namespace Data.Interceptors
                     if (registro is null)
                         continue;
 
-                    if (entry.State == EntityState.Added)
-                    {
-                        // Su Id todavía no existe: se completa en SavedChanges.
-                        _altasPendientes.Add((registro, entry));
-                    }
-                    else
-                    {
-                        context.Set<AuditLog>().Add(registro);
-                    }
+                    _pendientes.Add((registro, entry, entry.State == EntityState.Added));
                 }
             }
             catch

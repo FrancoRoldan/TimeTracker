@@ -182,6 +182,21 @@ if (seedData)
     }
 }
 
+// La tabla de auditoría se crea aparte de EnsureCreated, que no hace nada cuando la
+// base ya existe: sin esto, una base creada antes de la Fase 5 se queda sin la tabla
+// y cualquier operación de escritura falla con 42P01 (§20).
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    if (AuditLogSchema.EnsureExists(dbContext))
+        logger.LogInformation("Tabla de auditoría verificada");
+    else
+        logger.LogWarning("No se pudo verificar la tabla de auditoría; los cambios no quedarán registrados");
+}
+
+
 // Configure the HTTP request pipeline.
 
 // Primero de todo: cualquier excepción que escape de aquí abajo se convierte en

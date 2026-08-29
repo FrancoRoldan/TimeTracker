@@ -2192,7 +2192,13 @@ Soft-delete como baja   IsDeleted = true se registra con Action = "Delete"
 `Database.EnsureCreated()`, no con migraciones, y la única migración del
 repositorio ya estaba desfasada del modelo: generar una nueva producía un diff con
 cambios no relacionados (`AlterColumn` sobre `TimeEntries`, `AddColumn ProjectId`)
-y advertencia de posible pérdida de datos. La tabla se crea sola al recrear la base.
+y advertencia de posible pérdida de datos.
+
+> **Consecuencia que apareció en uso real:** `EnsureCreated()` solo actúa cuando la
+> base NO existe. En una base creada antes de esta fase la tabla nunca se creaba, y
+> cualquier escritura fallaba con `42P01: relation "AuditLogs" does not exist`.
+> Por eso `Data/Context/AuditLogSchema.cs` ejecuta un DDL idempotente al arrancar.
+> Si alguna vez se adoptan migraciones, ese archivo sobra.
 
 **Dashboard de auditoría** (Dashboard 7 de §26). Consulta la tabla directamente con
 un datasource de PostgreSQL: la auditoría es un registro de negocio con retención
