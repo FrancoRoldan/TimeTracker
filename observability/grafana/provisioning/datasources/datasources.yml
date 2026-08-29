@@ -50,19 +50,31 @@ datasources:
     jsonData:
       # Extrae el traceId del log JSON de Serilog y lo convierte en un enlace
       # directo a la traza en Tempo. Es el salto síntoma -> causa de §32.
+      # OJO: el marcador del valor capturado se escribe $${__value.raw}, con doble $.
+      # Grafana interpola $VAR en el aprovisionamiento y un solo $ hacía que
+      # ${__value.raw} se sustituyera por vacío: el enlace perdía el identificador.
       derivedFields:
         - name: TraceID
           matcherRegex: '"traceId":"([a-f0-9]{32})"'
-          url: '${__value.raw}'
+          url: '$${__value.raw}'
           datasourceUid: tempo
           urlDisplayLabel: 'Ver traza'
         # Los eventos de telemetría del frontend traen el traceId del navegador
         # en un campo propio: también debe enlazar.
         - name: BrowserTraceID
           matcherRegex: '"BrowserTraceId":"([a-f0-9]{32})"'
-          url: '${__value.raw}'
+          url: '$${__value.raw}'
           datasourceUid: tempo
           urlDisplayLabel: 'Ver traza del navegador'
+
+        # El SessionId no enlaza a una traza sino de vuelta a Loki, filtrando por
+        # esa sesión: es el paso 2 del runbook de soporte, "qué venía haciendo el
+        # usuario". Así se llega con un clic en vez de copiar y pegar el id.
+        - name: SessionId
+          matcherRegex: '"SessionId":"([^"]+)"'
+          url: '{service_name="timetracker-api"} |= "$${__value.raw}"'
+          datasourceUid: loki
+          urlDisplayLabel: 'Ver recorrido de la sesión'
 
   # La auditoría vive en PostgreSQL, no en Loki: es un registro de negocio con
   # requisitos de retención propios (§25), no telemetría operacional.

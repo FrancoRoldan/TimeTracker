@@ -32,12 +32,15 @@ Vas a ver algo así:
            en 16500 ms  [session=sesion-soporte browserTraceId=77a7b558303cb31f...]
 ```
 
-De esa línea salen las **dos llaves** de todo lo demás:
+Abriendo el detalle de la línea, los tres identificadores aparecen como **enlaces**:
 
-| Dato | Para qué sirve |
-| --- | --- |
-| `SessionId` | Reconstruir qué venía haciendo el usuario (Paso 2) |
-| `BrowserTraceId` | Ver qué pasó del lado del servidor (Paso 3) |
+| Campo | Enlace | Adónde lleva |
+| --- | --- | --- |
+| `SessionId` | *Ver recorrido de la sesión* | Paso 2: qué venía haciendo el usuario |
+| `BrowserTraceId` | *Ver traza del navegador* | Paso 3: qué pasó en el servidor |
+| `TraceId` | *Ver traza* | La traza de esa petición en Tempo |
+
+No hace falta copiar y pegar nada: es un clic por paso.
 
 > Este panel muestra tanto los errores de JavaScript como los de API. Los de API
 > se registran con nivel *Warning*, no *Error*: son fallos del servidor, no de la
@@ -82,19 +85,29 @@ conexión a internet."*
 
 **Acción:** no hay nada que arreglar del lado del sistema.
 
-### B) Hay logs del servidor y aparece `Failed executing DbCommand`
+### B) Hay logs del servidor y el fallo es de conexión a la base
 
-Fue la **base de datos**. Ejemplo real:
+Fue la **base de datos**. Hay dos firmas posibles, según cómo se haya caído:
+
+```text
+Failed executing DbCommand              el motor rechazó o cortó la conexión
+SocketException: Name does not resolve  el contenedor está detenido, así que
+                                        Docker le quitó la entrada de DNS y ni
+                                        siquiera se llega a intentar conectar
+```
+
+Ejemplo real, del segundo caso:
 
 ```
-[Error] An exception occurred while iterating over the results of a query
+[Error] An error occurred using the connection to database
         RequestPath = /api/time/manual
-        user.id = 1      tenant.id = 1      user.role = Admin
-        EXCEPCIÓN: System.InvalidOperationException: An exception has been raised
-                   that is likely due to a transient failure
+        user.id = 5      tenant.id = 3      user.role = Admin
 
-[Error] Failed executing DbCommand ({elapsed}ms)
-[Error] HTTP POST /api/time/manual responded 500 in 253 ms
+[Error] An exception occurred while iterating over the results of a query
+        System.Net.Sockets.SocketException: Name does not resolve
+           at System.Net.Dns.GetHostEntryOrAddressesCore(...)
+
+[Error] HTTP POST /api/time/manual responded 500 in 4497 ms
 ```
 
 Fijate que acá aparece **`user.id`**: ya sabés exactamente qué usuario era, sin
@@ -102,7 +115,14 @@ haberlo preguntado.
 
 **Para confirmar que fue algo momentáneo**, mirá en el dashboard *API Overview* el
 panel **Pool de conexiones Npgsql** en esa franja horaria: si se cortó, la base
-estuvo caída. También sirve el panel **Respuestas por código de estado**: si hubo un
+estuvo caída. Otra comprobación rápida desde la terminal:
+
+```bash
+docker ps --filter name=postgres --format '{{.Status}}'
+```
+
+Un `Up 4 minutes` cuando el incidente fue hace veinte confirma que el contenedor
+se reinició en el medio. También sirve el panel **Respuestas por código de estado**: si hubo un
 pico de 500 que afectó a varios endpoints a la vez, no fue un problema de ese usuario.
 
 ### C) Hay logs del servidor y la excepción NO menciona la base
@@ -155,3 +175,16 @@ En la práctica esto significa que el punto de entrada es **hora + pantalla**, n
 nombre de la persona. Para el volumen de esta aplicación alcanza, pero si soporte
 empieza a necesitar buscar por usuario, la solución es agregar el `userId` a los
 eventos de telemetría del frontend una vez autenticado.
+
+---
+
+## Ruido conocido que conviene no perseguir
+
+```text
+404 en GET /api/time/active     No hay timer corriendo. Es un estado válido del
+                                dominio, no un error. Aparece en cada carga del
+                                dashboard.
+```
+
+En cambio un **403** sí merece mirarse: significa que alguien intentó operar sobre
+una empresa que no le corresponde (§27).
