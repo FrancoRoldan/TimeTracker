@@ -134,81 +134,62 @@ namespace Core.Services.Projects
             return Result<ProjectResponse>.Success(response);
         }
 
+        /// <summary>
+        /// Lista los proyectos de UNA empresa: la indicada en <paramref name="companyId"/>
+        /// o, por defecto, la empresa activa de la request (cabecera X-Company-Id).
+        ///
+        /// Antes tenía dos ramas con sendos problemas de aislamiento multi-tenant:
+        /// sin companyId devolvía los proyectos de TODAS las empresas del usuario
+        /// —por eso el desplegable de carga manual mostraba proyectos ajenos—, y con
+        /// companyId filtraba por el valor recibido sin comprobar que el usuario
+        /// perteneciera a esa empresa.
+        /// </summary>
         public async Task<Result<List<ProjectResponse>>> GetAllProjectsAsync(int? companyId)
         {
-            if (companyId.HasValue)
+            var currentUserId = _tenantService.GetCurrentUserId();
+            if (currentUserId == null)
+                return Result<List<ProjectResponse>>.Unauthorized("User not authenticated");
+
+            // La empresa activa sale del token validado contra X-Company-Id.
+            var targetCompanyId = companyId ?? _tenantService.GetTenantId();
+            if (targetCompanyId == null)
+                return Result<List<ProjectResponse>>.Failure("No company selected");
+
+            // Se comprueba la pertenencia en ambos casos, también cuando el id llega
+            // por query string: es la request quien lo propone, no una fuente confiable.
+            var belongsToCompany = await _unitOfWork.UserCompanies
+                .Query()
+                .AsNoTracking()
+                .AnyAsync(uc => uc.UserId == currentUserId.Value
+                             && uc.CompanyId == targetCompanyId.Value);
+
+            if (!belongsToCompany)
+                return Result<List<ProjectResponse>>.Forbidden("You don't have access to this company");
+
+            // Proyección directa para no materializar todos los Issues.
+            var projectsData = await _unitOfWork.Projects
+                .Query()
+                .AsNoTracking()
+                .Where(p => p.CompanyId == targetCompanyId.Value)
+                .Select(p => new
+                {
+                    Project = p,
+                    CompanyName = p.Company.Name,
+                    IssueCount = p.Issues.Count(i => !i.IsDeleted)
+                })
+                .ToListAsync();
+
+            var projectResponses = projectsData.Select(pd =>
             {
-                // Optimized: Direct projection to avoid loading all Issues
-                var projectsWithData = await _unitOfWork.Projects
-                    .Query()
-                    .AsNoTracking()
-                    .Where(p => p.CompanyId == companyId.Value)
-                    .Select(p => new
-                    {
-                        Project = p,
-                        CompanyName = p.Company.Name,
-                        IssueCount = p.Issues.Count(i => !i.IsDeleted)
-                    })
-                    .ToListAsync();
-
-                var projectResponses = projectsWithData.Select(pd =>
+                var response = pd.Project.Adapt<ProjectResponse>();
+                return response with
                 {
-                    var response = pd.Project.Adapt<ProjectResponse>();
-                    return response with
-                    {
-                        CompanyName = pd.CompanyName ?? string.Empty,
-                        IssueCount = pd.IssueCount
-                    };
-                }).ToList();
+                    CompanyName = pd.CompanyName ?? string.Empty,
+                    IssueCount = pd.IssueCount
+                };
+            }).ToList();
 
-                return Result<List<ProjectResponse>>.Success(projectResponses);
-            }
-            else
-            {
-                var currentUserId = _tenantService.GetCurrentUserId();
-                if (currentUserId == null)
-                {
-                    return Result<List<ProjectResponse>>.Unauthorized("User not authenticated");
-                }
-
-                // Optimized: Get user company IDs with AsNoTracking
-                var userCompanyIds = await _unitOfWork.UserCompanies
-                    .Query()
-                    .AsNoTracking()
-                    .Where(uc => uc.UserId == currentUserId.Value)
-                    .Select(uc => uc.CompanyId)
-                    .ToListAsync();
-
-                if (!userCompanyIds.Any())
-                {
-                    return Result<List<ProjectResponse>>.Success(new List<ProjectResponse>());
-                }
-
-                // Optimized: Direct projection to avoid loading all Issues
-                var projectsData = await _unitOfWork.Projects
-                    .Query()
-                    .AsNoTracking()
-                    .Where(p => userCompanyIds.Contains(p.CompanyId))
-                    .Select(p => new
-                    {
-                        Project = p,
-                        CompanyName = p.Company.Name,
-                        IssueCount = p.Issues.Count(i => !i.IsDeleted)
-                    })
-                    .ToListAsync();
-
-                var userProjectResponses = projectsData.Select(pd =>
-                {
-                    var response = pd.Project.Adapt<ProjectResponse>();
-                    return response with
-                    {
-                        CompanyName = pd.CompanyName ?? string.Empty,
-                        IssueCount = pd.IssueCount
-                    };
-                }).ToList();
-
-                return Result<List<ProjectResponse>>.Success(userProjectResponses);
-            }
+            return Result<List<ProjectResponse>>.Success(projectResponses);
         }
 
         public async Task<Result<ProjectResponse>> UpdateProjectAsync(int id, UpdateProjectRequest request)

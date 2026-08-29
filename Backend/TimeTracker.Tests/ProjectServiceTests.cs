@@ -1,3 +1,4 @@
+﻿using Core.Common;
 using Core.Services.Projects;
 using Core.Services.Tenant;
 using Data.Dtos.Project;
@@ -181,6 +182,7 @@ public class ProjectServiceTests
         project2.Company = company;
         project2.Issues = new List<Issue>();
 
+        SetupUserCompanies(CompanyId);
         SetupProjectsQueryable(project1, project2);
 
         var result = await _service.GetAllProjectsAsync(CompanyId);
@@ -218,15 +220,60 @@ public class ProjectServiceTests
     }
 
     [Fact]
-    public async Task GetAll_UserWithNoCompanies_ReturnsEmpty()
+    public async Task GetAll_UserWithNoCompanies_IsForbidden()
     {
-        SetupUserCompanies(); // empty
+        // Antes devolvía una lista vacía, lo que ocultaba el problema: si el token
+        // dice que la empresa activa es X pero el usuario no pertenece a X, es un
+        // fallo de acceso, no un resultado sin datos.
+        SetupUserCompanies(); // sin empresas
         SetupProjectsQueryable();
 
         var result = await _service.GetAllProjectsAsync(null);
 
+        result.IsSuccess.Should().BeFalse();
+        result.Code.Should().Be(ErrorCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetAll_CompanyIdDeOtraEmpresa_IsForbidden()
+    {
+        // El companyId llega por query string: lo propone la request, no es una
+        // fuente confiable. Antes se filtraba por él sin comprobar la pertenencia,
+        // así que se podían listar los proyectos de una empresa ajena.
+        const int empresaAjena = 999;
+        SetupUserCompanies(CompanyId);
+        SetupProjectsQueryable(TestDataBuilder.CreateProject(1, empresaAjena, "Ajeno"));
+
+        var result = await _service.GetAllProjectsAsync(empresaAjena);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Code.Should().Be(ErrorCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetAll_SinCompanyId_UsaSoloLaEmpresaActiva()
+    {
+        // El desplegable de carga manual mostraba proyectos de otras empresas
+        // porque se listaban todas las del usuario en vez de la activa.
+        var otraEmpresa = 2;
+        _tenantService.Setup(t => t.GetTenantId()).Returns(CompanyId);
+        SetupUserCompanies(CompanyId, otraEmpresa);
+
+        var propio = TestDataBuilder.CreateProject(1, CompanyId, "De la empresa activa");
+        propio.Company = TestDataBuilder.CreateCompany(CompanyId, "ACME");
+        propio.Issues = new List<Issue>();
+
+        var ajeno = TestDataBuilder.CreateProject(2, otraEmpresa, "De la otra empresa");
+        ajeno.Company = TestDataBuilder.CreateCompany(otraEmpresa, "TechStart");
+        ajeno.Issues = new List<Issue>();
+
+        SetupProjectsQueryable(propio, ajeno);
+
+        var result = await _service.GetAllProjectsAsync(null);
+
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeEmpty();
+        result.Value.Should().HaveCount(1);
+        result.Value![0].Name.Should().Be("De la empresa activa");
     }
 
     // ── UpdateProjectAsync ────────────────────────────────────────────

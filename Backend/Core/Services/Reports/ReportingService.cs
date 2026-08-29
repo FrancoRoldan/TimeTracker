@@ -64,7 +64,13 @@ namespace Core.Services.Reports
                 query = query.Where(te => te.EndTime < dateTo.Value.Date.AddDays(1));
 
             if (projectId.HasValue)
-                query = query.Where(te => te.Issue.ProjectId == projectId.Value);
+            {
+                // Una TimeEntry puede colgar del proyecto directamente (ProjectId) o
+                // a través de su issue. Filtrar solo por te.Issue.ProjectId dejaba
+                // fuera las entradas sin issue.
+                query = query.Where(te => te.ProjectId == projectId.Value
+                                       || te.Issue!.ProjectId == projectId.Value);
+            }
 
             if (issueId.HasValue)
                 query = query.Where(te => te.IssueId == issueId.Value);
@@ -82,20 +88,31 @@ namespace Core.Services.Reports
                 .OrderBy(d => d.Date)
                 .ToListAsync();
 
+            // El proyecto efectivo de una entrada es el suyo propio o, si no lo tiene,
+            // el de su issue. Agrupar por te.Issue.ProjectId a secas producía NULL
+            // para las entradas sin issue y reventaba al materializar en int.
             var projectData = await query
-                .GroupBy(te => new { te.Issue.ProjectId, te.Issue.Project.Name })
+                .Where(te => te.ProjectId != null || te.IssueId != null)
+                .GroupBy(te => new
+                {
+                    ProjectId = te.ProjectId ?? te.Issue!.ProjectId,
+                    Name = te.ProjectId != null ? te.Project!.Name : te.Issue!.Project.Name
+                })
                 .Select(g => new ProjectBreakdown
                 {
                     ProjectId = g.Key.ProjectId,
-                    ProjectName = g.Key.Name,
+                    ProjectName = g.Key.Name ?? string.Empty,
                     TotalMinutes = g.Sum(te => (int)(te.EndTime!.Value - te.StartTime).TotalMinutes),
                     TotalHours = g.Sum(te => (int)(te.EndTime!.Value - te.StartTime).TotalMinutes) / 60m,
                     EntriesCount = g.Count()
                 })
                 .ToListAsync();
 
+            // Solo las entradas asociadas a un issue: las que cuelgan directamente
+            // de un proyecto no tienen título ni tipo que desglosar.
             var issueData = await query
-                .GroupBy(te => new { te.IssueId, te.Issue.Title, te.Issue.Project.Name })
+                .Where(te => te.IssueId != null)
+                .GroupBy(te => new { te.IssueId, te.Issue!.Title, te.Issue.Project.Name })
                 .Select(g => new IssueBreakdown
                 {
                     IssueId = g.Key.IssueId??0,
@@ -108,7 +125,8 @@ namespace Core.Services.Reports
                 .ToListAsync();
 
             var issueTypeData = await query
-                .GroupBy(te => te.Issue.Type)
+                .Where(te => te.IssueId != null)
+                .GroupBy(te => te.Issue!.Type)
                 .Select(g => new IssueTypeBreakdown
                 {
                     IssueType = g.Key,
@@ -166,7 +184,8 @@ namespace Core.Services.Reports
             var query = _unitOfWork.TimeEntries
                 .Query()
                 .AsNoTracking()
-                .Where(te => te.Issue.ProjectId == projectId && te.EndTime != null && te.CompanyId == companyId);
+                .Where(te => (te.ProjectId == projectId || te.Issue!.ProjectId == projectId)
+                          && te.EndTime != null && te.CompanyId == companyId);
 
             if (dateFrom.HasValue)
                 query = query.Where(te => te.StartTime >= dateFrom.Value);
@@ -191,7 +210,8 @@ namespace Core.Services.Reports
                 .ToListAsync();
 
             var issueBreakdown = await query
-                .GroupBy(te => new { te.IssueId, te.Issue.Title, te.Issue.Project.Name })
+                .Where(te => te.IssueId != null)
+                .GroupBy(te => new { te.IssueId, te.Issue!.Title, te.Issue.Project.Name })
                 .Select(g => new IssueBreakdown
                 {
                     IssueId = g.Key.IssueId??0,
@@ -288,7 +308,10 @@ namespace Core.Services.Reports
                 query = query.Where(te => te.EndTime < dateTo.Value.Date.AddDays(1));
 
             if (projectId.HasValue)
-                query = query.Where(te => te.Issue.ProjectId == projectId.Value);
+            {
+                query = query.Where(te => te.ProjectId == projectId.Value
+                                       || te.Issue!.ProjectId == projectId.Value);
+            }
 
             if (issueId.HasValue)
                 query = query.Where(te => te.IssueId == issueId.Value);
@@ -307,11 +330,16 @@ namespace Core.Services.Reports
                 .ToListAsync();
 
             var projectBreakdown = await query
-                .GroupBy(te => new { te.Issue.ProjectId, te.Issue.Project.Name })
+                .Where(te => te.ProjectId != null || te.IssueId != null)
+                .GroupBy(te => new
+                {
+                    ProjectId = te.ProjectId ?? te.Issue!.ProjectId,
+                    Name = te.ProjectId != null ? te.Project!.Name : te.Issue!.Project.Name
+                })
                 .Select(g => new ProjectBreakdown
                 {
                     ProjectId = g.Key.ProjectId,
-                    ProjectName = g.Key.Name,
+                    ProjectName = g.Key.Name ?? string.Empty,
                     TotalMinutes = g.Sum(te => (int)(te.EndTime!.Value - te.StartTime).TotalMinutes),
                     TotalHours = g.Sum(te => (int)(te.EndTime!.Value - te.StartTime).TotalMinutes) / 60m,
                     EntriesCount = g.Count()
