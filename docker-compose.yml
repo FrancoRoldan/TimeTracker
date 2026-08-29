@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -58,9 +56,15 @@ services:
       Build__Version: ${BUILD_VERSION:-unknown}
       Build__CommitSha: ${BUILD_COMMIT_SHA:-unknown}
       Build__Number: ${BUILD_NUMBER:-unknown}
-      # Destino de trazas y métricas. Si queda vacío la instrumentación se genera
-      # pero no se exporta, y la aplicación funciona igual (§C.4 del plan).
-      Otlp__Endpoint: ${OTLP_ENDPOINT:-}
+      # Destino de trazas y métricas.
+      #
+      # Apunta por defecto al Collector del perfil "observability", para que
+      # `docker compose --profile observability up -d` funcione sin necesidad de
+      # crear un .env. Levantando sin ese perfil el host no resuelve y el
+      # exportador falla en silencio: la aplicación funciona igual y no ensucia
+      # los logs, porque esos fallos van al EventSource interno de OpenTelemetry
+      # y no a Serilog (§C.4 y §D.5 del plan). Dejarlo vacío lo desactiva del todo.
+      Otlp__Endpoint: ${OTLP_ENDPOINT-http://otel-collector:4317}
       # gRPC (4317) por defecto; poner http/protobuf si el collector escucha en 4318.
       OTEL_EXPORTER_OTLP_PROTOCOL: ${OTLP_PROTOCOL:-grpc}
       TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
@@ -120,8 +124,8 @@ services:
   #   docker compose up -d                            solo la aplicación
   #   docker compose --profile observability up -d    aplicación + plataforma
   #
-  # Con el perfil activo, poner OTLP_ENDPOINT=http://otel-collector:4317 en .env
-  # para que la API exporte hacia el Collector.
+  # No hace falta configurar nada: Otlp__Endpoint del backend ya apunta a este
+  # Collector por defecto. Grafana queda en http://localhost:${GRAFANA_PORT:-3000}.
   # ---------------------------------------------------------------------------
 
   otel-collector:
