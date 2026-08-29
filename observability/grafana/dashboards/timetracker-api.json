@@ -2,23 +2,40 @@
   "uid": "timetracker-api",
   "title": "TimeTracker — API Overview",
   "description": "Métricas RED por endpoint, PostgreSQL y runtime. Dashboards 1, 2 y 3 de §26 del plan de observabilidad. Las ventanas siguen al selector de tiempo ($__range / $__rate_interval); los contadores se redondean porque increase() extrapola y produce decimales sin sentido para eventos discretos.",
-  "tags": ["timetracker", "api"],
+  "tags": [
+    "timetracker",
+    "api"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "30s",
-  "time": { "from": "now-1h", "to": "now" },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "templating": {
     "list": [
       {
         "name": "env",
         "label": "Entorno",
         "type": "query",
-        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
         "query": "label_values(http_server_request_duration_seconds_count, deployment_environment)",
         "refresh": 1,
         "includeAll": true,
         "multi": true,
-        "current": { "selected": true, "text": ["All"], "value": ["$__all"] }
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
       }
     ]
   },
@@ -26,19 +43,35 @@
     {
       "type": "row",
       "title": "Salud general",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "type": "stat",
       "title": "Requests / s",
       "description": "Rate de RED (§9). Excluye /health, que es ruido constante.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
           "decimals": 2,
-          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
           "noValue": "sin tráfico"
         }
       },
@@ -53,8 +86,16 @@
       "type": "stat",
       "title": "Tasa de error 5xx",
       "description": "Errors de RED. Alerta de §27 por encima del 2%. Si la API queda sin tráfico el valor cae a 0: mirar el panel de errores por minuto para distinguir 'sano' de 'nadie lo está usando'.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
@@ -65,12 +106,23 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 0.01 },
-              { "color": "red", "value": 0.02 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.01
+              },
+              {
+                "color": "red",
+                "value": 0.02
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "targets": [
@@ -84,8 +136,16 @@
       "type": "stat",
       "title": "Respuestas 5xx",
       "description": "Cantidad absoluta en el rango visible. Complementa a la tasa: con poco tráfico un solo error dispara un porcentaje alto y engaña.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -94,11 +154,19 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "targets": [
@@ -112,8 +180,16 @@
       "type": "stat",
       "title": "P95 global",
       "description": "Duration de RED. SLO de §28: por debajo de 500 ms.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
@@ -122,12 +198,23 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 0.5 },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.5
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "targets": [
@@ -141,8 +228,16 @@
       "type": "stat",
       "title": "Accesos denegados por tenant",
       "description": "Peticiones con un X-Company-Id que no pertenece al usuario. Cualquier valor distinto de cero merece una mirada (§27).",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -151,28 +246,57 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           },
-          "color": { "mode": "thresholds" }
+          "color": {
+            "mode": "thresholds"
+          }
         }
       },
       "targets": [
-        { "expr": "round(sum(increase(timetracker_tenant_access_denied_requests_total[$__range])))", "legendFormat": "denegados" }
+        {
+          "expr": "round(sum(increase(timetracker_tenant_access_denied_requests_total[$__range])))",
+          "legendFormat": "denegados"
+        }
       ]
     },
     {
       "type": "stat",
       "title": "Versión desplegada",
       "description": "Permite correlacionar una degradación con el deploy que la provocó (§29).",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "short", "noValue": "desconocida" } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "desconocida"
+        }
+      },
       "options": {
         "textMode": "name",
         "colorMode": "none",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        }
       },
       "targets": [
         {
@@ -184,21 +308,46 @@
     {
       "type": "row",
       "title": "Por endpoint",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      }
     },
     {
       "type": "timeseries",
       "title": "P95 de latencia por endpoint",
       "description": "Agrupado por route template, nunca por la URL con ids: evita explotar la cardinalidad (§8.2).",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": { "fillOpacity": 5, "lineWidth": 2, "showPoints": "never" }
+          "custom": {
+            "fillOpacity": 5,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
         }
       },
-      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["max"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[$__rate_interval])))",
@@ -209,15 +358,38 @@
     {
       "type": "timeseries",
       "title": "Requests por segundo y endpoint",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 6 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": { "fillOpacity": 15, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" } }
+          "custom": {
+            "fillOpacity": 15,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          }
         }
       },
-      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean"] } },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean"
+          ]
+        }
+      },
       "targets": [
         {
           "expr": "sum by (http_route) (rate(http_server_request_duration_seconds_count{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[$__rate_interval]))",
@@ -229,17 +401,61 @@
       "type": "timeseries",
       "title": "Respuestas por código de estado",
       "description": "401 y 403 se miran aparte: son la señal de problemas de multi-tenancy (§9).",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 15
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
           "decimals": 0,
-          "custom": { "fillOpacity": 40, "lineWidth": 1, "showPoints": "never", "stacking": { "mode": "normal" }, "drawStyle": "bars" }
+          "custom": {
+            "fillOpacity": 40,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            },
+            "drawStyle": "bars"
+          }
         },
         "overrides": [
-          { "matcher": { "id": "byRegexp", "options": "5.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
-          { "matcher": { "id": "byRegexp", "options": "2.*" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "5.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "2.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
         ]
       },
       "targets": [
@@ -247,21 +463,62 @@
           "expr": "round(sum by (http_response_status_code) (increase(http_server_request_duration_seconds_count{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[$__interval])))",
           "legendFormat": "{{http_response_status_code}}"
         }
-      ]
+      ],
+      "interval": "1m"
     },
     {
       "type": "table",
       "title": "Endpoints más lentos (P95 en el rango)",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 15
+      },
       "fieldConfig": {
-        "defaults": { "unit": "s", "decimals": 3 },
+        "defaults": {
+          "unit": "s",
+          "decimals": 3
+        },
         "overrides": [
-          { "matcher": { "id": "byName", "options": "http_route" }, "properties": [{ "id": "displayName", "value": "Endpoint" }] },
-          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "P95" }] }
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "http_route"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Endpoint"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "P95"
+              }
+            ]
+          }
         ]
       },
-      "options": { "sortBy": [{ "displayName": "P95", "desc": true }] },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "P95",
+            "desc": true
+          }
+        ]
+      },
       "targets": [
         {
           "expr": "topk(10, histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket{deployment_environment=~\"$env\", http_route!~\"/health.*\"}[$__range]))))",
@@ -270,44 +527,116 @@
         }
       ],
       "transformations": [
-        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true, "deployment_environment": true } } }
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "deployment_environment": true
+            }
+          }
+        }
       ]
     },
     {
       "type": "row",
       "title": "PostgreSQL y runtime",
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      }
     },
     {
       "type": "timeseries",
       "title": "Pool de conexiones Npgsql",
       "description": "Fuente de la alerta 'pool saturado' de §27. Lo que importa es el uso sostenido cerca del máximo, no el pico aislado.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 24 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
       "fieldConfig": {
-        "defaults": { "unit": "short", "decimals": 0, "custom": { "fillOpacity": 10, "showPoints": "never" } },
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "máximo del pool" },
+            "matcher": {
+              "id": "byName",
+              "options": "máximo del pool"
+            },
             "properties": [
-              { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } },
-              { "id": "custom.fillOpacity", "value": 0 },
-              { "id": "custom.lineStyle", "value": { "dash": [8, 8], "fill": "dash" } }
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    8,
+                    8
+                  ],
+                  "fill": "dash"
+                }
+              }
             ]
           }
         ]
       },
       "targets": [
-        { "expr": "sum by (state) (db_client_connections_usage{deployment_environment=~\"$env\"})", "legendFormat": "{{state}}" },
-        { "expr": "max(db_client_connections_max{deployment_environment=~\"$env\"})", "legendFormat": "máximo del pool" }
+        {
+          "expr": "sum by (state) (db_client_connections_usage{deployment_environment=~\"$env\"})",
+          "legendFormat": "{{state}}"
+        },
+        {
+          "expr": "max(db_client_connections_max{deployment_environment=~\"$env\"})",
+          "legendFormat": "máximo del pool"
+        }
       ]
     },
     {
       "type": "timeseries",
       "title": "Duración de comandos SQL",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 24 },
-      "fieldConfig": { "defaults": { "unit": "s", "custom": { "fillOpacity": 5, "showPoints": "never" } } },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 24
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "fillOpacity": 5,
+            "showPoints": "never"
+          }
+        }
+      },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by (le) (rate(db_client_commands_duration_seconds_bucket{deployment_environment=~\"$env\"}[$__rate_interval])))",
@@ -323,25 +652,60 @@
       "type": "timeseries",
       "title": "Runtime .NET",
       "description": "El heap va en bytes; las colecciones de GC y las excepciones, por segundo (eje derecho).",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 24 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 24
+      },
       "fieldConfig": {
-        "defaults": { "unit": "bytes", "custom": { "fillOpacity": 5, "showPoints": "never" } },
+        "defaults": {
+          "unit": "bytes",
+          "custom": {
+            "fillOpacity": 5,
+            "showPoints": "never"
+          }
+        },
         "overrides": [
           {
-            "matcher": { "id": "byRegexp", "options": ".*(GC|excepciones).*" },
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*(GC|excepciones).*"
+            },
             "properties": [
-              { "id": "unit", "value": "short" },
-              { "id": "custom.axisPlacement", "value": "right" },
-              { "id": "custom.fillOpacity", "value": 0 }
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
             ]
           }
         ]
       },
       "targets": [
-        { "expr": "sum(process_runtime_dotnet_gc_heap_size_bytes{deployment_environment=~\"$env\"})", "legendFormat": "heap" },
-        { "expr": "sum(rate(process_runtime_dotnet_gc_collections_count_total{deployment_environment=~\"$env\"}[$__rate_interval]))", "legendFormat": "GC/s" },
-        { "expr": "sum(rate(process_runtime_dotnet_exceptions_count_total{deployment_environment=~\"$env\"}[$__rate_interval]))", "legendFormat": "excepciones/s" }
+        {
+          "expr": "sum(process_runtime_dotnet_gc_heap_size_bytes{deployment_environment=~\"$env\"})",
+          "legendFormat": "heap"
+        },
+        {
+          "expr": "sum(rate(process_runtime_dotnet_gc_collections_count_total{deployment_environment=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "GC/s"
+        },
+        {
+          "expr": "sum(rate(process_runtime_dotnet_exceptions_count_total{deployment_environment=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "excepciones/s"
+        }
       ]
     }
   ]
