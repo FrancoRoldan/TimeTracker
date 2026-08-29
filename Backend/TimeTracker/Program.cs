@@ -170,30 +170,32 @@ var app = builder.Build();
 string seedDatabase = builder.Configuration.GetSection("SeedDatabase:Value").Value ?? "False";
 bool seedData = false;
 bool.TryParse(seedDatabase, out seedData);
-if (seedData)
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
 
-        dbContext.Database.EnsureCreated();
-        TimeTrackerSeeder.Seed(dbContext, passwordHasher);
-    }
-}
-
-// La tabla de auditoría se crea aparte de EnsureCreated, que no hace nada cuando la
-// base ya existe: sin esto, una base creada antes de la Fase 5 se queda sin la tabla
-// y cualquier operación de escritura falla con 42P01 (§20).
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
+    // El esquema se asegura SIEMPRE, no solo cuando se siembran datos de ejemplo.
+    // Antes esta llamada vivía dentro del if (seedData), así que con
+    // SEED_DATABASE=false una base nueva se quedaba sin ninguna tabla y la primera
+    // consulta fallaba con 42P01: relation "Users" does not exist.
+    // Sembrar datos y crear el esquema son decisiones independientes.
+    dbContext.Database.EnsureCreated();
+
+    // La tabla de auditoría, aparte: EnsureCreated no actúa si la base ya existe,
+    // y las bases anteriores a la Fase 5 se quedarían sin ella (§20).
     if (AuditLogSchema.EnsureExists(dbContext))
-        logger.LogInformation("Tabla de auditoría verificada");
+        logger.LogInformation("Esquema verificado");
     else
         logger.LogWarning("No se pudo verificar la tabla de auditoría; los cambios no quedarán registrados");
+
+    if (seedData)
+    {
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        TimeTrackerSeeder.Seed(dbContext, passwordHasher);
+        logger.LogInformation("Datos de ejemplo sembrados");
+    }
 }
 
 
