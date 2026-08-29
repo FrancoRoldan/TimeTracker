@@ -9,6 +9,7 @@ using Core.Services.Telemetry;
 using Core.Services.Tenant;
 using Core.Services.TimeTracking;
 using Data.Context;
+using Data.Interceptors;
 using Data.Interfaces;
 using Data.Repositorys;
 using Data.UnitOfWork;
@@ -79,8 +80,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var cnnString = builder.Configuration.GetConnectionString("DbConnString");
-builder.Services.AddDbContext<AppDbContext>(options =>
-options.UseNpgsql(cnnString));
+
+// El interceptor de auditoría es scoped: mantiene estado entre las dos fases del
+// guardado (§20) y necesita el usuario de la request.
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+
+builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+    options
+        .UseNpgsql(cnnString)
+        .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>()));
 
 
 // Add HttpContextAccessor for tenant service

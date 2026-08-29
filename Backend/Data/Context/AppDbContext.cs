@@ -38,6 +38,12 @@ namespace Data.Context
         public DbSet<Issue> Issues { get; set; }
         public DbSet<TimeEntry> TimeEntries { get; set; }
 
+        /// <summary>
+        /// Auditoría de negocio (§20). La escribe AuditSaveChangesInterceptor;
+        /// no debe modificarse desde los servicios.
+        /// </summary>
+        public DbSet<AuditLog> AuditLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

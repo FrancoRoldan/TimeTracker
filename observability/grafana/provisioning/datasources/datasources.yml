@@ -63,3 +63,23 @@ datasources:
           url: '${__value.raw}'
           datasourceUid: tempo
           urlDisplayLabel: 'Ver traza del navegador'
+
+  # La auditoría vive en PostgreSQL, no en Loki: es un registro de negocio con
+  # requisitos de retención propios (§25), no telemetría operacional.
+  # Se consulta en modo solo lectura desde el Dashboard 7 de §26.
+  - name: PostgreSQL
+    type: postgres
+    uid: postgres
+    access: proxy
+    url: postgres:5432
+    # Grafana solo interpola $VAR en el aprovisionamiento: la sintaxis de bash
+    # ${VAR:-valor} se pasa literal y la conexión falla con
+    # "no PostgreSQL user name specified in startup packet".
+    user: $DB_USER
+    secureJsonData:
+      password: $DB_PASSWORD
+    jsonData:
+      database: TimeTracker
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false

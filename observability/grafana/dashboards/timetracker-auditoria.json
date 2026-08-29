@@ -1,0 +1,401 @@
+{
+  "uid": "timetracker-auditoria",
+  "title": "TimeTracker — Auditoría",
+  "description": "Quién cambió qué y cuándo (§20). Dashboard 7 de §26. Se consulta directamente la tabla AuditLogs de PostgreSQL: la auditoría es un registro de negocio con retención propia, no telemetría operacional. Cada fila lleva el TraceId con el que se puede ir a la traza en Tempo (§21).",
+  "tags": [
+    "timetracker",
+    "auditoria"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "entidad",
+        "label": "Entidad",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "query": "SELECT DISTINCT \"EntityType\" FROM \"AuditLogs\" ORDER BY 1",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "accion",
+        "label": "Acción",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "postgres"
+        },
+        "query": "SELECT DISTINCT \"Action\" FROM \"AuditLogs\" ORDER BY 1",
+        "refresh": 2,
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Cambios en el rango",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0"
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"cambios\" FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"EntityType\" IN ($entidad) AND \"Action\" IN ($accion)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Eliminaciones",
+      "description": "Las bajas son las que más suelen necesitar explicación.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 5,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"bajas\" FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"Action\" = 'Delete' AND \"EntityType\" IN ($entidad)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Usuarios que modificaron",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 5,
+        "x": 10,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0"
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(DISTINCT \"UserId\") AS \"usuarios\" FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"UserId\" IS NOT NULL AND \"EntityType\" IN ($entidad) AND \"Action\" IN ($accion)"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Cambios sin usuario",
+      "description": "Operaciones del sistema (seeder, tareas de mantenimiento). Un valor alto en producción merece revisión: significa que algo escribe sin contexto de usuario.",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 9,
+        "x": 15,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"sin usuario\" FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"UserId\" IS NULL"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Cambios por tipo de acción",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Delete"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Create"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Update"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(\"Timestamp\", $__interval), \"Action\" AS metric, count(*) AS value FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"EntityType\" IN ($entidad) AND \"Action\" IN ($accion) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Entidades más modificadas",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \"EntityType\" AS \"entidad\", count(*) AS \"cambios\" FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"EntityType\" IN ($entidad) AND \"Action\" IN ($accion) GROUP BY 1 ORDER BY 2 DESC"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Registro de cambios",
+      "description": "Copiando el TraceId se puede buscar la traza en Tempo y ver qué ocurrió técnicamente durante esa operación (§21).",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "postgres"
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Acción"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Delete": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "Create": {
+                        "color": "green",
+                        "index": 1
+                      },
+                      "Update": {
+                        "color": "blue",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "Valores (anteriores|nuevos)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 320
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \"Timestamp\" AS \"Cuándo\", \"UserId\" AS \"Usuario\", \"CompanyId\" AS \"Empresa\", \"Action\" AS \"Acción\", \"EntityType\" AS \"Entidad\", \"EntityId\" AS \"Id\", \"ChangedColumns\" AS \"Campos\", \"OldValues\"::text AS \"Valores anteriores\", \"NewValues\"::text AS \"Valores nuevos\", \"TraceId\", \"IpAddress\" AS \"IP\" FROM \"AuditLogs\" WHERE $__timeFilter(\"Timestamp\") AND \"EntityType\" IN ($entidad) AND \"Action\" IN ($accion) ORDER BY \"Timestamp\" DESC LIMIT 200"
+        }
+      ]
+    }
+  ]
+}

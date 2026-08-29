@@ -118,5 +118,27 @@ namespace Core.Services.Tenant
                 return null;
             }
         }
+
+        string? ICurrentUserAccessor.GetIpAddress()
+        {
+            try
+            {
+                var context = _httpContextAccessor.HttpContext;
+                if (context is null)
+                    return null;
+
+                // Detrás de un proxy o del contenedor de Nginx, la IP real del cliente
+                // llega en X-Forwarded-For; se toma la primera de la lista.
+                var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(forwarded))
+                    return forwarded.Split(',')[0].Trim();
+
+                return context.Connection.RemoteIpAddress?.ToString();
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

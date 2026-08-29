@@ -12,7 +12,9 @@
 > - **Fase 0** (prerrequisitos de código, §30) — completada. Cerró A1, A2, A3, A4, A8 y A10. Ver [Anexo B](#anexo-b--registro-de-la-fase-0-ejecutada).
 > - **Fase 2** (instrumentación del backend) — completada. La API emite logs estructurados con `traceId`, trazas y métricas por OpenTelemetry, y tiene health checks reales. Cerró A5, A6 y A7. Ver [Anexo C](#anexo-c--registro-de-la-fase-2-ejecutada).
 > - **Fase 3** (frontend/RUM) — completada. El navegador reporta errores, Web Vitals y eventos a `POST /api/telemetry`, y propaga `traceparent`, con lo que la traza empieza en el clic del usuario. Cerró A11–A16. Ver [Anexo E](#anexo-e--registro-de-la-fase-3-ejecutada).
-> - **Fase 4** (plataforma) — la aplicación ya está lista para apuntar a un stack existente: ver la [guía de configuración del Anexo D](#anexo-d--guía-de-configuración-contra-un-stack-existente). Falta desplegar el Collector.
+> - **Fase 4** (plataforma) — completada. Collector, Tempo, Loki, Promtail, Prometheus y Grafana viven en el perfil `observability` del `docker-compose.yml`, con datasources y dashboards versionados. Ver [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
+> - **Fase 5** (auditoría) — completada. Tabla `AuditLogs` escrita por un interceptor de EF Core, correlacionada con trazas y logs por `TraceId`, y su propio dashboard. Ver [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
+> - **Fases 6 y 7** (analytics y alertas) — pendientes.
 >
 > El resto del documento sigue siendo *propuesta*, salvo lo marcado como **Estado actual**. El [Anexo A](#anexo-a--deuda-técnica-que-bloquea-la-observabilidad) lista la deuda pendiente.
 
@@ -1456,26 +1458,32 @@ Registro de ejecución en el [Anexo C](#anexo-c--registro-de-la-fase-2-ejecutada
 
 Registro de ejecución en el [Anexo E](#anexo-e--registro-de-la-fase-3-ejecutada).
 
-### Fase 4 — Plataforma
+### Fase 4 — Plataforma ✅ COMPLETADA (2026-08-28)
 
 ```text
-OpenTelemetry Collector
-Prometheus
-Loki
-Tempo
-Grafana
-postgres_exporter + cadvisor
-Todo como servicios adicionales en docker-compose.yml
+✓ OpenTelemetry Collector
+✓ Prometheus
+✓ Loki (+ Promtail, que lee los logs por la API de Docker)
+✓ Tempo
+✓ Grafana, con datasources y dashboards aprovisionados
+  postgres_exporter + cadvisor        pendientes
 ```
 
-### Fase 5 — Auditoría
+Van en el perfil `observability` del `docker-compose.yml`, para no encarecer el
+arranque normal. Registro en el [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
+
+### Fase 5 — Auditoría ✅ COMPLETADA (2026-08-29)
 
 ```text
-Entidad AuditLog + migración EF Core
-ISaveChangesInterceptor
-Correlación con TraceId
-Dashboard de auditoría
+✓ Entidad AuditLog
+✓ ISaveChangesInterceptor
+✓ Correlación con TraceId
+✓ Dashboard de auditoría
 ```
+
+Sin migración de EF Core: la aplicación crea el esquema con `EnsureCreated()`
+y la única migración del repositorio ya estaba desfasada del modelo. Registro en
+el [Anexo F](#anexo-f--registro-de-las-fases-4-y-5-ejecutadas).
 
 ### Fase 6 — Analytics
 
@@ -2091,4 +2099,149 @@ A18  Dos Dockerfiles de backend con configuraciones distintas
 Los `console.*` que quedan en la aplicación no se tocaron: ahora conviven con la
 telemetría y siguen siendo útiles en desarrollo. Los errores que importan ya salen
 por el ErrorHandler y por el interceptor.
+```
+
+---
+
+## Anexo F — Registro de las Fases 4 y 5 ejecutadas
+
+**Fechas:** plataforma 2026-08-28, auditoría 2026-08-29.
+
+### F.1 Fase 4 — Plataforma
+
+Cinco servicios en el `docker-compose.yml`, bajo el perfil `observability`:
+
+```text
+docker compose up -d                          solo la aplicación
+docker compose --profile observability up -d  aplicación + plataforma
+```
+
+| Servicio | Rol |
+| --- | --- |
+| `otel-collector` | Recibe OTLP y reparte: trazas a Tempo, métricas expuestas para Prometheus |
+| `tempo` | Trazas, retención 7 días (§25) |
+| `loki` + `promtail` | Logs. Promtail los lee por la API de Docker, sin cambiar el logging driver |
+| `prometheus` | Métricas, retención 90 días. Scrapea al Collector, no a la API |
+| `grafana` | Puerto 3000, con datasources y dashboards versionados en `observability/` |
+
+**Correlación entre señales.** Es lo que da valor al conjunto:
+
+```text
+log  → traza    derived field del datasource de Loki sobre "traceId"
+traza → logs    tracesToLogsV2 mapeando service.name → service_name
+```
+
+Para que ese segundo salto funcione, los contenedores declaran su identidad OTel
+con la etiqueta de Docker `observability.service.name` y Promtail la convierte en
+el label `service_name` de Loki. Sin eso el span decía `timetracker-api` y el log
+decía `backend`, y Grafana no encontraba nada.
+
+**Dashboards.** `API Overview`, `Negocio y Frontend` y `Auditoría`. Las consultas
+usan nombres de métrica verificados contra Prometheus, no supuestos: el exportador
+del Collector agrega la unidad al nombre (`timetracker_users_logged_in_logins_total`,
+`timetracker_web_vital_milliseconds`).
+
+**Dos ajustes que salieron de usarlos de verdad:**
+
+```text
+Exportación cada 60 s   El valor por defecto del SDK hacía que un pico de errores
+                        tardara más de un minuto en verse y pareciera que el panel
+                        estaba roto. OTEL_METRIC_EXPORT_INTERVAL pasa a 15 s.
+
+increase() extrapola    Un contador entero producía "5,3 logins fallidos".
+                        Los paneles de conteo van envueltos en round().
+
+$__interval corto       Con scrape cada 15 s, increase($__interval) puede caer en
+                        ventanas donde Prometheus no tiene dos muestras y no
+                        devuelve NINGUNA serie: el panel queda vacío en vez de
+                        mostrar ceros. Los paneles de barras fijan interval: 1m.
+```
+
+### F.2 Fase 5 — Auditoría
+
+**`AuditLog`** (`Data/Models/AuditLog.cs`) con los campos de §20.2: quién, cuándo,
+qué entidad, qué cambió, valores anteriores y nuevos en `jsonb`, `TraceId`,
+aplicación e IP. No hereda de `BaseEntity` a propósito: no es una entidad de
+dominio, no se borra por soft-delete y no debe auditarse a sí misma.
+
+**`AuditSaveChangesInterceptor`** (`Data/Interceptors/`). Se eligió un interceptor
+sobre el `ChangeTracker` y no llamadas desde los servicios porque así ninguna
+operación se puede olvidar de auditar: todo lo que pase por `SaveChanges` queda
+registrado, venga de donde venga.
+
+Trabaja **en dos fases**: las modificaciones y bajas se registran dentro de la
+misma transacción, y las altas se completan justo después. La razón es que la
+clave primaria de una entidad nueva no existe hasta que EF guarda — registrarlas
+antes dejaba `EntityId` en 0 y el JSON con el temporal negativo de EF
+(`-2147482644`). Por eso el interceptor es **scoped**: mantiene estado entre fases.
+
+Garantías que impone:
+
+```text
+No audita secretos      PasswordHash, Token, Secret y similares nunca se serializan
+No se audita a sí misma
+No registra ruido       un Modified sin cambios reales no genera entrada
+Nunca rompe el negocio  un fallo escribiendo auditoría no propaga excepción
+Soft-delete como baja   IsDeleted = true se registra con Action = "Delete"
+```
+
+**Sin migración de EF Core.** La aplicación crea el esquema con
+`Database.EnsureCreated()`, no con migraciones, y la única migración del
+repositorio ya estaba desfasada del modelo: generar una nueva producía un diff con
+cambios no relacionados (`AlterColumn` sobre `TimeEntries`, `AddColumn ProjectId`)
+y advertencia de posible pérdida de datos. La tabla se crea sola al recrear la base.
+
+**Dashboard de auditoría** (Dashboard 7 de §26). Consulta la tabla directamente con
+un datasource de PostgreSQL: la auditoría es un registro de negocio con retención
+propia, no telemetría operacional, y no tiene sentido meterla en Loki.
+
+> Detalle del aprovisionamiento: Grafana solo interpola `$VAR`; la sintaxis de bash
+> `${VAR:-valor}` se pasa literal y la conexión falla con *"no PostgreSQL user name
+> specified in startup packet"*.
+
+### F.3 Verificación realizada
+
+```text
+✓ dotnet build / dotnet test        0 errores, 92/92
+✓ EnsureCreated crea AuditLogs      jsonb en los valores, 5 índices
+✓ Create / Update / Delete          registrados con EntityId real (no 0)
+✓ ChangedColumns                    "Name,UpdatedAt" en la edición
+✓ Soft-delete                       IsDeleted=true → Action "Delete"
+✓ UserId, CompanyId, IpAddress      poblados desde la request
+✓ Operaciones del seeder            quedan sin UserId, como corresponde
+✓ Datasource de PostgreSQL          Create: 37, Update: 2, Delete: 1
+```
+
+**Secretos.** Se ejercitó el caso más sensible, un cambio de contraseña:
+
+```text
+Action=Update  EntityType=User  ChangedColumns=UpdatedAt,UpdatedBy
+```
+
+El cambio de `PasswordHash` no aparece. Una búsqueda por `password`, `hash` o el
+prefijo de bcrypt sobre toda la tabla devuelve **0 coincidencias**.
+
+**Correlación de §21**, el objetivo de la fase. Un único `TraceId` une las tres señales:
+
+```text
+TraceId 4692eb964e41ece7e015746ef1197c2a
+
+  Tempo        POST api/project + 3 spans de Npgsql
+  Loki         HTTP POST /api/project responded 201
+  AuditLogs    Create | Project | EntityId 6 | UserId 1
+```
+
+Responde primero "¿quién creó ese proyecto?" y después "¿qué ocurrió técnicamente
+durante esa operación?".
+
+### F.4 Lo que queda
+
+```text
+Fase 6  Analytics: catálogo de eventos de uso y su almacenamiento
+Fase 7  SLOs, reglas de alerta, canales de notificación y runbooks
+A9      Secreto JWT commiteado en el repositorio
+A17     Paquete Redis referenciado sin usar
+A18     Unificar los dos Dockerfiles del backend
+        postgres_exporter y cadvisor para las métricas de §10 y §11
+        Retención de la auditoría: hoy no se purga (§25)
 ```
