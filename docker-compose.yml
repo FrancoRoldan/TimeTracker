@@ -67,6 +67,11 @@ services:
       Otlp__Endpoint: ${OTLP_ENDPOINT-http://otel-collector:4317}
       # gRPC (4317) por defecto; poner http/protobuf si el collector escucha en 4318.
       OTEL_EXPORTER_OTLP_PROTOCOL: ${OTLP_PROTOCOL:-grpc}
+      # Cada cuánto exporta métricas el SDK, en milisegundos. El valor por defecto
+      # de OpenTelemetry son 60 s: con eso un pico de errores tarda más de un
+      # minuto en verse en Grafana y parece que el panel no funciona. Para el
+      # volumen de esta aplicación 15 s es barato y hace el tablero utilizable.
+      OTEL_METRIC_EXPORT_INTERVAL: ${OTEL_METRIC_EXPORT_INTERVAL:-15000}
       TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
     ports:
       - "${BACKEND_PORT:-5083}:80"

@@ -1,12 +1,27 @@
 {
   "uid": "timetracker-negocio",
   "title": "TimeTracker — Negocio y Frontend",
-  "description": "Métricas funcionales (§22) y RUM del navegador (§16). Dashboards 5 y 6 de §26 del plan de observabilidad.",
+  "description": "Métricas funcionales (§22) y RUM del navegador (§16). Los contadores se muestran redondeados: increase() extrapola y devolvía valores como '5,3 logins fallidos'. Las ventanas siguen al selector de tiempo.",
   "tags": ["timetracker", "negocio", "rum"],
   "timezone": "browser",
   "schemaVersion": 39,
   "refresh": "30s",
   "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "tenant",
+        "label": "Empresa",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(timetracker_timers_started_total, tenant_id)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "current": { "selected": true, "text": ["All"], "value": ["$__all"] }
+      }
+    ]
+  },
   "panels": [
     {
       "type": "row",
@@ -18,26 +33,36 @@
       "title": "Timers iniciados",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "green" } } },
-      "targets": [{ "expr": "sum(increase(timetracker_timers_started_total[6h]))", "legendFormat": "iniciados" }]
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "color": { "mode": "fixed", "fixedColor": "green" } }
+      },
+      "targets": [
+        { "expr": "round(sum(increase(timetracker_timers_started_total{tenant_id=~\"$tenant\"}[$__range])))", "legendFormat": "iniciados" }
+      ]
     },
     {
       "type": "stat",
       "title": "Timers detenidos",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "blue" } } },
-      "targets": [{ "expr": "sum(increase(timetracker_timers_stopped_total[6h]))", "legendFormat": "detenidos" }]
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "color": { "mode": "fixed", "fixedColor": "blue" } }
+      },
+      "targets": [
+        { "expr": "round(sum(increase(timetracker_timers_stopped_total{tenant_id=~\"$tenant\"}[$__range])))", "legendFormat": "detenidos" }
+      ]
     },
     {
       "type": "stat",
-      "title": "Timers sin cerrar",
-      "description": "Iniciados menos detenidos. Un valor que crece y no baja es la señal de la alerta 'timers abandonados' de §27.",
+      "title": "Sin cerrar en el rango",
+      "description": "Iniciados menos detenidos dentro de la ventana visible. Es una aproximación, no un inventario: un timer abierto ayer y cerrado hoy descuadra el saldo. Sirve para detectar la tendencia de la alerta 'timers abandonados' (§27); el número exacto de timers abiertos hay que consultarlo en la base.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
+          "decimals": 0,
+          "noValue": "0",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -51,53 +76,71 @@
       },
       "targets": [
         {
-          "expr": "clamp_min(sum(timetracker_timers_started_total) - sum(timetracker_timers_stopped_total), 0)",
-          "legendFormat": "abiertos"
+          "expr": "clamp_min(round(sum(increase(timetracker_timers_started_total{tenant_id=~\"$tenant\"}[$__range]))) - round(sum(increase(timetracker_timers_stopped_total{tenant_id=~\"$tenant\"}[$__range]))), 0)",
+          "legendFormat": "sin cerrar"
         }
       ]
     },
     {
       "type": "stat",
       "title": "Horas registradas",
-      "description": "minutes_tracked_total convertido a horas. Es la métrica que sustenta los reportes y los costos.",
+      "description": "minutes_tracked_total convertido a horas. Es la métrica que sustenta los reportes y el cálculo de costos.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "h", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "purple" } } },
-      "targets": [{ "expr": "sum(increase(timetracker_minutes_tracked_total[6h])) / 60", "legendFormat": "horas" }]
+      "fieldConfig": {
+        "defaults": { "unit": "h", "decimals": 1, "noValue": "0", "color": { "mode": "fixed", "fixedColor": "purple" } }
+      },
+      "targets": [
+        { "expr": "sum(increase(timetracker_minutes_tracked_total{tenant_id=~\"$tenant\"}[$__range])) / 60", "legendFormat": "horas" }
+      ]
     },
     {
       "type": "stat",
       "title": "Cargas manuales",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "fixed", "fixedColor": "yellow" } } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "noValue": "0", "color": { "mode": "fixed", "fixedColor": "yellow" } }
+      },
       "targets": [
-        { "expr": "sum(increase(timetracker_time_entries_created_manual_total[6h]))", "legendFormat": "manuales" }
+        { "expr": "round(sum(increase(timetracker_time_entries_created_manual_total{tenant_id=~\"$tenant\"}[$__range])))", "legendFormat": "manuales" }
       ]
     },
     {
       "type": "timeseries",
-      "title": "Actividad de tiempo por empresa",
-      "description": "tenant.id como dimensión (§22): permite ver si una degradación afecta a una empresa o a todas.",
+      "title": "Actividad de timers por empresa",
+      "description": "tenant.id como dimensión (§22): distingue si algo afecta a una empresa o a todas.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 10, "lineWidth": 2 } } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": { "fillOpacity": 40, "lineWidth": 1, "showPoints": "never", "drawStyle": "bars", "stacking": { "mode": "normal" } }
+        }
+      },
       "targets": [
         {
-          "expr": "sum by (tenant_id) (rate(timetracker_timers_started_total[10m]) * 600)",
-          "legendFormat": "empresa {{tenant_id}} — iniciados"
+          "expr": "round(sum by (tenant_id) (increase(timetracker_timers_started_total{tenant_id=~\"$tenant\"}[$__interval])))",
+          "legendFormat": "empresa {{tenant_id}}"
         }
       ]
     },
     {
       "type": "timeseries",
-      "title": "Minutos registrados en el tiempo",
+      "title": "Minutos registrados",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "fieldConfig": { "defaults": { "unit": "m", "custom": { "fillOpacity": 20, "lineWidth": 1 } } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "m",
+          "decimals": 0,
+          "custom": { "fillOpacity": 30, "lineWidth": 1, "showPoints": "never", "drawStyle": "bars", "stacking": { "mode": "normal" } }
+        }
+      },
       "targets": [
         {
-          "expr": "sum by (tenant_id) (increase(timetracker_minutes_tracked_total[10m]))",
+          "expr": "round(sum by (tenant_id) (increase(timetracker_minutes_tracked_total{tenant_id=~\"$tenant\"}[$__interval])))",
           "legendFormat": "empresa {{tenant_id}}"
         }
       ]
@@ -112,37 +155,59 @@
       "title": "Issues creados",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 0, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
-      "targets": [{ "expr": "sum(increase(timetracker_issues_created_total[6h]))", "legendFormat": "issues" }]
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0" } },
+      "targets": [
+        { "expr": "round(sum(increase(timetracker_issues_created_total{tenant_id=~\"$tenant\"}[$__range])))", "legendFormat": "issues" }
+      ]
     },
     {
       "type": "stat",
       "title": "Proyectos creados",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 4, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
-      "targets": [{ "expr": "sum(increase(timetracker_projects_created_total[6h]))", "legendFormat": "proyectos" }]
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0" } },
+      "targets": [
+        { "expr": "round(sum(increase(timetracker_projects_created_total{tenant_id=~\"$tenant\"}[$__range])))", "legendFormat": "proyectos" }
+      ]
     },
     {
       "type": "stat",
       "title": "Reportes generados",
+      "description": "Desglosado por tipo de reporte.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 4, "w": 4, "x": 8, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "short" } },
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "noValue": "0" } },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        { "expr": "sum by (report_type) (increase(timetracker_reports_generated_total[6h]))", "legendFormat": "{{report_type}}" }
+        { "expr": "round(sum by (report_type) (increase(timetracker_reports_generated_total[$__range])))", "legendFormat": "{{report_type}}" }
       ]
     },
     {
       "type": "timeseries",
       "title": "Inicios de sesión: exitosos vs fallidos",
-      "description": "Un pico de fallidos sin aumento de exitosos es la señal de §27.",
+      "description": "Un pico de fallidos sin aumento de exitosos es la señal de §27. Se cuenta sin registrar el email, para no almacenar datos personales.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 15, "lineWidth": 2 } } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": { "fillOpacity": 30, "lineWidth": 1, "showPoints": "never", "drawStyle": "bars" }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "fallidos" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }]
+          },
+          {
+            "matcher": { "id": "byName", "options": "exitosos" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }]
+          }
+        ]
+      },
       "targets": [
-        { "expr": "sum(increase(timetracker_users_logged_in_logins_total[10m]))", "legendFormat": "exitosos" },
-        { "expr": "sum(increase(timetracker_login_failed_logins_total[10m]))", "legendFormat": "fallidos" }
+        { "expr": "round(sum(increase(timetracker_users_logged_in_logins_total[$__interval])))", "legendFormat": "exitosos" },
+        { "expr": "round(sum(increase(timetracker_login_failed_logins_total[$__interval])))", "legendFormat": "fallidos" }
       ]
     },
     {
@@ -152,51 +217,79 @@
     },
     {
       "type": "timeseries",
-      "title": "Web Vitals P75 por métrica",
-      "description": "Medidos en el dispositivo real del usuario (§16). SLO de §28: LCP P75 < 2.5 s en desktop.",
+      "title": "Web Vitals P75 — LCP, FCP, TTFB, INP",
+      "description": "Medidos en el dispositivo real del usuario (§16). SLO de §28: LCP P75 por debajo de 2,5 s en escritorio. CLS va aparte porque no es una medida de tiempo.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
-      "fieldConfig": { "defaults": { "unit": "ms", "custom": { "fillOpacity": 5, "lineWidth": 2 } } },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "fillOpacity": 5, "lineWidth": 2, "showPoints": "always" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 2500 },
+              { "color": "red", "value": 4000 }
+            ]
+          }
+        }
+      },
       "targets": [
         {
-          "expr": "histogram_quantile(0.75, sum by (le, vital_name) (rate(timetracker_web_vital_milliseconds_bucket[10m])))",
+          "expr": "histogram_quantile(0.75, sum by (le, vital_name) (rate(timetracker_web_vital_milliseconds_bucket{vital_name!=\"CLS\"}[$__rate_interval])))",
           "legendFormat": "{{vital_name}}"
         }
       ]
     },
     {
       "type": "timeseries",
-      "title": "Errores reportados por el navegador",
-      "description": "Errores de JavaScript y de llamadas a la API vistos desde el cliente, no desde el servidor.",
+      "title": "Errores del navegador y CLS",
+      "description": "CLS es un desplazamiento acumulado sin unidad, por eso no comparte panel con las métricas en milisegundos.",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "fillOpacity": 20, "lineWidth": 1 } } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0, "custom": { "fillOpacity": 30, "lineWidth": 1, "showPoints": "never", "drawStyle": "bars" } },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "CLS P75" },
+            "properties": [
+              { "id": "custom.drawStyle", "value": "line" },
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "unit", "value": "none" },
+              { "id": "decimals", "value": 3 },
+              { "id": "custom.fillOpacity", "value": 0 }
+            ]
+          }
+        ]
+      },
       "targets": [
         {
-          "expr": "sum by (route) (increase(timetracker_frontend_errors_total[10m]))",
-          "legendFormat": "JS — {{route}}"
+          "expr": "round(sum by (route) (increase(timetracker_frontend_errors_total[$__interval])))",
+          "legendFormat": "errores JS — {{route}}"
         },
         {
-          "expr": "sum(increase(timetracker_frontend_events_total[10m]))",
-          "legendFormat": "eventos de uso"
+          "expr": "histogram_quantile(0.75, sum by (le) (rate(timetracker_web_vital_milliseconds_bucket{vital_name=\"CLS\"}[$__rate_interval])))",
+          "legendFormat": "CLS P75"
         }
       ]
     },
     {
       "type": "logs",
-      "title": "Errores recientes — clic en TraceID para ver la traza",
-      "description": "El derived field del datasource de Loki convierte el traceId en un enlace a Tempo. Es el recorrido síntoma → causa de §32.",
+      "title": "Errores recientes — clic en TraceID para abrir la traza",
+      "description": "El derived field del datasource de Loki convierte el traceId en un enlace a Tempo: es el recorrido síntoma → causa de §32.",
       "datasource": { "type": "loki", "uid": "loki" },
       "gridPos": { "h": 10, "w": 24, "x": 0, "y": 31 },
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
         "sortOrder": "Descending",
-        "enableLogDetails": true
+        "enableLogDetails": true,
+        "dedupStrategy": "exact"
       },
       "targets": [
         {
-          "expr": "{service=\"backend\"} |= \"\\\"@l\\\":\\\"Error\\\"\"",
+          "expr": "{service_name=~\"timetracker-.+\"} |= \"\\\"@l\\\":\\\"Error\\\"\"",
           "queryType": "range"
         }
       ]
