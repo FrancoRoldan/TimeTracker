@@ -81,8 +81,7 @@ builder.Services.AddSwaggerGen();
 
 var cnnString = builder.Configuration.GetConnectionString("DbConnString");
 
-// El interceptor de auditoría es scoped: mantiene estado entre las dos fases del
-// guardado (§20) y necesita el usuario de la request.
+
 builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
 builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
@@ -124,7 +123,8 @@ builder.Services.AddScoped<ITelemetryIngestionService, TelemetryIngestionService
 
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => {
+    .AddJwtBearer(options =>
+    {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -176,15 +176,8 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    // El esquema se asegura SIEMPRE, no solo cuando se siembran datos de ejemplo.
-    // Antes esta llamada vivía dentro del if (seedData), así que con
-    // SEED_DATABASE=false una base nueva se quedaba sin ninguna tabla y la primera
-    // consulta fallaba con 42P01: relation "Users" does not exist.
-    // Sembrar datos y crear el esquema son decisiones independientes.
     dbContext.Database.EnsureCreated();
 
-    // La tabla de auditoría, aparte: EnsureCreated no actúa si la base ya existe,
-    // y las bases anteriores a la Fase 5 se quedarían sin ella (§20).
     if (AuditLogSchema.EnsureExists(dbContext))
         logger.LogInformation("Esquema verificado");
     else
@@ -226,7 +219,7 @@ app.UseSerilogRequestLogging(options =>
     options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
     {
         diagnosticContext.Set("RequestHost", httpContext.Request.Host.Value);
-        // Route template, nunca la URL con ids: evita explotar la cardinalidad (§8.2).
+
         var endpoint = httpContext.GetEndpoint();
         if (endpoint is not null)
             diagnosticContext.Set("Endpoint", endpoint.DisplayName);
@@ -235,7 +228,7 @@ app.UseSerilogRequestLogging(options =>
 
 app.UseCors("CorsPolicy");
 
-// Rate limiting: protege el endpoint público /api/telemetry (§18).
+
 app.UseRateLimiter();
 
 app.UseHttpsRedirection();
@@ -249,8 +242,7 @@ app.UseTenantContext();
 
 app.MapControllers();
 
-// --- Health checks (§8.5) ---------------------------------------------------
-// /health se mantiene por compatibilidad con el healthcheck de docker-compose.yml.
+
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = _ => false, // liveness: solo comprueba que el proceso responde
@@ -270,7 +262,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     ResponseWriter = WriteHealthResponse
 }).AllowAnonymous().WithTags("Health");
 
-// --- Identidad del despliegue (§29) -----------------------------------------
+
 app.MapGet("/info", (ServiceInfo info) => Results.Ok(new
 {
     application = info.Name,
