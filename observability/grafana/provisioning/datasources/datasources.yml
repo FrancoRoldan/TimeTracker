@@ -50,26 +50,32 @@ datasources:
     jsonData:
       # Extrae el traceId del log JSON de Serilog y lo convierte en un enlace
       # directo a la traza en Tempo. Es el salto síntoma -> causa de §32.
-      # OJO: el marcador del valor capturado se escribe $${__value.raw}, con doble $.
-      # Grafana interpola $VAR en el aprovisionamiento y un solo $ hacía que
-      # ${__value.raw} se sustituyera por vacío: el enlace perdía el identificador.
+      # OJO con el marcador del valor capturado. Grafana interpola $VAR en los
+      # archivos de aprovisionamiento, así que un solo $ hace que ${__value.raw}
+      # se guarde como cadena vacía.
+      #
+      # Para los enlaces a Tempo eso es lo CORRECTO: con url vacío, Grafana usa el
+      # valor capturado por el regex como identificador de traza, y los enlaces
+      # aparecen. Escaparlo como $${__value.raw} guardaba el literal y los enlaces
+      # dejaban de renderizarse. Se deja el $ simple a propósito.
       derivedFields:
         - name: TraceID
           matcherRegex: '"traceId":"([a-f0-9]{32})"'
-          url: '$${__value.raw}'
+          url: '${__value.raw}'
           datasourceUid: tempo
           urlDisplayLabel: 'Ver traza'
         # Los eventos de telemetría del frontend traen el traceId del navegador
         # en un campo propio: también debe enlazar.
         - name: BrowserTraceID
           matcherRegex: '"BrowserTraceId":"([a-f0-9]{32})"'
-          url: '$${__value.raw}'
+          url: '${__value.raw}'
           datasourceUid: tempo
           urlDisplayLabel: 'Ver traza del navegador'
 
         # El SessionId no enlaza a una traza sino de vuelta a Loki, filtrando por
         # esa sesión: es el paso 2 del runbook de soporte, "qué venía haciendo el
-        # usuario". Así se llega con un clic en vez de copiar y pegar el id.
+        # usuario". Acá el destino es una consulta de LogQL y no un identificador
+        # suelto, así que sí hace falta el literal escapado con $$.
         - name: SessionId
           matcherRegex: '"SessionId":"([^"]+)"'
           url: '{service_name="timetracker-api"} |= "$${__value.raw}"'
