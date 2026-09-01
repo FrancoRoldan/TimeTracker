@@ -10,6 +10,7 @@ export interface TimeEntry {
   startTime: string;
   endTime: string | null;
   durationMinutes: number | null;
+  registeredInDevOps: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -525,6 +525,9 @@ namespace Core.Services.TimeTracking
             if (request.Description != null)
                 entry.Description = request.Description;
 
+            if (request.RegisteredInDevOps.HasValue)
+                entry.RegisteredInDevOps = request.RegisteredInDevOps.Value;
+
             // Validate StartTime < EndTime
             if (entry.EndTime.HasValue && entry.StartTime >= entry.EndTime.Value)
                 return Result<TimeEntryResponse>.Failure("Start time must be before end time");
@@ -573,7 +576,8 @@ namespace Core.Services.TimeTracking
                 StartTime = entry.StartTime,
                 EndTime = entry.EndTime,
                 DurationMinutes = entry.DurationMinutes,
-                Description = entry.Description
+                Description = entry.Description,
+                RegisteredInDevOps = entry.RegisteredInDevOps
             };
         }
     }

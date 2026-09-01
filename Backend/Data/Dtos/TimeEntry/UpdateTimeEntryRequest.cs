@@ -7,5 +7,6 @@ namespace Data.Dtos.TimeEntry
         public DateTime? StartTime { get; init; }
         public DateTime? EndTime { get; init; }
         public string? Description { get; init; }
+        public bool? RegisteredInDevOps { get; init; }
     }
 }

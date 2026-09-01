@@ -2139,10 +2139,19 @@ con la etiqueta de Docker `observability.service.name` y Promtail la convierte e
 el label `service_name` de Loki. Sin eso el span decía `timetracker-api` y el log
 decía `backend`, y Grafana no encontraba nada.
 
-**Dashboards.** `API Overview`, `Negocio y Frontend` y `Auditoría`. Las consultas
-usan nombres de métrica verificados contra Prometheus, no supuestos: el exportador
-del Collector agrega la unidad al nombre (`timetracker_users_logged_in_logins_total`,
-`timetracker_web_vital_milliseconds`).
+**Dashboards.** `API Overview`, `Negocio`, `Frontend y RUM` y `Auditoría`. Las
+consultas usan nombres de métrica verificados contra Prometheus, no supuestos: el
+exportador del Collector agrega la unidad al nombre
+(`timetracker_users_logged_in_logins_total`, `timetracker_web_vital_milliseconds`).
+
+> **Ajuste 2026-08-31:** el dashboard `Negocio y Frontend` original mezclaba
+> métricas de negocio con Web Vitals, errores de frontend y el panel de recorrido
+> de sesión, todo apretado al final del dashboard. Se separó en dos archivos:
+> `timetracker-negocio.json` (solo negocio) y `timetracker-frontend.json`
+> (Web Vitals, errores del navegador y recorrido de sesión, con sus propias
+> variables `ruta` y `sesion`). El aprovisionamiento es por directorio
+> (`observability/grafana/provisioning/dashboards/dashboards.yml`), así que no
+> requirió cambios de configuración.
 
 **Dos ajustes que salieron de usarlos de verdad:**
 

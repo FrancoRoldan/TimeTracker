@@ -24,6 +24,8 @@ namespace Data.Models
         [MaxLength(1000)]
         public string? Description { get; set; }
 
+        public bool RegisteredInDevOps { get; set; }
+
         // Computed property (not mapped to DB)
         [NotMapped]
         public int? DurationMinutes => EndTime.HasValue

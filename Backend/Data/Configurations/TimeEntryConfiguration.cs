@@ -13,6 +13,9 @@ namespace Data.Configurations
             builder.Property(te => te.Description)
                 .HasMaxLength(1000);
 
+            builder.Property(te => te.RegisteredInDevOps)
+                .HasDefaultValue(false);
+
             builder.HasOne(te => te.Issue)
                 .WithMany(i => i.TimeEntries)
                 .HasForeignKey(te => te.IssueId)

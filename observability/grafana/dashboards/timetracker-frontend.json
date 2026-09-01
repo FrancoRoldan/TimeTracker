@@ -1,0 +1,282 @@
+{
+  "uid": "timetracker-frontend",
+  "title": "TimeTracker — Frontend y RUM",
+  "description": "RUM del navegador, errores de frontend/API vistos por el usuario y trazabilidad de sesión. Separado del dashboard de Negocio para que 'pegar una sesión y revisar qué vio el usuario' no compita por espacio con las métricas de negocio.",
+  "tags": [
+    "timetracker",
+    "frontend",
+    "rum"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "ruta",
+        "label": "Ruta (pantalla)",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": []
+      },
+      {
+        "name": "sesion",
+        "label": "Sesión (pegar sessionId)",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": []
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "row",
+      "title": "Web Vitals y errores",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Web Vitals P75 — LCP, FCP, TTFB, INP",
+      "description": "Medidos en el dispositivo real del usuario (§16). SLO de §28: LCP P75 por debajo de 2,5 s en escritorio. CLS va aparte porque no es una medida de tiempo.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "fillOpacity": 5,
+            "lineWidth": 2,
+            "showPoints": "always"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 2500
+              },
+              {
+                "color": "red",
+                "value": 4000
+              }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.75, sum by (le, vital_name) (rate(timetracker_web_vital_milliseconds_bucket{vital_name!=\"CLS\"}[$__rate_interval])))",
+          "legendFormat": "{{vital_name}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Errores del navegador y CLS",
+      "description": "CLS es un desplazamiento acumulado sin unidad, por eso no comparte panel con las métricas en milisegundos.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "drawStyle": "bars"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CLS P75"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "round(sum by (route) (increase(timetracker_frontend_errors_total[$__interval])))",
+          "legendFormat": "errores JS — {{route}}"
+        },
+        {
+          "expr": "histogram_quantile(0.75, sum by (le) (rate(timetracker_web_vital_milliseconds_bucket{vital_name=\"CLS\"}[$__rate_interval])))",
+          "legendFormat": "CLS P75"
+        }
+      ],
+      "interval": "1m"
+    },
+    {
+      "type": "logs",
+      "title": "Errores que vio el usuario — punto de partida de soporte",
+      "description": "Todo lo que el navegador reportó como fallido: errores de JavaScript y errores de llamadas a la API. Antes filtraba por nivel Error y dejaba fuera los api_error, que se registran como Warning y son justamente los que aparecen cuando un usuario dice 'no puedo guardar'. Copiar el SessionId de la línea y pegarlo en la variable Sesión.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "dedupStrategy": "exact"
+      },
+      "targets": [
+        {
+          "expr": "{service_name=\"timetracker-api\"} |~ \"Error de frontend|Error de API visto\" |= \"$ruta\"",
+          "queryType": "range"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Uso de la aplicación",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Eventos de uso más frecuentes",
+      "description": "Catálogo de §23. La métrica dice cuántos; para saber quién y en qué orden está el panel de recorrido de sesión.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "round(sum by (event_name) (increase(timetracker_frontend_events_total[$__interval])))",
+          "legendFormat": "{{event_name}}"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Recorrido de una sesión — pegar el sessionId en la variable de arriba",
+      "description": "Responde 'qué venía haciendo el usuario antes del error' (§23). Sin un sessionId muestra los últimos eventos de uso de todas las sesiones. El sessionId aparece en cualquier error del navegador.",
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Ascending",
+        "enableLogDetails": true
+      },
+      "targets": [
+        {
+          "expr": "{service_name=\"timetracker-api\"} |= \"$sesion\" |~ \"Evento de uso|Error de API visto|Error de frontend\"",
+          "queryType": "range"
+        }
+      ]
+    }
+  ]
+}

@@ -13,5 +13,6 @@ namespace Data.Dtos.TimeEntry
         public DateTime? EndTime { get; init; }
         public int? DurationMinutes { get; init; }
         public string? Description { get; init; }
+        public bool RegisteredInDevOps { get; init; }
     }
 }

@@ -11,6 +11,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginatorModule, PageEvent, MatPaginatorIntl } from '@angular/material/paginator';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { TimeEntryService } from '../../services/time-entry.service';
 import { TimeEntry } from '../../interfaces';
 import { TimeEntryModalComponent } from '../time-entry-modal/time-entry-modal.component';
@@ -35,7 +37,9 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
     MatNativeDateModule,
     MatProgressSpinnerModule,
     MatPaginatorModule,
-    MatChipsModule
+    MatChipsModule,
+    MatCheckboxModule,
+    MatTooltipModule
   ],
   providers: [
     { provide: MatPaginatorIntl, useClass: SpanishPaginatorIntl }
@@ -212,6 +216,19 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
               <th mat-header-cell *matHeaderCellDef>Duración</th>
               <td mat-cell *matCellDef="let entry">
                 <span class="hours-badge">{{ formatDuration(entry.durationMinutes) }}</span>
+              </td>
+            </ng-container>
+
+            <!-- Azure DevOps Column -->
+            <ng-container matColumnDef="devops">
+              <th mat-header-cell *matHeaderCellDef>DevOps</th>
+              <td mat-cell *matCellDef="let entry">
+                <mat-checkbox
+                  [checked]="entry.registeredInDevOps"
+                  [disabled]="devopsUpdatingIds().has(entry.id)"
+                  matTooltip="¿Ya está registrado en Azure DevOps?"
+                  (change)="onToggleDevOps(entry, $event.checked)">
+                </mat-checkbox>
               </td>
             </ng-container>
 
@@ -454,7 +471,8 @@ export class TimeEntryListComponent implements OnInit {
   public currentPage = signal<number>(0);
   public totalMinutes = signal<number>(0);
 
-  public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'actions'];
+  public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'devops', 'actions'];
+  public devopsUpdatingIds = signal<Set<number>>(new Set());
 
   public totalHours = computed(() => {
     const totalMinutes = this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
@@ -649,6 +667,44 @@ export class TimeEntryListComponent implements OnInit {
           data: {
             title: 'Error!',
             message: extractErrorMessage(error, 'Failed to delete time entry. Please try again.')
+          } as ErrorDialogData
+        });
+      }
+    });
+  }
+
+  onToggleDevOps(entry: TimeEntry, checked: boolean): void {
+    const previousValue = entry.registeredInDevOps;
+
+    // Optimistic update so the checkbox reacts instantly
+    this.timeEntries.update(entries =>
+      entries.map(e => e.id === entry.id ? { ...e, registeredInDevOps: checked } : e)
+    );
+    this.devopsUpdatingIds.update(ids => new Set(ids).add(entry.id));
+
+    this.timeEntryService.updateTimeEntry(entry.id, { registeredInDevOps: checked }).subscribe({
+      next: () => {
+        this.devopsUpdatingIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(entry.id);
+          return next;
+        });
+      },
+      error: (error) => {
+        // Revert on failure
+        this.timeEntries.update(entries =>
+          entries.map(e => e.id === entry.id ? { ...e, registeredInDevOps: previousValue } : e)
+        );
+        this.devopsUpdatingIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(entry.id);
+          return next;
+        });
+        console.error('Error updating DevOps flag:', error);
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'No se pudo actualizar el estado de Azure DevOps.')
           } as ErrorDialogData
         });
       }
