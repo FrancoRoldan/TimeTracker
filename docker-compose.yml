@@ -96,13 +96,6 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile
-      args:
-        # URL del API para el frontend (debe ser accesible desde el navegador)
-        # Configúrala en el archivo .env
-        API_URL: ${API_URL:-http://localhost:5083/api}
-        # Acompañan a cada error y Web Vital que reporta el navegador (§29).
-        APP_VERSION: ${BUILD_VERSION:-unknown}
-        ENV_NAME: ${ASPNETCORE_ENVIRONMENT:-Production}
     container_name: timetracker-frontend
     restart: unless-stopped
     labels:
@@ -110,6 +103,13 @@ services:
 
     environment:
       TZ: ${TIMEZONE:-America/Argentina/Buenos_Aires}
+      # Config de runtime (docker-entrypoint.sh regenera assets/env.js al arrancar):
+      # cambiar estas variables no requiere rebuildear la imagen.
+      # URL del API para el frontend (debe ser accesible desde el navegador)
+      API_URL: ${API_URL:-http://localhost:5083/api}
+      # Acompañan a cada error y Web Vital que reporta el navegador (§29).
+      APP_VERSION: ${BUILD_VERSION:-unknown}
+      ENV_NAME: ${ASPNETCORE_ENVIRONMENT:-Production}
     ports:
       - "${FRONTEND_PORT:-4200}:80"
     depends_on:

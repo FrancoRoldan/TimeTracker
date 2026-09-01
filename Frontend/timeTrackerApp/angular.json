@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "testApp": {
+    "timetracker-app": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/test-app",
+            "outputPath": "dist/timetracker-app",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": [
@@ -73,10 +73,10 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "testApp:build:production"
+              "buildTarget": "timetracker-app:build:production"
             },
             "development": {
-              "buildTarget": "testApp:build:development"
+              "buildTarget": "timetracker-app:build:development"
             }
           },
           "defaultConfiguration": "development"

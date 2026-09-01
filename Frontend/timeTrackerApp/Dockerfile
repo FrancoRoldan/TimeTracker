@@ -1,15 +1,16 @@
 # TimeTracker Frontend - Standalone Dockerfile
 # Este Dockerfile permite ejecutar el frontend de forma independiente
-# Uso: docker build --build-arg API_URL=http://backend:8080/api -t timetracker-frontend .
-#      docker run -p 4200:80 timetracker-frontend
+# Uso: docker build -t timetracker-frontend .
+#      docker run -p 4200:80 -e API_URL=http://backend:8080/api timetracker-frontend
+#
+# La config (API_URL, APP_VERSION, ENV_NAME) se inyecta en runtime, no en build-time
+# (ver docker-entrypoint.sh): la imagen se buildea una sola vez y sirve para
+# cualquier entorno cambiando solo variables de entorno del contenedor.
 
 # ============================================
 # Stage 1: Build Angular Application
 # ============================================
 FROM node:20-alpine AS build
-
-# Build argument for API URL (default para desarrollo local)
-ARG API_URL=http://localhost:5083/api
 
 WORKDIR /app
 
@@ -21,18 +22,6 @@ RUN npm ci --legacy-peer-deps
 
 # Copy application source
 COPY . .
-
-# Replace API_URL in environment.ts before building
-RUN echo "==== INICIO CONFIGURACIÓN API URL ====" && \
-    echo "🔧 API_URL recibido: ${API_URL}" && \
-    echo "📄 Contenido ANTES del reemplazo:" && \
-    cat src/environments/environment.ts && \
-    echo "" && \
-    echo "🔄 Ejecutando reemplazo..." && \
-    sed -i.bak "s|API_URL_PLACEHOLDER|${API_URL}|g" src/environments/environment.ts && \
-    echo "✅ Contenido DESPUÉS del reemplazo:" && \
-    cat src/environments/environment.ts && \
-    echo "==== FIN CONFIGURACIÓN API URL ===="
 
 # Build for production
 RUN npm run build -- --configuration production
@@ -49,10 +38,14 @@ RUN apk add --no-cache wget
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy built Angular app from build stage
-COPY --from=build /app/dist/test-app/browser /usr/share/nginx/html
+COPY --from=build /app/dist/timetracker-app/browser /usr/share/nginx/html
 
 # Create health check endpoint
 RUN echo "healthy" > /usr/share/nginx/html/health
+
+# Entrypoint: genera assets/env.js con la config de runtime antes de arrancar nginx
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Set timezone
 ENV TZ=America/Argentina/Buenos_Aires
@@ -65,5 +58,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
 
-# Start nginx
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

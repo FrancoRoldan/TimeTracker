@@ -1,12 +1,14 @@
-// NOTA: Este archivo es modificado en build-time por Docker.
+// Config de producción, leída en runtime desde window.__env (ver public/assets/env.js
+// y docker-entrypoint.sh). Así la imagen Docker se buildea una sola vez y se
+// despliega en cualquier entorno cambiando solo variables de entorno del contenedor.
 // Para desarrollo local se usa environment.development.ts (fileReplacements).
-// El Dockerfile reemplaza los PLACEHOLDER con los valores de los ARG.
-// Fuente canónica: environment.template.ts
-export const environment = {
-    baseUrl: "API_URL_PLACEHOLDER",
+const runtimeEnv = (window as any).__env ?? {};
 
-    appVersion: "APP_VERSION_PLACEHOLDER",
-    envName: "ENV_NAME_PLACEHOLDER",
+export const environment = {
+    baseUrl: runtimeEnv.apiUrl,
+
+    appVersion: runtimeEnv.appVersion,
+    envName: runtimeEnv.envName,
 
     telemetry: {
         enabled: true,
