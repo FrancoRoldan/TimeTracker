@@ -95,7 +95,7 @@ services:
   frontend:
     build:
       context: ./Frontend
-      dockerfile: Dockerfile
+      dockerfile: timeTrackerApp/Dockerfile
     container_name: timetracker-frontend
     restart: unless-stopped
     labels:
