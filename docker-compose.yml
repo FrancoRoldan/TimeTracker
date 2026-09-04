@@ -94,8 +94,8 @@ services:
   # Frontend Angular
   frontend:
     build:
-      context: ./Frontend
-      dockerfile: timeTrackerApp/Dockerfile
+      context: ./Frontend/timeTrackerApp
+      dockerfile: Dockerfile
     container_name: timetracker-frontend
     restart: unless-stopped
     labels:
