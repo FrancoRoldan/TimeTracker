@@ -1,29 +1,29 @@
 /**
- * Full E2E flow:
- *   login → create 2 companies → select company A (via list) →
- *   select company A (via sidebar) → create project →
- *   create issue → add manual time entry →
- *   verify company isolation → switch back → cleanup via API
+ * Flujo E2E completo:
+ *   iniciar sesión → crear 2 empresas → seleccionar la empresa A (desde la lista) →
+ *   seleccionar la empresa A (desde la barra lateral) → crear proyecto →
+ *   crear incidencia → añadir registro de tiempo manual →
+ *   verificar el aislamiento entre empresas → volver a cambiar → limpiar mediante la API
  *
- * WHY cy.selectCompany is called before each resource-creation test:
- *   cy.session() restores the initial login snapshot which has no
- *   selectedCompany in localStorage. CompanyService reads it from
- *   localStorage on init, so after every beforeEach the active company
- *   is null and "Crear proyecto" is disabled. Each test that needs an
- *   active company must explicitly select one.
+ * POR QUÉ se llama a cy.selectCompany antes de cada prueba de creación de recursos:
+ *   cy.session() restaura la sesión inicial de inicio de sesión, que no tiene
+ *   selectedCompany en localStorage. CompanyService lo lee de
+ *   localStorage al inicializarse, por lo que después de cada beforeEach la
+ *   empresa activa es null y "Crear proyecto" está deshabilitado. Cada prueba
+ *   que necesita una empresa activa debe seleccionar una explícitamente.
  *
- * Dates are selected via the Material calendar picker (cy.pickToday) to
- * avoid all locale/Date.parse format issues.
+ * Las fechas se seleccionan mediante el selector de calendario de Material
+ * (cy.pickToday) para evitar problemas de formato con la configuración regional
+ * y Date.parse.
  *
- * Credentials and URLs: cypress.env.json (gitignored).
- * Run: npx cypress open  |  npx cypress run --headless
+ * Credenciales y URLs: cypress.env.json (ignorado por Git).
+ * Ejecutar: npx cypress open  |  npx cypress run --headless
  */
 
 const ts = Date.now().toString().slice(-6);
 
-// Derive a unique 2-hour window from ts so concurrent/repeated runs don't
-// hit the backend's per-user overlap guard (which is not company-scoped).
-const _startHour = parseInt(ts) % 22; // 0–21, keeps endHour ≤ 23
+
+const _startHour = parseInt(ts) % 22; // 0–21, mantiena la hora final ≤ 23
 const _pad = (n: number) => String(n).padStart(2, '0');
 
 const TEST_DATA = {
@@ -40,13 +40,12 @@ const TEST_DATA = {
 
 const ids = { companyA: 0, companyB: 0, project: 0, issue: 0, timeEntry: 0 };
 
-// Opens a mat-select inside the open dialog (overlay renders outside dialog so
-// we call this OUTSIDE cy.within() blocks)
+
 function openDialogSelect(formControlName: string): void {
   cy.get(`mat-dialog-container mat-select[formcontrolname="${formControlName}"]`).click();
 }
 
-// Bypass deprecated Cypress.env(key) overload
+
 const cypressEnv = (Cypress as unknown as { env: () => Record<string, string> }).env();
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,9 +54,6 @@ describe('TimeTracker – Full E2E Flow', () => {
 
   beforeEach(() => {
     cy.login();
-    // Re-issue JWT so companyIds[] in claims includes companies created during
-    // this run. cy.session() restores the original login token which doesn't
-    // know about companies created after that snapshot.
     cy.refreshAuthToken();
   });
 
@@ -68,7 +64,7 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.url().should('include', '/dashboard');
   });
 
-  // ── 2. Create Company A ──────────────────────────────────────────────────
+  // ── 2. Crear Empresa A ──────────────────────────────────────────────────
 
   it('creates company A', () => {
     cy.intercept('POST', '**/company').as('createCompanyA');
@@ -88,7 +84,7 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.contains('mat-card-title', TEST_DATA.companyA.name).should('be.visible');
   });
 
-  // ── 3. Create Company B ──────────────────────────────────────────────────
+  // ── 3. Crear Empresa B ──────────────────────────────────────────────────
 
   it('creates company B', () => {
     cy.intercept('POST', '**/company').as('createCompanyB');
@@ -108,8 +104,8 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.contains('mat-card-title', TEST_DATA.companyB.name).should('be.visible');
   });
 
-  // ── 4. Select Company A via company list ─────────────────────────────────
-  // Tests the "Seleccionar" button on the company card specifically.
+  // ── 4. Seleccionar Empresa A ─────────────────────────────────
+  // Prueba el seleccionar.
 
   it('selects company A as active via company list', () => {
     cy.visit('/companies');
@@ -123,8 +119,7 @@ describe('TimeTracker – Full E2E Flow', () => {
       .should('contain.text', TEST_DATA.companyA.name);
   });
 
-  // ── 5. Create Project under Company A ────────────────────────────────────
-  // Must re-select company — cy.session restores login snapshot (no active company).
+  // ── 5. Crear Proyecto bajo Empresa A ────────────────────────────────────
 
   it('creates a project under company A', () => {
     cy.intercept('POST', '**/project').as('createProject');
@@ -153,7 +148,7 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.contains(TEST_DATA.project.name).should('be.visible');
   });
 
-  // ── 6. Create Issue inside the Project ───────────────────────────────────
+  // ── 6. Crear Incidencia dentro del Proyecto ───────────────────────────────────
 
   it('creates an issue under the project', () => {
     cy.intercept('POST', '**/issue').as('createIssue');
@@ -184,7 +179,7 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.contains(TEST_DATA.issue.title).should('be.visible');
   });
 
-  // ── 7. Add Manual Time Entry ─────────────────────────────────────────────
+  // ── 7. Agregar Entrada de Tiempo Manual ─────────────────────────────────────────────
 
   it('adds a manual time entry', () => {
     cy.intercept('POST', '**/time/manual').as('createTimeEntry');
@@ -215,7 +210,7 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.contains(TEST_DATA.timeEntry.description).should('be.visible');
   });
 
-  // ── 8. Switch to Company B – verify tenant isolation ─────────────────────
+  // ── 8. Cambiar a Empresa B – comprobar isolation de tenant ─────────────────────
 
   it('switches to company B and verifies no company A projects', () => {
     cy.visit('/projects');
@@ -224,18 +219,18 @@ describe('TimeTracker – Full E2E Flow', () => {
     cy.contains('mat-card-title', TEST_DATA.project.name).should('not.exist');
   });
 
-  // ── 9. Switch back to Company A ──────────────────────────────────────────
+  // ── 9. Cambiar a Empresa A ──────────────────────────────────────────
 
   it('switches back to company A and sees the project again', () => {
     cy.visit('/projects');
 
-    cy.selectCompany(TEST_DATA.companyB.name);  // start from B to test the switch
+    cy.selectCompany(TEST_DATA.companyB.name);  
     cy.selectCompany(TEST_DATA.companyA.name);
 
     cy.contains('mat-card-title', TEST_DATA.project.name).should('be.visible');
   });
 
-  // ── Cleanup ───────────────────────────────────────────────────────────────
+  // ── Limpieza ───────────────────────────────────────────────────────────────
 
   after(() => {
     cy.window().then((win) => {
