@@ -13,10 +13,10 @@ import { MatPaginatorModule, PageEvent, MatPaginatorIntl } from '@angular/materi
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { forkJoin, of } from 'rxjs';
 import { TimeEntryService } from '../../services/time-entry.service';
 import { TimeEntry } from '../../interfaces';
 import { TimeEntryModalComponent } from '../time-entry-modal/time-entry-modal.component';
-import { TimeTrackerComponent } from "../time-tracker/time-tracker.component";
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../shared/components/confirm-dialog-component/confirm-dialog-component.component';
 import { ErrorDialogComponent, ErrorDialogData } from '../../../shared/components/error-dialog/error-dialog.component';
 import { extractErrorMessage } from '../../../shared/utils/error-handler.util';
@@ -165,8 +165,72 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
           <p>Crea tu primer registro de tiempo para comenzar a registrar tu trabajo</p>
         </div>
       } @else {
+        <!-- Bulk selection bar -->
+        @if (selectedCount() > 0) {
+          <div class="bulk-bar">
+            <div class="bulk-bar-info">
+              <mat-icon>done_all</mat-icon>
+              <span>{{ selectedCount() }} {{ selectedCount() === 1 ? 'registro seleccionado' : 'registros seleccionados' }}</span>
+              <button mat-button (click)="clearSelection()">Cancelar</button>
+            </div>
+            <div class="bulk-bar-actions">
+              <button mat-stroked-button [disabled]="isBulkWorking()" (click)="bulkSetDevOps(true)">
+                <mat-icon>cloud_done</mat-icon>
+                Marcar en DevOps
+              </button>
+              <button mat-stroked-button [disabled]="isBulkWorking()" (click)="bulkSetDevOps(false)">
+                <mat-icon>cloud_off</mat-icon>
+                Desmarcar DevOps
+              </button>
+              <button mat-stroked-button color="warn" [disabled]="isBulkWorking()" (click)="confirmBulkDelete()">
+                <mat-icon>delete</mat-icon>
+                Eliminar
+              </button>
+            </div>
+          </div>
+        }
+
+        @if (showSelectAllBanner()) {
+          <div class="select-all-banner">
+            <span>Se seleccionaron los {{ timeEntries().length }} registros de esta página.</span>
+            <button mat-button (click)="selectAllMatching()" [disabled]="selectingAll()">
+              @if (selectingAll()) {
+                <mat-spinner diameter="16" style="display:inline-block; margin-right: 6px;"></mat-spinner>
+              }
+              Seleccionar los {{ totalItems() }} registros que coinciden con el filtro
+            </button>
+          </div>
+        }
+
+        @if (allFilteredSelected() && totalItems() > timeEntries().length) {
+          <div class="select-all-banner">
+            <span>Los {{ totalItems() }} registros que coinciden con el filtro están seleccionados.</span>
+            <button mat-button (click)="clearSelection()">Quitar selección</button>
+          </div>
+        }
+
+        <!-- Desktop / tablet table -->
         <div class="table-container">
           <table mat-table [dataSource]="timeEntries()" class="time-entries-table">
+            <!-- Select Column -->
+            <ng-container matColumnDef="select">
+              <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox
+                  [checked]="isPageFullySelected()"
+                  [indeterminate]="isPagePartiallySelected()"
+                  aria-label="Seleccionar todos los registros de la página"
+                  (change)="toggleAllOnPage()">
+                </mat-checkbox>
+              </th>
+              <td mat-cell *matCellDef="let entry">
+                <mat-checkbox
+                  [checked]="isSelected(entry.id)"
+                  [attr.aria-label]="'Seleccionar registro del ' + formatDate(entry.startTime)"
+                  (change)="toggleRow(entry.id)">
+                </mat-checkbox>
+              </td>
+            </ng-container>
+
             <!-- Date Column -->
             <ng-container matColumnDef="date">
               <th mat-header-cell *matHeaderCellDef>Fecha</th>
@@ -176,20 +240,24 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
             <!-- Project Column -->
             <ng-container matColumnDef="project">
               <th mat-header-cell *matHeaderCellDef>Proyecto</th>
-              <td mat-cell *matCellDef="let entry">{{ entry.projectName }}</td>
+              <td mat-cell *matCellDef="let entry">
+                <span class="truncate-text" [matTooltip]="entry.projectName" matTooltipShowDelay="400">{{ entry.projectName }}</span>
+              </td>
             </ng-container>
 
             <!-- Issue Column -->
             <ng-container matColumnDef="issue">
               <th mat-header-cell *matHeaderCellDef>Problema</th>
-              <td mat-cell *matCellDef="let entry">{{ entry.issueTitle || '-' }}</td>
+              <td mat-cell *matCellDef="let entry">
+                <span class="truncate-text" [matTooltip]="entry.issueTitle || ''" matTooltipShowDelay="400">{{ entry.issueTitle || '-' }}</span>
+              </td>
             </ng-container>
 
             <!-- Description Column -->
             <ng-container matColumnDef="description">
               <th mat-header-cell *matHeaderCellDef>Descripción</th>
               <td mat-cell *matCellDef="let entry">
-                <span class="description-text">{{ entry.description || 'Sin descripción' }}</span>
+                <span class="truncate-text description-text" [matTooltip]="entry.description || ''" matTooltipShowDelay="400">{{ entry.description || 'Sin descripción' }}</span>
               </td>
             </ng-container>
 
@@ -234,20 +302,81 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
 
             <!-- Actions Column -->
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef>Acciones</th>
+              <th mat-header-cell *matHeaderCellDef class="actions-header">Acciones</th>
               <td mat-cell *matCellDef="let entry">
-                <button mat-icon-button (click)="editEntry(entry)" [disabled]="!entry.endTime">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button color="warn" (click)="confirmDelete(entry)">
-                  <mat-icon>delete</mat-icon>
-                </button>
+                <div class="row-actions">
+                  <button mat-icon-button matTooltip="Editar" (click)="editEntry(entry)" [disabled]="!entry.endTime">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" matTooltip="Eliminar" (click)="confirmDelete(entry)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
               </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+            <tr mat-row
+                *matRowDef="let row; columns: displayedColumns;"
+                class="entry-row"
+                [class.selected-row]="isSelected(row.id)"></tr>
           </table>
+        </div>
+
+        <!-- Mobile card list -->
+        <div class="mobile-cards">
+          @for (entry of timeEntries(); track entry.id) {
+            <div class="entry-card" [class.selected-row]="isSelected(entry.id)">
+              <div class="entry-card-top">
+                <mat-checkbox
+                  [checked]="isSelected(entry.id)"
+                  [attr.aria-label]="'Seleccionar registro del ' + formatDate(entry.startTime)"
+                  (change)="toggleRow(entry.id)">
+                </mat-checkbox>
+                <span class="entry-card-date">{{ formatDate(entry.startTime) }}</span>
+                <span class="hours-badge">{{ formatDuration(entry.durationMinutes) }}</span>
+              </div>
+
+              <div class="entry-card-body">
+                <div class="entry-card-titles">
+                  <span class="entry-card-project">{{ entry.projectName }}</span>
+                  @if (entry.issueTitle) {
+                    <span class="entry-card-issue">{{ entry.issueTitle }}</span>
+                  }
+                </div>
+                @if (entry.description) {
+                  <p class="entry-card-description">{{ entry.description }}</p>
+                }
+                <div class="entry-card-time">
+                  <mat-icon>schedule</mat-icon>
+                  <span>{{ formatTime(entry.startTime) }}</span>
+                  <span>–</span>
+                  @if (entry.endTime) {
+                    <span>{{ formatTime(entry.endTime) }}</span>
+                  } @else {
+                    <span class="active-badge">Activo</span>
+                  }
+                </div>
+              </div>
+
+              <div class="entry-card-footer">
+                <mat-checkbox
+                  [checked]="entry.registeredInDevOps"
+                  [disabled]="devopsUpdatingIds().has(entry.id)"
+                  (change)="onToggleDevOps(entry, $event.checked)">
+                  DevOps
+                </mat-checkbox>
+                <div class="entry-card-actions">
+                  <button mat-icon-button matTooltip="Editar" (click)="editEntry(entry)" [disabled]="!entry.endTime">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button color="warn" matTooltip="Eliminar" (click)="confirmDelete(entry)">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
         </div>
 
         <mat-paginator
@@ -405,6 +534,49 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
       opacity: 0.8;
     }
 
+    /* Bulk selection bar */
+    .bulk-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background-color: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+      border-radius: 8px;
+      padding: 8px 16px;
+      margin-bottom: 12px;
+    }
+
+    .bulk-bar-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .bulk-bar-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .select-all-banner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+      background-color: var(--mat-sys-surface-variant);
+      border-radius: 6px;
+      padding: 6px 12px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
     .table-container {
       overflow-x: auto;
       background-color: var(--mat-sys-surface);
@@ -416,12 +588,61 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
       width: 100%;
     }
 
-    .description-text {
+    .time-entries-table th,
+    .time-entries-table td {
+      font-size: 14px;
+      padding-right: 12px;
+    }
+
+    .time-entries-table .mat-column-select {
+      width: 44px;
+      padding-left: 8px;
+    }
+
+    .time-entries-table .mat-column-date {
+      width: 100px;
+      white-space: nowrap;
+    }
+
+    .time-entries-table .mat-column-project,
+    .time-entries-table .mat-column-issue {
+      max-width: 150px;
+    }
+
+    .time-entries-table .mat-column-description {
+      max-width: 220px;
+    }
+
+    .time-entries-table .mat-column-startTime,
+    .time-entries-table .mat-column-endTime {
+      width: 76px;
+      white-space: nowrap;
+    }
+
+    .time-entries-table .mat-column-hours {
+      width: 90px;
+      white-space: nowrap;
+    }
+
+    .time-entries-table .mat-column-devops {
+      width: 64px;
+      text-align: center;
+    }
+
+    .time-entries-table .mat-column-actions {
+      width: 96px;
+    }
+
+    .truncate-text {
       display: block;
-      max-width: 300px;
+      max-width: 100%;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .description-text {
+      max-width: 220px;
     }
 
     .active-badge {
@@ -432,24 +653,166 @@ import { SpanishPaginatorIntl } from '../../../shared/services/spanish-paginator
       border-radius: 4px;
       font-size: 12px;
       font-weight: 500;
+      white-space: nowrap;
     }
 
     .hours-badge {
       font-weight: 600;
       color: var(--mat-sys-primary);
+      white-space: nowrap;
+    }
+
+    /* Row action buttons: visible on hover/focus only (desktop) */
+    .row-actions {
+      display: flex;
+      gap: 2px;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .entry-row:hover .row-actions,
+    .entry-row:focus-within .row-actions {
+      opacity: 1;
+    }
+
+    .entry-row.selected-row {
+      background-color: var(--mat-sys-surface-variant);
+    }
+
+    /* Touch devices have no hover: keep actions visible */
+    @media (hover: none) {
+      .row-actions {
+        opacity: 1;
+      }
+    }
+
+    /* Mobile card list: hidden by default, shown under breakpoint */
+    .mobile-cards {
+      display: none;
+    }
+
+    .entry-card {
+      background-color: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .entry-card.selected-row {
+      border-color: var(--mat-sys-primary);
+      background-color: var(--mat-sys-surface-variant);
+    }
+
+    .entry-card-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .entry-card-date {
+      flex: 1;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .entry-card-body {
+      padding-left: 4px;
+    }
+
+    .entry-card-titles {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 4px;
+    }
+
+    .entry-card-project {
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .entry-card-issue {
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .entry-card-description {
+      margin: 4px 0;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .entry-card-time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .entry-card-time mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .entry-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .entry-card-actions {
+      display: flex;
+      gap: 4px;
     }
 
     @media (max-width: 768px) {
+      .container {
+        padding: 12px;
+      }
+
       .header {
         flex-direction: column;
       }
 
       .filters {
         flex-direction: column;
+        align-items: stretch;
+      }
+
+      .date-filter-buttons {
+        justify-content: flex-start;
       }
 
       mat-form-field {
         width: 100%;
+      }
+
+      .bulk-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .bulk-bar-actions {
+        justify-content: flex-start;
+      }
+
+      .table-container {
+        display: none;
+      }
+
+      .mobile-cards {
+        display: block;
       }
     }
   `]
@@ -471,8 +834,39 @@ export class TimeEntryListComponent implements OnInit {
   public currentPage = signal<number>(0);
   public totalMinutes = signal<number>(0);
 
-  public displayedColumns: string[] = ['date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'devops', 'actions'];
+  public displayedColumns: string[] = ['select', 'date', 'project', 'issue', 'description', 'startTime', 'endTime', 'hours', 'devops', 'actions'];
   public devopsUpdatingIds = signal<Set<number>>(new Set());
+
+  // Selection state (persists across pages so users can select entries beyond the current page)
+  public selectedIds = signal<Set<number>>(new Set());
+  public selectingAll = signal<boolean>(false);
+  public isBulkWorking = signal<boolean>(false);
+
+  public selectedCount = computed(() => this.selectedIds().size);
+
+  public isPageFullySelected = computed(() => {
+    const entries = this.timeEntries();
+    if (entries.length === 0) return false;
+    const selected = this.selectedIds();
+    return entries.every(e => selected.has(e.id));
+  });
+
+  public isPagePartiallySelected = computed(() => {
+    const entries = this.timeEntries();
+    const selected = this.selectedIds();
+    const count = entries.filter(e => selected.has(e.id)).length;
+    return count > 0 && count < entries.length;
+  });
+
+  public allFilteredSelected = computed(() => {
+    return this.totalItems() > 0 && this.selectedIds().size >= this.totalItems();
+  });
+
+  public showSelectAllBanner = computed(() => {
+    return this.isPageFullySelected()
+      && this.totalItems() > this.timeEntries().length
+      && !this.allFilteredSelected();
+  });
 
   public totalHours = computed(() => {
     const totalMinutes = this.timeEntries().reduce((sum, entry) => sum + (entry.durationMinutes ?? 0), 0);
@@ -490,27 +884,12 @@ export class TimeEntryListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    // Subscribe to time entries observable for automatic updates
-    this.timeEntryService.timeEntries$.subscribe(entries => {
-      // Only update if we're not in the middle of loading paginated results
+    // React only to timer start/stop happening elsewhere (e.g. the floating tracker widget),
+    // not to every mutation of the service's cache (create/update/delete already update
+    // this page locally, so reacting to them here would cause needless full reloads).
+    this.timeEntryService.activeTimer$.subscribe(() => {
       if (!this.isLoading()) {
-        // This handles real-time updates from start/stop timer
-        const currentEntries = this.timeEntries();
-        const currentEntryIds = new Set(currentEntries.map(e => e.id));
-        const hasNewEntries = entries.some(e => !currentEntryIds.has(e.id));
-
-        // Check if any existing entry has been updated (e.g., timer stopped)
-        const hasUpdatedEntries = entries.some(entry => {
-          const current = currentEntries.find(e => e.id === entry.id);
-          return current && (
-            current.endTime !== entry.endTime ||
-            current.durationMinutes !== entry.durationMinutes
-          );
-        });
-
-        if (hasNewEntries || hasUpdatedEntries || entries.length !== currentEntries.length) {
-          this.loadTimeEntries();
-        }
+        this.loadTimeEntries();
       }
     });
 
@@ -553,6 +932,7 @@ export class TimeEntryListComponent implements OnInit {
     this.startDate.set(startDate);
     this.endDate.set(endDate);
     this.currentPage.set(0); // Reset to first page
+    this.clearSelection();
     this.loadTimeEntries();
   }
 
@@ -596,6 +976,7 @@ export class TimeEntryListComponent implements OnInit {
     this.startDate.set(date);
     this.selectedDateFilter.set(''); // Deseleccionar filtro predefinido
     this.currentPage.set(0);
+    this.clearSelection();
     this.loadTimeEntries();
   }
 
@@ -603,6 +984,7 @@ export class TimeEntryListComponent implements OnInit {
     this.endDate.set(date);
     this.selectedDateFilter.set(''); // Deseleccionar filtro predefinido
     this.currentPage.set(0);
+    this.clearSelection();
     this.loadTimeEntries();
   }
 
@@ -611,7 +993,147 @@ export class TimeEntryListComponent implements OnInit {
     this.endDate.set(null);
     this.selectedDateFilter.set('');
     this.currentPage.set(0);
+    this.clearSelection();
     this.loadTimeEntries();
+  }
+
+  // --- Selection ---
+
+  isSelected(id: number): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  toggleRow(id: number): void {
+    this.selectedIds.update(ids => {
+      const next = new Set(ids);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  toggleAllOnPage(): void {
+    const pageIds = this.timeEntries().map(e => e.id);
+    const shouldSelect = !this.isPageFullySelected();
+
+    this.selectedIds.update(ids => {
+      const next = new Set(ids);
+      for (const id of pageIds) {
+        if (shouldSelect) {
+          next.add(id);
+        } else {
+          next.delete(id);
+        }
+      }
+      return next;
+    });
+  }
+
+  selectAllMatching(): void {
+    const startDateStr = this.startDate() ? this.startDate()!.toISOString() : undefined;
+    const endDateStr = this.endDate() ? this.endDate()!.toISOString() : undefined;
+
+    this.selectingAll.set(true);
+    this.timeEntryService.getTimeEntries(startDateStr, endDateStr).subscribe({
+      next: (entries) => {
+        this.selectedIds.set(new Set(entries.map(e => e.id)));
+        this.selectingAll.set(false);
+      },
+      error: (error) => {
+        this.selectingAll.set(false);
+        console.error('Error selecting all matching entries:', error);
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'No se pudo seleccionar todos los registros.')
+          } as ErrorDialogData
+        });
+      }
+    });
+  }
+
+  clearSelection(): void {
+    this.selectedIds.set(new Set());
+  }
+
+  // --- Bulk actions ---
+
+  bulkSetDevOps(value: boolean): void {
+    const ids = Array.from(this.selectedIds());
+    if (ids.length === 0) return;
+
+    this.isBulkWorking.set(true);
+    const requests = ids.map(id => this.timeEntryService.updateTimeEntry(id, { registeredInDevOps: value }));
+
+    forkJoin(requests).subscribe({
+      next: () => {
+        this.isBulkWorking.set(false);
+        this.toastService.showSuccess('Registros actualizados.');
+        this.clearSelection();
+        this.loadTimeEntries();
+      },
+      error: (error) => {
+        this.isBulkWorking.set(false);
+        console.error('Error updating entries in bulk:', error);
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'No se pudieron actualizar todos los registros seleccionados.')
+          } as ErrorDialogData
+        });
+        this.loadTimeEntries();
+      }
+    });
+  }
+
+  confirmBulkDelete(): void {
+    const count = this.selectedCount();
+    if (count === 0) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Eliminar registros',
+        message: `¿Seguro que querés eliminar ${count} ${count === 1 ? 'registro' : 'registros'}? Esta acción no se puede deshacer.`
+      } as ConfirmDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.bulkDelete();
+      }
+    });
+  }
+
+  bulkDelete(): void {
+    const ids = Array.from(this.selectedIds());
+    if (ids.length === 0) return;
+
+    this.isBulkWorking.set(true);
+    const requests = ids.map(id => this.timeEntryService.deleteTimeEntry(id));
+
+    forkJoin(requests).subscribe({
+      next: () => {
+        this.isBulkWorking.set(false);
+        this.toastService.showSuccess(`${ids.length} ${ids.length === 1 ? 'registro eliminado' : 'registros eliminados'}.`);
+        this.clearSelection();
+        this.loadTimeEntries();
+      },
+      error: (error) => {
+        this.isBulkWorking.set(false);
+        console.error('Error deleting entries in bulk:', error);
+        this.dialog.open(ErrorDialogComponent, {
+          data: {
+            title: 'Error!',
+            message: extractErrorMessage(error, 'No se pudieron eliminar todos los registros seleccionados.')
+          } as ErrorDialogData
+        });
+        this.clearSelection();
+        this.loadTimeEntries();
+      }
+    });
   }
 
   openCreateModal(): void {
@@ -659,6 +1181,11 @@ export class TimeEntryListComponent implements OnInit {
     this.timeEntryService.deleteTimeEntry(id).subscribe({
       next: () => {
         this.toastService.showSuccess('Time entry has been deleted.');
+        this.selectedIds.update(ids => {
+          const next = new Set(ids);
+          next.delete(id);
+          return next;
+        });
         this.loadTimeEntries();
       },
       error: (error) => {
@@ -676,7 +1203,7 @@ export class TimeEntryListComponent implements OnInit {
   onToggleDevOps(entry: TimeEntry, checked: boolean): void {
     const previousValue = entry.registeredInDevOps;
 
-    // Optimistic update so the checkbox reacts instantly
+    // Optimistic update so the checkbox reacts instantly, without reloading the page
     this.timeEntries.update(entries =>
       entries.map(e => e.id === entry.id ? { ...e, registeredInDevOps: checked } : e)
     );
