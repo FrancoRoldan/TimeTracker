@@ -1,7 +1,7 @@
 using Data.Context;
 using Data.Interfaces;
 using Data.Models;
-using Data.Repositorys;
+using Data.Repositories;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Data.UnitOfWork

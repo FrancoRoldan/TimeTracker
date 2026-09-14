@@ -1,9 +1,9 @@
-﻿using Data.Context;
+using Data.Context;
 using Data.Interfaces;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace Data.Repositorys
+namespace Data.Repositories
 {
     public class UserRepository : Repository<User>, IUserRepository
     {
@@ -13,6 +13,6 @@ namespace Data.Repositorys
         {
             return await _dbSet.FirstOrDefaultAsync(u => u.Email == email);
         }
-        
+
     }
 }

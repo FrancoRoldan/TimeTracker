@@ -197,7 +197,7 @@ Backend/
 └── Data/
     ├── Models/        ← Entidades
     ├── Dtos/          ← Transfer Objects
-    └── Repositorys/   ← Acceso a datos
+    └── Repositories/   ← Acceso a datos
 
 Frontend/
 ├── app/

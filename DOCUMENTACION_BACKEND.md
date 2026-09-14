@@ -96,7 +96,7 @@ Backend/
 │   │   ├── 20251209025829_InitialCreate.cs
 │   │   ├── 20251209025829_InitialCreate.Designer.cs
 │   │   └── AppDbContextModelSnapshot.cs
-│   ├── Repositorys/
+│   ├── Repositories/
 │   │   ├── Repository.cs           # Implementación genérica
 │   │   └── UserRepository.cs       # Implementación específica
 │   ├── UnitOfWork/

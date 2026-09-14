@@ -90,7 +90,7 @@ Backend/
 │   ├── Configurations/           # Fluent API de EF Core
 │   ├── Interfaces/
 │   ├── Migrations/
-│   ├── Repositorys/
+│   ├── Repositories/
 │   ├── UnitOfWork/
 │   └── Validators/
 └── TimeTracker/

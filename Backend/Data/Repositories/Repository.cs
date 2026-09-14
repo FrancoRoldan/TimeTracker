@@ -1,10 +1,10 @@
-﻿using Data.Context;
+using Data.Context;
 using Data.Interfaces;
 using Data.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
-namespace Data.Repositorys
+namespace Data.Repositories
 {
     public class Repository<T> : IRepository<T> where T : BaseEntity
     {

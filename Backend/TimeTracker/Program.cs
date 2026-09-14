@@ -11,7 +11,6 @@ using Core.Services.TimeTracking;
 using Data.Context;
 using Data.Interceptors;
 using Data.Interfaces;
-using Data.Repositorys;
 using Data.UnitOfWork;
 using Data.Validators;
 using FluentValidation;
@@ -107,9 +106,6 @@ builder.Services.AddScoped<ICurrentUserAccessor>(sp =>
     (ICurrentUserAccessor)sp.GetRequiredService<ITenantService>());
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-// Repositories (legacy - will be replaced by UnitOfWork)
-builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Business Services
 builder.Services.AddScoped<IUserService, UserService>();
